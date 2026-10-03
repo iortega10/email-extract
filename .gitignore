@@ -1,0 +1,12 @@
+.hearth/
+fixtures/real/
+local-private/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+dist/
+build/
+.exec-mcp/
+.scratch/
