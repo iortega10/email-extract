@@ -1,0 +1,11 @@
+# Source, sidecars and ledgers are compared byte for byte (the ledger hashes fixture bytes), so a
+# checkout must never translate a line ending: the committed bytes are LF.
+* text=auto eol=lf
+
+# Message fixtures are *bytes*: CRLF, bare LF, bare CR and 8-bit data are the thing under test, and a
+# checkout that normalised any of them would silently change what the walker is measured against.
+*.eml binary
+*.msg binary
+fixtures/raw/** binary
+fixtures/generated/*.eml binary
+fixtures/time/*.eml binary
