@@ -83,9 +83,14 @@ input arrives or a fallback changes.
   reply** (`.eml`: plain text has an Outlook `From:`/`Sent:` block, the HTML has `divRplyFwdMsg`
   and no `blockquote`); a small legacy `.xls` file for typing tests; and HTML-only `.msg` bodies
   throughout (the plain-text alternative is dropped on conversion).
-- **The two messages named "rtf" turned out to carry no RTF stream** (HTML only, like the rest), so
-  the compressed-RTF body path remains **unverified against real mail** (it stays covered by
-  synthetic fixtures only; a named gap).
+- **Compressed RTF is now covered by one real sample** (a third message named "rtf"; the
+  first two carried no RTF stream): a `PR_RTF_COMPRESSED` stream (`LZFu`, 503 bytes -> 938
+  decompressed, declared sizes matching) beside a plain-text `PR_BODY` and **no `PR_HTML`**; the
+  RTF carries `\fromtext` (generated from plain text), not `\fromhtml1`. So the
+  decompress-only reader is enough for this message because the plain body exists. **Still
+  unverified against real mail:** an **RTF-only** body (no plain body), where "RTF to text"
+  being a named gap would leave the message unreadable, and **HTML wrapped in RTF**
+  (`\fromhtml1`), a deterministic de-encapsulation worth a Phase 1b decision.
 - **Deferred by the owner (none available):** non-English reply markers, encrypted or signed
   messages, auto-replies and bounces. Left for later; the design records them as named gaps.
 - Probes of real samples print structure only and are never given to hearth's model.

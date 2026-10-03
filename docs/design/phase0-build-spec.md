@@ -157,6 +157,14 @@ measurable here*:
   recipient storage counts, the string-property type (UTF-16 vs 8-bit). It prints **no content**.
   Record the observed property-tag set and storage layout in `email-spike.md` as measured facts
   with the sample described only by its structure. `olefile` is imported by this dev tool only.
+  **Measured on the owner's samples (structure only), to be re-verified by the spike:** the
+  **code page properties (internet code page, message code page) are fixed-size properties
+  inside the `__properties_version1.0` stream, not separate streams**; a reader that looks for a
+  stream named after the property tag will wrongly conclude they are absent. The same applies
+  to the compressed-RTF-in-sync flag. Body streams (`PR_BODY`, `PR_RTF_COMPRESSED`, `PR_HTML`)
+  are real streams; real messages exist with HTML only, and with plain + compressed RTF and no
+  HTML (the RTF generated from text, `\fromtext`). The probe must therefore parse the property
+  table for the code page and flag properties and report presence only.
 
 Exit: every assumption stated in the design doc's "Open risks" is marked measured with a
 reproducer, or marked unmeasurable with the reason. Report any place stdlib disagrees with the
