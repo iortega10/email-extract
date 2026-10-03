@@ -49,11 +49,14 @@ input arrives or a fallback changes.
   the owner is explicitly permitted to use; keep them outside the repo. Flag recall cannot be gated
   without human must-find labels from real documents.
 
-## 5. Approval to touch the sibling repos for track S: OPEN
+## 5. Approval to touch the sibling repos for track S: APPROVED by the owner
 
-- The matcher move (`docextract_core.match`) is a behavior-preserving change to shipped
-  word-extract code (a `wordextract` version bump, a `docextract-core` addition). It blocks Phase 4
-  only. Not started.
+- The matcher move (`docextract_core.match`) is a behavior-preserving change to shipped word-extract
+  code (a `wordextract` version bump, a `docextract-core` addition). It blocks Phase 4 only and is not
+  started; it gets its own spec and validated turns, and the word-extract suite, ledger and the
+  five-part acceptance test in the email design (D8) gate it. The same approval covers the OPC
+  promotion (workbook track C) and the CFB promote-back, which would reopen D13's decision about the
+  `.msg` reader's container code.
 
 ## 6. The employer-ownership question
 
