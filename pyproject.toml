@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "email-extract"
+version = "0.1.0"
+description = "Deterministic .eml/.msg extraction: headers, body views, attachment manifest, threading claims"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+readme = "README.md"
+authors = [{name = "Ivan Ortega"}]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+# docextract-core is released in lockstep; for local work install it editable from
+# ../word-extract/docextract-core. olefile (BSD) arrives with the .msg reader in Phase 1b --
+# it is NOT a dependency until then, and no GPL dependency is allowed anywhere.
+dependencies = ["docextract-core>=0.1.0,<0.2"]
+
+[project.urls]
+Homepage = "https://github.com/iortega10/email-extract"
+Source = "https://github.com/iortega10/email-extract"
+Issues = "https://github.com/iortega10/email-extract/issues"
+
+[project.optional-dependencies]
+# Sibling parsers, routed to as optional extras; never imported by the library itself
+# (the package must import with neither sibling installed).
+word = ["word-extract>=0.1.0,<0.2"]
+form = ["form-extract>=0.1.0,<0.2"]
+dev = ["pytest>=8"]
+
+[tool.setuptools.packages.find]
+include = ["emailextract*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

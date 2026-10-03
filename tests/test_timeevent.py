@@ -1,0 +1,155 @@
+"""Turn 0.1 tests: the D15 TimeEvent shape stays frozen and semantically strict.
+
+The frozen shape imports nothing from the core; the only import is the codec
+entry point. Its version is ``TIMEEVENT_VERSION`` and must never be the record's
+``OUTPUT_SCHEMA_VERSION``.
+"""
+
+from __future__ import annotations
+
+import dataclasses
+import pathlib
+import re
+
+import pytest
+
+from docextract_core.codec import CodecError
+
+import emailextract.versions as versions
+from emailextract import (
+    Ambiguity,
+    OffsetOrigin,
+    Precision,
+    TimeEvent,
+    TimeSource,
+    TimeValue,
+    Trust,
+    record_from_bytes,
+    record_to_bytes,
+)
+
+
+def _event(**overrides: object) -> TimeEvent:
+    fields: dict[str, object] = dict(
+        event_id="ev-1",
+        doc_id="doc-1",
+        kind="received_hop",
+        when_raw="Thu, 01 Jan 2026 12:00:00 +0200",
+        when_utc=TimeValue(value="2026-01-01T10:00:00Z"),
+        offset=TimeValue(value="+02:00"),
+        offset_origin=OffsetOrigin.STATED_IN_TEXT,
+        precision=Precision.SECOND,
+        ambiguity=Ambiguity.NONE,
+        source=TimeSource(ordinal=0, field="Received"),
+        trust=Trust.CLAIMED,
+        usable_for_arrival_ordering=True,
+    )
+    fields.update(overrides)
+    return TimeEvent(**fields)  # type: ignore[arg-type]
+
+
+def test_timeevent_shape_is_frozen_field_for_field() -> None:
+    """A field added, removed or reordered is a shape change -- a version bump, not a tweak."""
+    assert [f.name for f in dataclasses.fields(TimeEvent)] == [
+        "event_id",
+        "doc_id",
+        "kind",
+        "when_raw",
+        "when_utc",
+        "offset",
+        "offset_origin",
+        "precision",
+        "ambiguity",
+        "source",
+        "trust",
+        "usable_for_arrival_ordering",
+        "parent_event_id",
+    ]
+
+
+def test_unknown_relative_event_round_trips_byte_identically() -> None:
+    """The spec's example: an order asserted but no absolute time is usable."""
+    event = _event(
+        when_utc=TimeValue(unknown_reason="relative"),
+        offset=TimeValue(unknown_reason="absent"),
+        offset_origin=OffsetOrigin.ABSENT,
+        ambiguity=Ambiguity.RELATIVE,
+    )
+    payload = record_to_bytes(event)
+    decoded = record_from_bytes(TimeEvent, payload)
+    assert decoded == event
+    assert record_to_bytes(decoded) == payload
+    assert decoded.when_utc.is_unknown
+    assert decoded.when_utc.value is None
+    assert decoded.when_utc.unknown_reason == "relative"
+    assert decoded.offset.unknown_reason == "absent"
+
+
+def test_when_utc_cannot_also_carry_a_value() -> None:
+    with pytest.raises(CodecError):
+        TimeValue(value="2026-01-01T10:00:00Z", unknown_reason="relative")
+    with pytest.raises(CodecError):
+        _event(when_utc=TimeValue(value="2026-01-01T10:00:00Z", unknown_reason="relative"))
+
+
+def test_when_utc_requires_exactly_one_of_value_or_unknown_reason() -> None:
+    with pytest.raises(CodecError):
+        TimeValue()
+    with pytest.raises(CodecError):
+        TimeValue(value=None, unknown_reason=None)
+
+
+def test_offset_requires_exactly_one_of_value_or_unknown_reason() -> None:
+    with pytest.raises(CodecError):
+        _event(offset=TimeValue())
+    with pytest.raises(CodecError):
+        _event(offset=TimeValue(value="+02:00", unknown_reason="absent"))
+
+
+def test_offset_origin_absent_requires_an_unknown_offset() -> None:
+    with pytest.raises(CodecError):
+        _event(offset=TimeValue(value="+02:00"), offset_origin=OffsetOrigin.ABSENT)
+    assert _event(
+        offset=TimeValue(unknown_reason="absent"), offset_origin=OffsetOrigin.ABSENT
+    ).offset_origin is OffsetOrigin.ABSENT
+
+
+def test_offset_origin_is_one_of_three_states() -> None:
+    assert {o.value for o in OffsetOrigin} == {"stated_in_text", "derived_by_named_rule", "absent"}
+    assert len(OffsetOrigin.__members__) == 3
+
+
+def test_source_requires_exactly_one_of_field_property_part() -> None:
+    with pytest.raises(CodecError):
+        _event(source=TimeSource(ordinal=0))
+    with pytest.raises(CodecError):
+        _event(source=TimeSource(ordinal=0, field="Date", property="0x0039"))
+    with pytest.raises(CodecError):
+        _event(source=TimeSource(ordinal=0, field="Date", part="1.2"))
+    with pytest.raises(CodecError):
+        _event(source=TimeSource(ordinal=0, property="0x0039", part="1.2"))
+
+
+def test_source_signatures_are_closed() -> None:
+    assert {p.value for p in Precision} == {"year", "month", "day", "second"}
+    assert len(Precision.__members__) == 4
+    assert {a.value for a in Ambiguity} == {"none", "day_month", "timezone", "relative"}
+    assert len(Ambiguity.__members__) == 4
+    assert {t.value for t in Trust} == {"claimed", "derived", "user_supplied", "filesystem"}
+    assert len(Trust.__members__) == 4
+
+
+def test_calendar_facts_are_not_timeevents() -> None:
+    """SEQUENCE/UID/METHOD are calendar facts, not TimeEvents; only DT* timestamps emit events."""
+    shape = {f.name for f in dataclasses.fields(TimeEvent)}
+    assert not (shape & {"sequence", "uid", "method", "attendee", "rsvp", "status", "recurrence_id"})
+
+
+def test_timeevent_shape_has_its_own_version_constant() -> None:
+    """D15: the TimeEvent shape is versioned by TIMEEVENT_VERSION, its own constant --
+    it is not the record's OUTPUT_SCHEMA_VERSION and never rides on it."""
+    assert "TIMEEVENT_VERSION" in vars(versions)
+    assert versions.TIMEEVENT_VERSION == "1"
+    source = pathlib.Path(versions.__file__).read_text(encoding="utf-8")
+    assert re.search(r"^TIMEEVENT_VERSION\s*[:=]", source, re.MULTILINE)
+    assert not re.search(r"^TIMEEVENT_VERSION\s*=\s*OUTPUT_SCHEMA_VERSION", source, re.MULTILINE)

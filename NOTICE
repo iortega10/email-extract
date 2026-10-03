@@ -1,0 +1,29 @@
+email-extract
+Copyright 2026 Ivan Ortega
+
+This product includes software developed by Ivan Ortega: the `emailextract` package in this
+repository. Portions were written with the assistance of AI coding tools under the author's
+direction and review.
+
+Licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Third-party material
+--------------------
+
+Runtime dependencies (installed separately, not bundled)
+  docextract-core (Apache License, Version 2.0) -- the shared hashing and strict JSON codec
+  this package's records are encoded through.
+
+Optional dependencies (installed separately, not bundled)
+  word-extract (Apache License, Version 2.0) -- the `emailextract[word]` extra; DOCX routing.
+  form-extract (Apache License, Version 2.0) -- the `emailextract[form]` extra; PDF/XLSX routing.
+  olefile (BSD 3-Clause), https://github.com/decalage2/olefile -- the future .msg reader
+  (Phase 1b). Not a dependency of this release; no GPL dependency is allowed anywhere in
+  this repository, including optional extras and development dependencies.
+
+Development dependencies (installed separately, not bundled)
+  pytest (MIT)
+
+The test fixtures under fixtures/ are synthetic and contain no real customer, third-party or
+employer data. Real email never enters the repository: fixtures/real/ is git-ignored, probes
+print structure only, and no real message content is ever written to a test, a log or a commit.
