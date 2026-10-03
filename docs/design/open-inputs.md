@@ -73,15 +73,19 @@ input arrives or a fallback changes.
 - **Fallback:** the timeline layer is not built until word-extract emits a real `TimeEvent`;
   parsers emit time evidence meanwhile.
 
-## 8. More redacted real samples: PARTLY ANSWERED
+## 8. More redacted real samples: MOSTLY ANSWERED, a few deferred
 
-- **Received so far (structure only; the files stay in the owner's Downloads folder):** seven
-  `.msg` and three `.eml` messages. Newly covered: a Gmail reply in both containers, a
-  calendar-invite forward (`.eml`), an Outlook-authored message with an **embedded message
-  attachment** (the same attached message also saved standalone as `.msg`, so the embedded and
-  standalone forms can be compared locally), the same message in both containers, and HTML-only
-  `.msg` bodies throughout (the plain-text alternative is dropped on conversion).
-- **Still wanted, kept outside the repo:** a `.msg` with an ordinary file attachment (PDF, XLSX,
-  DOCX), an RTF-only body, a quoted reply composed in desktop Outlook, a non-English reply marker,
-  a bounce or auto-reply, an encrypted or signed message. Probes of real samples print structure
-  only and are never given to hearth's model.
+- **Received (structure only; the files stay in the owner's Downloads folder):** eleven `.msg` and
+  four `.eml` messages. Covered now: Gmail replies in both containers; a calendar-invite forward
+  (`.eml`); an Outlook-authored message with an **embedded message attachment** (also saved
+  standalone, so embedded and standalone forms can be compared locally); a `.msg` with an
+  **ordinary file attachment (a 376 KB PDF) that carries a Content-ID**; a native **desktop-Outlook
+  reply** (`.eml`: plain text has an Outlook `From:`/`Sent:` block, the HTML has `divRplyFwdMsg`
+  and no `blockquote`); a small legacy `.xls` file for typing tests; and HTML-only `.msg` bodies
+  throughout (the plain-text alternative is dropped on conversion).
+- **The two messages named "rtf" turned out to carry no RTF stream** (HTML only, like the rest), so
+  the compressed-RTF body path remains **unverified against real mail** (it stays covered by
+  synthetic fixtures only; a named gap).
+- **Deferred by the owner (none available):** non-English reply markers, encrypted or signed
+  messages, auto-replies and bounces. Left for later; the design records them as named gaps.
+- Probes of real samples print structure only and are never given to hearth's model.
