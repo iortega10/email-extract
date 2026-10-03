@@ -34,11 +34,13 @@ reproducibility, not scale.
    optional extras, tests, dev-dependencies; D1, D13), built in **Phase 1b**; the owner has not yet
    confirmed this policy (see "Blocked on the user"), and **Phase 0 does not depend on it**.
    `.emlx`, `.mht`, mbox and PST are out of v1.
-3. **Real email never enters the repo, a fixture, a test, a commit message, a log or a prompt.**
-   `fixtures/real/` is git-ignored. The owner's real samples live in their Downloads folder and
-   stay there. **They are never pointed at hearth's model** (it runs on an external provider):
-   any check against them is a *structure-only* probe (names, counts, sizes, content types;
-   never subjects, addresses, bodies or filenames) run locally by the owner or by Claude.
+3. **Real email never enters the repo, a fixture, a test, a commit message or a log.** `fixtures/real/`
+   is git-ignored. The owner's sample mails live in their Downloads folder and stay there. The owner has
+   confirmed that **the sample mails supplied so far carry no confidentiality concern**, so a
+   *structure-only* probe (`tools/real_probe.py`: names, counts, sizes, tags, never subjects, addresses,
+   bodies or decoded filenames) may be run on them by the build agent. Mail from the owner's employer or
+   any other mail is **not** covered by that confirmation and is never probed or read by an agent.
+   If a prompt file or an input cannot be found, **stop and ask**; never search the machine for it.
 4. The "organizer" is **not built first** (D15): parsers emit `TimeEvent` evidence, the shape is
    frozen as a doc and a dataclass in Phase 0 with conflict fixtures, and a read-only
    `docextract-timeline` layer is a later, separate package. The employer-ownership question is
@@ -412,7 +414,7 @@ Exit: green.
   true) or drops a part: that is the class of defect this design exists to prevent.
 - Keep `emailextract` importable with neither sibling installed and with no `olefile`; a stray
   top-level import of `wordextract`, `formextract`, `pymupdf` or `olefile` in the library is a bug.
-- Never read a real sample into a prompt, a log or a test; probes print structure only.
+- Never read real sample *content* into a prompt, a log or a test; probes print structure only. Never search the machine for a missing file; ask.
 
 ## What revision 2 changed
 

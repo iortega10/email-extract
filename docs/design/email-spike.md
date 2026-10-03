@@ -6,8 +6,9 @@ the stdlib*):
 - **A — stdlib `email` + lxml**, `tools/email_spike.py`: hand-written byte
   strings only, no real mail. One row per measurement id, run on every
   interpreter present.
-- **B — real `.msg` structure**, `tools/real_probe.py`: owner-run against local
-  samples outside the repository. Structure only: stream names/sizes, storage
+- **B — real `.msg` structure**, `tools/real_probe.py`: run against local samples outside the
+  repository (in this session by hearth, which searched the owner's Downloads folder; the owner
+  has confirmed these sample mails carry no confidentiality concern). Structure only: stream names/sizes, storage
   layout, property tags/types/sizes, counts, presence. **No content is read or
   printed** — no property values, no header text, no body bytes, no decoded
   filenames. Samples are described only by structure (S01–S11 below).
@@ -27,7 +28,7 @@ python tools/real_probe.py <path-outside-repo>   # section B; refuses in-repo pa
 
 `real_probe.py` exit codes: `0` ok, `2` usage/refused/nonexistent path,
 `3` olefile missing, `4` not an OLE file. Both tools print structure only;
-`real_probe.py` reconfigures stdout to UTF-8.
+`real_probe.py` reconfigures stdout to UTF-8. It prints the probed file's path in its header; that is acceptable for these samples and is not content.
 
 Run summary: A on 3.14.3 → `measured=24 not_measurable=1 spike_error=0`;
 A on 3.11.15 → `measured=21 not_measurable=4 spike_error=0` (three of the four
@@ -47,7 +48,7 @@ Status per interpreter: **M** = measured, **N** = not measurable here (reason).
 | a02 | duplicate headers, order | M | M | three `Received` kept in order via `get_all()`; header order preserved (`Received ×3`, then `Subject`); `defects = []`. |
 | a03 | non-`name: value` header line | M | M | the bad line and everything after it fall into the payload; the `Subject` after it is **not** readable (`None`); `MissingHeaderBodySeparatorDefect()` recorded; no warnings. |
 | a04 | message with no blank line | M | M | both headers parsed; `get_payload() = ''`; `is_multipart() = False`; **`defects = []`** — stdlib silently accepts headers-to-EOF. |
-| a05 | `Date: -0000` vs `+0000` | M | M | full `parsedate_tz` tuple is identical for `-0000`, `+0000`, `GMT` and no-zone (tz slot `0`/`-1` varies); **`parsedate_to_datetime('-0000')` is naive** (`tzinfo=None`) while `+0000`/`GMT` are aware UTC; internal `_parsedate_tz('-0000')[-1]` is `None`, the public `parsedate_tz` rewrites it to `0`. |
+| a05 | `Date: -0000` vs `+0000` | M | M | public `parsedate_tz` returns the identical tuple (tz slot `0`) for `-0000`, `+0000`, `GMT` and no-zone, while **`parsedate_to_datetime('-0000')` is naive** (`tzinfo=None`, `utcoffset=None`) and `+0000`/`GMT` are aware UTC; the internal `_parsedate_tz('-0000')[-1]` is `None` (public `parsedate_tz` rewrites it to `0`) and `_parsedate_tz('+0000')[-1] = 0`. |
 | a06 | `parseaddr`/`getaddresses`: group, IDN, SMTPUTF8, garbage | M | M | empty group → `getaddresses=[('', '')]`; group with members → members returned, group name dropped (`parseaddr('Team: ...')` = `('', '')`); IDN/unicode-domain/SMTPUTF8 local pass through verbatim; garbage → `('','just')` (first token); trailing comma → `getaddresses=[('','')]` **disagrees** with `parseaddr=('','a@example.com')`; unclosed `<a@b` → `('Name','a@example.com')`. |
 | a07 | RFC 2047 encoded words | M | M | valid Q/B decode with `defects=[]`; folded pair joins to `onetwo`; **unknown charset, bad base64 and bad `%` escapes all decode silently** (`x-nope` passes through, bad base64 → `i<U+FFFD>`, bad escape stays `%ZZ`) with `defects = []`. |
 | a08 | RFC 2231 `filename*` continuations | M | M | continuations joined (`part one and two.txt`); percent-encoded charset decoded (`naïve file.txt`); plain quoted and escaped-quote names correct; `defects = []`. |
@@ -166,7 +167,7 @@ recorded by the probe's tag-set section). This is an observation, not a
 frozen contract — **no property tag is frozen by this document**.
 
 ```
-0000:0001 0002:0102 0003:0102 0004:0102 0017:0003 001A:001F 0023:000B 0026:0003 0029:000B 002E:0003 0036:0003 0037:001F 0039:0040 003B:0102 003D:001F 003F:0102 0040:001F 0041:0102 0042:001F 0043:0102 0044:001F 004F:0102 0050:001F 0051:0102 0052:0102 0057:000B 0058:000B 0059:000B 0064:001F 0065:001F 0070:001F 0071:0102 0075:001F 0076:001F 0077:001F 0078:001F 007D:001F 0C06:000B 0C15:0003 0C19:0102 0C1A:001F 0C1D:0102 0C1E:001F 0C1F:001F 0C24:0102 0C2C:0102 0C2D:0102 0C2E:0102 0E02:001F 0E03:001F 0E04:001F 0E05:001F 0E06:0040 0E07:0003 0E0B:0102 0E0F:000B 0E17:0003 0E1B:000B 0E1D:001F 0E21:0003 0E23:0003 0E2F:0003 0E4B:0102 0E4C:0102 0E4D:0102 0E4E:0102 0E58:0102 0E59:0102 0ECD:000B 0F02:0040 0F03:0102 0F0A:0040 0FF4:0003 0FF6:0102 0FF7:0003 0FF9:0102 0FFE:0003 0FFF:0102 1000:001F 1009:0102 1013:0102 1015:001F 1016:0003 1035:001F 1039:001F 1042:001F 1045:001F 120B:0102 1213:0003 3000:0003 3001:001F 3002:001F 3003:001F 3007:0040 3008:0040 300B:0102 3013:0102 3014:0102 3016:000B 335B:0003 335E:0003 3389:0040 340D:0003 3645:000B 3655:000B 365A:0003 3663:0003 3668:0003 3677:0102 36FA:000B 3701:000D/0102 3703:001F 3704:001F 3705:0003 3707:001F 370B:0003 370E:001F 3712:001F 3714:0003 3900:0003 3905:0003 39FE:001F 3A0C:001F 3A20:001F 3A40:000B 3FD9:001F 3FDE:0003 3FF1:0003 3FF8:001F 3FFA:001F 3FFD:0003 4022:001F 4023:001F 4024:001F 4025:001F 4030:001F 4031:001F 4034:001F 4035:001F 4038:001F 4039:001F 4059:0003 405A:0003 4076:0003 5037:0003 50CF:0102 5110:0102 5111:0102 5114:000B 5D01:001F 5D02:001F 5D07:001F 5D08:001F 5D0A:001F 5D0B:001F 5D15:0102 5D16:0102 5FE5:001F 5FF7:0102 5FFD:0003 6200:0003 6201:0003 64F0:0102 65C6:0003 65E1:0102 65E2:0102 65E3:0102 66C3:0003 66CA:001F 6748:0014 67FE:0014 6827:0003 7082:0040 7097:0102 7FF6:001F 7FFE:000B 8000:0003 8001:000B/001F 8002:000B/001F/0048 8003:0003/000B/001F 8004:001F/0048 8005:0003/000B/0048/101F 8006:0003/001F/0048/0102 8007:0003/000B/0048/0102 8008:0003/000B/0048 8009:000B/0040/0048/0102 800A:0003/000B/0040/0102 800B:0003/000B/0040/0102 800C:000B/0040/0102 800D:000B/0040 800E:001F/0040/0102 800F:000B/001F/0040/0102 8010:000B/001F 8011:000B/001F/0040 8012:001F/0040 8013:001F/0040 8014:0003/001F 8015:001F 8016:001F 8017:001F 8018:001F 8019:0003/001F 801A:0003/000B/001F 801B:0003/000B/001F 801C:0003/000B/001F/0048 801D:0003/000B/001F/0048 801E:000B/001F/0048 801F:0003/001F/0048 8020:000B/001F 8021:0003/000B/001F 8022:0003/000B/0048 8023:0003/000B/001F 8024:0003/000B/001F/0048 8025:0003/001F 8026:0003/001F 8027:0003/000B/001F/0102 8028:0003/001F/0102 8029:0003/000B/001F/0102 802A:0003/001F/0102/101F 802B:0003/001F/0102 802C:0003/001F/0102 802D:0003/001F/0102 802E:001F/0102 802F:001F/0102/101F 8030:000B/001F/0102/101F 8031:000B/001F/0040/101F 8032:0003/000B/001F 8033:000B/001F 8034:000B/001F 8035:0003/000B/001F 8036:000B/001F 8037:000B/001F/0040 8038:000B/001F 8039:000B/001F/0040 803A:000B/001F/0040 803B:001F 803C:001F 803D:001F 803E:001F
+0000:0001 0002:0102 0003:0102 0004:0102 0017:0003 001A:001F 0023:000B 0026:0003 0029:000B 002E:0003 0036:0003 0037:001F 0039:0040 003B:0102 003D:001F 003F:0102 0040:001F 0041:0102 0042:001F 0043:0102 0044:001F 004F:0102 0050:001F 0051:0102 0052:0102 0057:000B 0058:000B 0059:000B 0064:001F 0065:001F 0070:001F 0071:0102 0075:001F 0076:001F 0077:001F 0078:001F 007D:001F 0C06:000B 0C15:0003 0C19:0102 0C1A:001F 0C1D:0102 0C1E:001F 0C1F:001F 0C24:0102 0C2C:0102 0C2D:0102 0C2E:0102 0E02:001F 0E03:001F 0E04:001F 0E05:001F 0E06:0040 0E07:0003 0E0B:0102 0E0F:000B 0E17:0003 0E1B:000B 0E1D:001F 0E21:0003 0E23:0003 0E2F:0003 0E4B:0102 0E4C:0102 0E4D:0102 0E4E:0102 0E58:0102 0E59:0102 0ECD:000B 0F02:0040 0F03:0102 0F0A:0040 0FF4:0003 0FF6:0102 0FF7:0003 0FF9:0102 0FFE:0003 0FFF:0102 1000:001F 1009:0102 1013:0102 1015:001F 1016:0003 1035:001F 1039:001F 1042:001F 1045:001F 120B:0102 1213:0003 3000:0003 3001:001F 3002:001F 3003:001F 3007:0040 3008:0040 300B:0102 3013:0102 3014:0102 3016:000B 335B:0003 335E:0003 3389:0040 340D:0003 3645:000B 3655:000B 365A:0003 3663:0003 3668:0003 3677:0102 36FA:000B 3701:000D/0102 3703:001F 3704:001F 3705:0003 3707:001F 370B:0003 370E:001F 3712:001F 3714:0003 3900:0003 3905:0003 39FE:001F 3A0C:001F 3A20:001F 3A40:000B 3FD9:001F 3FDE:0003 3FF1:0003 3FF8:001F 3FFA:001F 3FFD:0003 4022:001F 4023:001F 4024:001F 4025:001F 4030:001F 4031:001F 4034:001F 4035:001F 4038:001F 4039:001F 4059:0003 405A:0003 4076:0003 5037:0003 50CF:0102 5110:0102 5111:0102 5114:000B 5D01:001F 5D02:001F 5D07:001F 5D08:001F 5D0A:001F 5D0B:001F 5D15:0102 5D16:0102 5FE5:001F 5FF7:0102 5FFD:0003 6200:0003 6201:0003 64F0:0102 65C6:0003 65E1:0102 65E2:0102 65E3:0102 66C3:0003 66CA:001F 6748:0014 67FE:0014 6827:0003 7082:0040 7097:0102 7FF6:001F 7FFE:000B 8000:0003 8001:000B/001F 8002:000B/001F/0048 8003:0003/000B/001F 8004:001F/0048 8005:0003/000B/0048/101F 8006:0003/001F/0048/0102 8007:0003/000B/0048/0102 8008:0003/000B/0048 8009:000B/0040/0048/0102 800A:0003/000B/0040/0102 800B:0003/000B/0040/0102 800C:000B/0040/0102 800D:000B/0040 800E:001F/0040/0102 800F:000B/001F/0040/0102 8010:000B/001F 8011:000B/001F/0040 8012:001F/0040 8013:001F/0040 8014:0003/001F 8015:001F 8016:001F 8017:001F 8018:001F 8019:0003/001F 801A:0003/000B/001F 801B:0003/000B/001F 801C:0003/000B/001F/0048 801D:0003/000B/001F/0048 801E:000B/001F/0048 801F:0003/001F/0048 8020:000B/001F 8021:0003/000B/001F 8022:0003/000B/0048 8023:0003/000B/001F 8024:0003/000B/001F/0048 8025:0003/000B/001F 8026:0003/001F 8027:0003/000B/001F/0102 8028:0003/001F/0102 8029:0003/000B/001F/0102 802A:0003/001F/0102/101F 802B:0003/001F/0102 802C:0003/001F/0102 802D:0003/001F/0102 802E:001F/0102 802F:001F/0102/101F 8030:000B/001F/0102/101F 8031:000B/001F/0040/101F 8032:0003/000B/001F 8033:000B/001F 8034:000B/001F 8035:0003/000B/001F 8036:000B/001F 8037:000B/001F/0040 8038:000B/001F 8039:000B/001F/0040 803A:000B/001F/0040 803B:001F 803C:001F 803D:001F 803E:001F
 ```
 
 Reading notes:
@@ -174,26 +175,38 @@ Reading notes:
 - `001E` (**PT_STRING8**) appears **nowhere** — zero 8-bit string streams in
   all 11 samples; every string property is `001F` (UTF-16), with `101F`
   (multi-valued UTF-16) in the suffixed named-property streams.
-- Tags `8001`–`803E` are the **named-property range**: 55 of them were
-  observed with **more than one type across different samples** (e.g. `8005`
+- Tags `8001`–`803E` are the **named-property range**: 63 were observed in
+  these samples, 54 of them with **more than one type across different samples** (e.g. `8005`
   as `0003`/`000B`/`0048`/`101F`). The numeric tag is per-message; identity
   lives in `__nameid_version1.0`, so a reader must not key named properties on
   the tag alone.
 - The probe names only a minimal confident set (`0037`, `007D`, `1000`,
-  `1009`, `1013`, `3A00`, `65C6`); every other tag is reported hex-only.
+  `1009`, `1013`, `3FDE`, `3FFD`); every other tag is reported hex-only.
 
-### B4. Code-page and flag properties (design claim → measured)
+### B4. Code-page and flag properties (design claim -> measured; **corrected** after review)
+
+> **Correction.** The first draft of this section identified the internet code page as `65C6` and the
+> message code page as `3A00`. Both identifications were wrong: `0x65C6` is an unrelated long
+> property (observed values 0 and 2) and `0x3A00` is absent because it is not the code page. The
+> code pages are **`0x3FDE` (PidTagInternetCodepage) and `0x3FFD` (PidTagMessageCodepage)**. The rows
+> below were re-measured on the same 11 samples (presence by the probe after `tools/real_probe.py`
+> was fixed; the value sets are code-page numbers only, read from the fixed entries, no content).
 
 | design claim (spec, Turn 0.0) | status | evidence from the 11 samples |
 |---|---|---|
-| internet code page is a fixed-size property inside `__properties_version1.0`, not a stream; a stream-based reader wrongly concludes absent | **measured, confirmed** | `65C6:0003` (PR_INTERNET_CPID) present as a fixed entry in the `[message]` table of **11/11** samples; **no stream named `__substg1.0_65C6*` exists in any sample** |
-| message code page likewise | **not observed** | `3A00` absent from every table and every stream in all 11 samples — nothing to confirm or refute here; a reader must handle its absence |
-| the compressed-RTF-in-sync flag likewise (fixed entry, not a stream) | **measured (general form); specific tag not observed** | zero streams typed `000B` exist anywhere (a boolean property can only be a table entry — verified: no `*000B` stream names in 11/11); 54 distinct boolean-typed tags appear as fixed entries; no sample carries `39E1`/`39E0` |
+| internet code page is a fixed-size property inside `__properties_version1.0`, not a stream; a stream-based reader wrongly concludes absent | **measured, confirmed** | `3FDE:0003` present as a fixed entry in the `[message]` table of **11/11** samples; **no stream named `__substg1.0_3FDE*` exists**. Observed values: **1252, 20127 (us-ascii), 28591 (iso-8859-1), 65001 (UTF-8)** |
+| message code page likewise | **measured, confirmed** | `3FFD:0003` present as a fixed entry in **11/11** samples; no stream of that name. Observed values: **1252, 65001** |
+| the compressed-RTF-in-sync flag likewise (fixed entry, not a stream) | **measured (general form); specific tag not observed** | zero streams typed `000B` exist anywhere (a boolean property can only be a table entry); 54 distinct boolean-typed tags appear as fixed entries; no sample carries `39E1`/`39E0` |
 | body streams (`00001000`, `00001009`, `00001013`) are real streams | **measured** | all three observed as streams: `1000:001F` (UTF-16), `1009:0102`, `1013:0102` |
 | real messages exist with HTML only | **measured** | **10/11** samples: `0x1013` present, `0x1000` and `0x1009` absent |
 | real messages exist with plain + compressed RTF and no HTML | **measured** | **S09**: `0x1000` (PT_UNICODE, 956 B) + `0x1009` (503 B) present, `0x1013` absent |
-| (the RTF is generated from text, `\fromtext`) | **not verified** | verifying the marker requires reading RTF content — prohibited for this probe by design |
+| (the RTF is generated from text, `\fromtext`) | **not verified by the probe** | verifying the marker requires reading RTF content, which the probe does not do (it was checked separately by the owner's side on one sample: compressed RTF with `\fromtext`, no `\fromhtml1`) |
 | probe parses the table for code-page/flag properties and reports presence only | **implemented** | probe section `code-page / flag properties` prints PRESENT/absent with the containing table label, never a value |
+
+**Consequence for D13's encoding ladder:** both properties are real and present in every sample, and
+they **can disagree** in value (internet 28591 or 20127 against message 1252), so the ladder's step 1
+(internet code page) and step 2 (message code page) are both exercised; the ladder must read them from
+the property table, not from streams.
 
 Additional measured facts:
 
