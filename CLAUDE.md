@@ -25,7 +25,10 @@ Run the single file under test with `python -m pytest tests/test_<name>.py -q`.
 ## Layout
 
 - `emailextract/` -- `versions.py` (frozen constants), `model.py` (contracts), `timeevent.py`
-  (D15 `TimeEvent`), `walk_eml.py`/`walk_msg.py` (Turn 0.2+).
+  (D15 `TimeEvent`), `container.py` (the container-neutral interface, the `.eml` adapter and an
+  in-memory fake), `ids.py` (content-addressed ids), `walk.py` (the one skeleton walker, over any
+  container), `store.py` (the throwaway re-ingest store). There is deliberately no per-format
+  walker: format-specific walkers would duplicate the measured rules.
 - `tests/` -- hand-typed, one file per contract; `ground_truth/` + `check_ground_truth.py`
   verify fixtures (importance order: tests > fixtures > ground truth > docs).
 - `fixtures/synthetic/` -- generated fixtures; `fixtures/real/` is git-ignored forever.

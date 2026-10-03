@@ -1,0 +1,18 @@
+{
+  "_comment": "The ledger's corpora, oldest first: each version lists the message names its fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names until the Turn 0.3 fixtures exist; relative fixture paths under --fixtures after that). Growing the corpus adds a version here -- the tool detects a changed file list and appends it automatically; it never bumps a component version.",
+  "corpora": [
+    {
+      "files": [
+        "bad_cte_fallback",
+        "folded_and_duplicate_headers",
+        "headers_only",
+        "lossy_charset",
+        "malformed_header_line",
+        "multipart_preamble_epilogue",
+        "nested_multipart",
+        "plain_simple"
+      ],
+      "version": 1
+    }
+  ]
+}

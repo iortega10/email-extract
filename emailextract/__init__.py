@@ -1,9 +1,10 @@
-"""emailextract -- deterministic .eml/.msg email extraction (Phase 0 contract layer).
+"""emailextract -- deterministic .eml/.msg email extraction (Phase 0: contracts + skeleton walker).
 
-Turn 0.1 freezes the contracts only: importable with neither sibling repository
-installed and without olefile -- this package depends only on docextract-core.
-There is no extractor yet: the walker arrives in Turn 0.2, and nothing here claims a status
-for a file it has not read.
+Turn 0.1 froze the contracts; Turn 0.2 added the container interface and the skeleton
+walker (``emailextract.walk``). Importable with neither sibling repository installed and
+without olefile -- this package depends only on docextract-core. Nothing here claims a
+status for a file it has not read: what the walker does not build is recorded as
+``unknown("not_built_in_phase0")``, never as an absence.
 """
 
 from __future__ import annotations

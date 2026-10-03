@@ -4,10 +4,16 @@ Deterministic extraction from `.eml` (RFC 5322) and `.msg` (CFB) email files: he
 body views, an attachment manifest, threading claims, flag/visibility sidecars, and
 provenance -- as one self-contained `.json` sidecar per input file.
 
-Status: **Phase 0 (Turn 0.1)**. The contract layer is frozen: the record shapes below are
-implemented and tested today; the skeleton walker arrives in Turn 0.2.
-Most section numbers resolve to `unknown("not_built_in_phase0")` until later turns -- that
-is the intended behavior, not a defect.
+Status: **Phase 0 (Turn 0.2)**. Turn 0.1 froze the contract layer -- the record shapes below
+are implemented and tested today -- and Turn 0.2 landed the skeleton walker: the
+container-neutral `Container` interface with its `.eml` adapter and an in-memory fake (the
+second `container_kind`, zero CFB code), a raw-header scanner over the raw bytes, the
+recorded decode chain, the run record with the re-ingest-is-a-no-op harness, and the
+behavior ledger (`tests/ledger/`). Most section numbers resolve to
+`unknown("not_built_in_phase0")` until later turns -- that is the intended behavior, not a
+defect. Quotes are not segmented, attachments are not classified, siblings are not routed,
+threads are not built, headers are not rendered and terms are not matched; no CFB file is
+read (Phase 1b).
 
 ## What it is (design D1-D16, docs/design/email-extraction-design.md)
 
@@ -44,8 +50,23 @@ package itself: `import emailextract` must succeed with neither sibling present.
 
 ## Use
 
-There is no extractor yet. Turn 0.2 adds the skeleton walker; until then the package ships the
-frozen record contracts, the closed vocabularies and the version stamps, importable with no
+The skeleton walker measures a message; it does not extract one yet. What it records
+today: raw byte spans per part and per header field, the declared-versus-used
+CTE/charset decode chain with `fallback_fired`, preamble/epilogue accounting,
+content-addressed part ids (the `1.2.3` path is a locator, never an identity), and
+`unknown("not_built_in_phase0")` for every section it does not build:
+
+```python
+from emailextract.container import EmlContainer, memory_bytes
+from emailextract.walk import walk
+
+result = walk(EmlContainer(memory_bytes(raw_bytes)))
+result.parts[0].raw_span        # a span into the raw message (the verbatim layer)
+result.parts[0].decode_chain    # declared vs used, fallback_fired
+result.unknown_sections         # six sections, unknown(not_built_in_phase0)
+```
+
+The frozen record contracts are unchanged from Turn 0.1 and stay importable with no
 sibling installed:
 
 ```python
@@ -75,6 +96,7 @@ hint.
 
 ```sh
 python -m pytest            # green is the gate for every turn
+python tools/update_behavior_ledger.py --check   # behavior fingerprints must agree
 ```
 
 Never commit real email: `fixtures/real/` is git-ignored, probes print structure only,
