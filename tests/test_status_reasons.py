@@ -25,7 +25,10 @@ from emailextract.model import reason_required, reasons_for
 # Hand-typed: status -> (a reason is mandatory, every allowed reason id).
 EXPECTED_REASON_TABLE = {
     "parsed": (False, ()),
-    "skipped": (True, ("size_cap", "total_size_cap", "depth_cap")),
+    "skipped": (
+        True,
+        ("size_cap", "total_size_cap", "depth_cap", "part_count_cap", "header_bytes_cap"),
+    ),
     "unsupported": (False, ()),
     "not_installed": (False, ()),
     "failed": (True, ("extractor_error", "decode_failed", "sibling_contract_error")),
@@ -71,13 +74,13 @@ def test_reason_table_has_exactly_the_spec_rows() -> None:
 
 
 def test_every_reason_belongs_to_exactly_one_status() -> None:
-    """D6: a reason belongs to exactly one status -- the three rows hold 3 + 3 + 3."""
+    """D6: a reason belongs to exactly one status -- the three rows hold 5 + 3 + 3."""
     owners: dict[str, str] = {}
     for status_name, (_, reasons) in EXPECTED_REASON_TABLE.items():
         for reason in reasons:
             assert reason not in owners, f"{reason} claimed by both {owners.get(reason)} and {status_name}"
             owners[reason] = status_name
-    assert len(owners) == 9
+    assert len(owners) == 11
 
 
 def test_reason_mandatory_rows_reject_a_missing_reason() -> None:

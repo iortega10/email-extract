@@ -15,6 +15,7 @@ from typing import Final
 
 __all__ = [
     "NOT_BUILT_IN_PHASE0",
+    "NOT_BUILT_IN_PHASE1",
     "RawSpan",
     "container_hash",
     "content_hash",
@@ -25,6 +26,17 @@ __all__ = [
 
 NOT_BUILT_IN_PHASE0: Final[str] = "not_built_in_phase0"
 """The reason id every not-yet-built section carries (D9 tri-state unknowns)."""
+
+NOT_BUILT_IN_PHASE1: Final[str] = "not_built_in_phase1"
+"""The reason id a not-yet-built Phase 1 axis carries, beside ``NOT_BUILT_IN_PHASE0``.
+
+The not-built idiom is exactly one value: ``TriValue(state=UNKNOWN,
+reason_id=NOT_BUILT_IN_PHASE1)``. It is never encoded as ``None`` (which keeps its
+single meaning: no such axis, or the input did not exercise the field) nor as an
+empty list (genuinely empty). A union ``X | NotBuilt`` is forbidden, because the
+core codec decodes a union by its first non-``None`` member and would not
+round-trip.
+"""
 
 
 def sha256_hex(data: bytes) -> str:

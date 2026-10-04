@@ -1,0 +1,31 @@
+{
+  "_comment": "Additions-only sha256 fingerprints of the hand-typed labels and the oracle that reads them. A path is relative to the repository root and posix; the fingerprint is sha256 of the file's bytes. Adding a file appends a line; changing or removing a recorded file is refused in place (that is a label edit and the rule is the label is never edited). Record lines with tools/update_label_ledger.py in the same commit as the change that caused them.",
+  "files": {
+    "emailextract/evals/__init__.py": "d8db516f191dfc120178f174f01660653f631f8a1aca02805ee6369a70a6fc37",
+    "emailextract/evals/__main__.py": "05d94684d1820483a3428008e4e62ab5c4b0be1db29ff0d73739dcb5a0c1fff9",
+    "emailextract/evals/falsify.py": "322caff1d24c19c373532309be0fac3447fcc0d8c5433cc8b9d17a4712dd3d01",
+    "emailextract/evals/gates.py": "537b1417d10b4a1cb7dfd1def82bd5acc88f2333f963bf53df4810a482eee165",
+    "emailextract/evals/l1.py": "84eb26afed0e19585ceb1e833ff3b219b073a9edaaadfe4fb0793c2ad11d82cf",
+    "emailextract/evals/labels.py": "676296d3ca6d36ac95968ed8dad1e0e5326df6afcb056c601cf3b1f1d6289f3d",
+    "emailextract/evals/metrics.py": "9f1be0590a91f6378f1bdd4e536967346147ff03a6e05774c06242d02503aa51",
+    "fixtures/generated/alternative_text_html.expected.json": "2cb91d6ccb08de716b077fcfbf69cd4bd03e0c623576ac6ec9896df1f73f9b4e",
+    "fixtures/generated/attachments_mixed.expected.json": "8a3087596bcb46c288b09d31f66bb12591a041a52c9633062c2a623274e5bd80",
+    "fixtures/generated/inline_cid_referenced_and_not.expected.json": "f8f90f7fc092aca0c719190e3c779e73d25918133776f8b831f9021cbd0116e2",
+    "fixtures/generated/multipart_mixed_wraps_alternative.expected.json": "e30d0c0edd865924bf54fb9deeace1fa954fdb36b7d6a5660f8f3c98d5df0ee9",
+    "fixtures/generated/plain_simple.expected.json": "3cf873f8fd12309d34a13b75f9e6e35fce879b68b9a86ff4de5b5cc1a202301f",
+    "fixtures/generated/preamble_epilogue.expected.json": "1dc680a1d3bc0d749ca479649df85aa548d966d8bd62599e11866aa79d00abe7",
+    "fixtures/generated/rfc2047_folded_duplicate_received.expected.json": "b7c0c330eaf13a6848bb66f311ca7a47d85c85c09e4b90dc82027a3c45cadaaf",
+    "fixtures/generated/thread_three_refs_chain.expected.json": "d12925e474263c62eac4fe6b725513133ea9cb2299ddb03a2800e8d2790d525a",
+    "fixtures/raw/bad_charset.expected.json": "92fb25be9917be03932d3b9ccd33dccdfe34bfa2d4f402459ba619acf4b973a6",
+    "fixtures/raw/malformed_mime.expected.json": "3b0beac0fff7ef1efe89d5cf2370739f3914a4c8718187dfde3fce7c4c9f54d2",
+    "fixtures/raw/truncated_base64.expected.json": "699a90d23d9cc3e22cc6a312b43ab104f3292f24016639895964466efdabf6dc",
+    "fixtures/time/date_before_hops.expected.json": "205be74b674d2a49af00731f4b73b7d71a0d73cb44b272fab1ff3db753f37bbc",
+    "fixtures/time/date_no_zone.expected.json": "cdf0721c31945d177f6374bdb701527c5660026b7ac8391377a4a11f66b81fd1",
+    "fixtures/time/date_vs_mtime.expected.json": "ccc856b47ddcc12f834c029757a90e63cc3c6b70719a74ffc8bb6c9fe8704020",
+    "fixtures/time/future_date_in_text.expected.json": "7711bf2eb783e16a066244a4d797767abada5d90ff714b97c120b0fa665ebf35",
+    "fixtures/time/received_clock_skew.expected.json": "3d970061e8f6424f03faf9471915a14d21d516b18fe5a887fa7e0d8cc07e1864",
+    "tests/support/fake_store.py": "1399154ef3c74ef8ca8331f2227add96bd25f5621507a0dd18ae66c9697c9449",
+    "tests/support/sidecar_copy.py": "3022d2f7ce133508ac1a9638a521562db83524ddeba7e73ef98126010a688757",
+    "tests/support/timeline_ref.py": "7eb9cf3ef876dace1e9fe3e6ba44f21676fa00acfb0f3dd877bf0feca1c5f55b"
+  }
+}

@@ -606,7 +606,7 @@ Status is never derived from classification and never from size.
 | status | reason required | allowed reasons / explainer |
 |---|---|---|
 | `parsed` | no | child result stored (link present) |
-| `skipped` | yes | `size_cap`, `total_size_cap`, `depth_cap` |
+| `skipped` | yes | `size_cap`, `total_size_cap`, `depth_cap`, `part_count_cap`, `header_bytes_cap` |
 | `unsupported` | no | the `detected_type` is the reason (zip, pptx, tnef; `.msg` and minimal `text/calendar` are parsed in v1, D4/D13) |
 | `not_installed` | no | carries `needed_sibling`; environmental |
 | `failed` | yes | `extractor_error`, `decode_failed`, `sibling_contract_error` |

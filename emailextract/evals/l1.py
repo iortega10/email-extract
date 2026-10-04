@@ -289,6 +289,115 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             note="[[gap_id, locator, phase, reason]] gaps a later phase records, named so a "
             "later phase cannot mistake silence for agreement",
         ),
+        # Phase 1: the parser's fact ids (Turn 1.0b declaration). Every one is declared
+        # here at phase 1 with its exact value shape and **no measurer** until its turn
+        # ships, so a sidecar that labels it is reported ``not_yet`` (CURRENT_PHASE is 0)
+        # instead of being skipped, and an unmodelled label is still a hard failure.
+        "document.axes": Measure(
+            1,
+            note="[[axis_id, state, reason_id | null], ...] one row per axis the record carries; "
+            "axis_id is one of attachment.status/attachment.route/document.times/"
+            "document.thread_edges/document.children/document.same_message_candidates (a wildcard "
+            "id is banned); state is value|absent|unknown; reason_id is not_built_in_phase1 or "
+            "'built' when state=unknown, else null",
+        ),
+        "headers.projection": Measure(
+            1,
+            note="[[ordinal, name, raw_value, parsed_kind, parsed_value], ...] raw beside parsed, "
+            "one row per field; the raw value keeps its folds (latin-1 view); parsed_kind is "
+            "text|address_list|date_time|message_id|message_id_list|unparsed; parsed_value is null "
+            "where parsed_kind=unparsed",
+        ),
+        "headers.addresses": Measure(
+            1,
+            note="[[ordinal, field_name, [[raw_offset, raw_length, display_name, addr_spec, state, "
+            "reason_id], ...]], ...]; raw spans are BYTES into the raw message; state is "
+            "parsed|group|unparsed; a group's members are the nested rows and a zero-member group "
+            "is []; reason_id is null unless state=unparsed (headers.address_unparsable); IDN and "
+            "SMTPUTF8 stay verbatim",
+        ),
+        "headers.date": Measure(
+            1,
+            note="[[ordinal, raw, zone_state, offset, utc], ...]; zone_state is "
+            "zone_stated|zone_stated_minus_zero|zone_absent; offset is '+HHMM'/'-HHMM' or null; "
+            "utc is the RFC 3339 instant or ['unknown', reason_id] (headers.no_date/"
+            "headers.invalid_date) -- a missing or invalid date never sorts as an epoch",
+        ),
+        "headers.parameters": Measure(
+            1,
+            note="[[ordinal, field_name, parameter, decoded_value, decode_state, fallback_reason], "
+            "...] one row per structured parameter (a boundary, a charset, a name, a filename); "
+            "decode_state is decoded|fallback|undecodable; fallback_reason is null unless "
+            "decode_state=fallback, then encoded_word_in_parameter|empty_charset|"
+            "missing_continuation_index|duplicate_continuation_index",
+        ),
+        "body.text": Measure(
+            1,
+            note="[[part, text, verbatim_precision, verbatim_reason], ...]; verbatim_precision is "
+            "exact|part_level; verbatim_reason is null when exact, else cte_not_identity|"
+            "multibyte_without_offset_map|decode_fallback; a part_level row carries no within-part "
+            "byte span; the coordinate space is the decoded text in code points, un-normalised",
+        ),
+        "body.alternative_group": Measure(
+            1,
+            note="[[part, group_id], ...] one row per part inside a multipart/alternative; group_id "
+            "is a message-local stable id (the multipart's part locator plus an ordinal)",
+        ),
+        "body.html_spans": Measure(
+            1,
+            note="[[part, element_ordinal, tag, projected_offset, projected_length], ...] one row "
+            "per element of the own element tree, in document order; the span is the element's span "
+            "in the HTML projection",
+        ),
+        "body.cid_refs": Measure(
+            1,
+            note="[[part, [cid, ...]], ...] one row per part that references any cid: (an HTML img "
+            "src or a href); the list is the de-duplicated set of cids the part references",
+        ),
+        "body.plain_effectively_empty": Measure(
+            1,
+            note="[[part, emptiness_rule], ...] one row per text/plain alternative present but "
+            "effectively empty; emptiness_rule is whitespace_only|stub_only",
+        ),
+        "body.quote_boundaries": Measure(
+            1,
+            note="[[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, "
+            "span_length], ...] one row per boundary per view; kind is quote|forward|signature|"
+            "list_footer|unknown and only kind=quote advances ordinal (the rank within the view); "
+            "prefix_depth is per line; span is in the view's code points",
+        ),
+        "body.view_levels": Measure(
+            1,
+            note="[[part, view, level, resolution_rule_id], ...] one row per view (not per span); "
+            "level is the derived rank and carries the rule that resolved it; ordinal and depth are "
+            "stored, never averaged",
+        ),
+        "attach.types": Measure(
+            1,
+            note="[[part, declared_mime, magic, container_introspection, winner, disagreement], ...] "
+            "one row per attachment occurrence; each verdict is a triple [state, value | null, "
+            "reason_id | null] with state value|absent|unknown (magic consulted and clean is "
+            "['value', 'unrecognized', null]); winner is magic|declared_mime|"
+            "container_introspection|null; disagreement is a bool",
+        ),
+        "attach.filename": Measure(
+            1,
+            note="[[part, filename_raw, decode_state, decoded_value, fallback_reason], ...] one row "
+            "per occurrence that carries a filename; decode_state is decoded|fallback|absent|"
+            "unparsable; fallback_reason is null unless decode_state=fallback",
+        ),
+        "attach.decorative": Measure(
+            1,
+            note="[[part, rule_id | null], ...] one row per attachment occurrence; rule_id is a "
+            "recorded hint rule (inline_unreferenced_small_image|inline_unreferenced_tracking_pixel) "
+            "or null; the hint never removes an occurrence",
+        ),
+        "attach.cid_use": Measure(
+            1,
+            note="[[part, cid, referenced], ...] one row per occurrence that carries a Content-ID; "
+            "referenced is referenced|unreferenced|n/a, decided against body.cid_refs; a cid-less "
+            "occurrence is ['<part>', null, 'n/a']",
+        ),
         # Phase 3: threading and time evidence (D7/D15).
         "thread.claims": Measure(
             3, note="[[message_id, [references], parent_claim_or_null]] header edges as claims (needs D7)"

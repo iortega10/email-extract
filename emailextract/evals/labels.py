@@ -1,7 +1,7 @@
 """The sidecar loader: hand-typed labels, read without the library.
 
-A *sidecar* is ``<fixture>.expected.json``, sitting next to the fixture it
-describes (``plain_simple.eml`` / ``plain_simple.expected.json``), and the labels
+A *sidecar* is the expectation file (``<stem>.expected.json``) that sits next to
+the fixture it describes and shares its stem, and the labels
 in it were typed by hand from the design documents and the fixture's declared
 shape -- never read out of ``emailextract``. That is the whole point (D11): the
 labels are the independent side of the comparison, so this module must not
@@ -43,8 +43,18 @@ PROVENANCES: tuple[str, ...] = ("human", "generator", "spec")
 FIXTURE_SUFFIXES: tuple[str, ...] = (".eml",)
 
 REQUIRED_KEYS: tuple[str, ...] = ("fixture", "labels_provenance", "facts")
-OPTIONAL_KEYS: tuple[str, ...] = ("annotations",)
+OPTIONAL_KEYS: tuple[str, ...] = ("annotations", "benign")
 FACT_KEYS: tuple[str, ...] = ("phase", "value")
+
+#: The closed ``benign.reason_id`` set (``docs/design/phase1-ledgers.md`` section (c)):
+#: why a fixture is expected to be clean. The id is what makes the exclusion auditable
+#: -- it names why this fixture is expected to be clean rather than quietly skipping it.
+BENIGN_REASON_IDS: tuple[str, ...] = (
+    "no_attachment_expected",
+    "no_quote_expected",
+    "headers_only_by_design",
+    "known_ambiguous_bytes",
+)
 
 #: ``<family>.<name>``: a family from the gap registry and a snake_case name. The
 #: loader does not check the family against the registry (that is ``l1``'s job
@@ -84,6 +94,7 @@ class Sidecar:
     labels_provenance: str
     facts: Mapping[str, Fact]
     annotations: Mapping[str, Any]
+    benign: Mapping[str, Any] | None = None
 
     @property
     def stem(self) -> str:
@@ -146,6 +157,8 @@ def load_sidecar(path: Path | str) -> Sidecar:
     annotations = payload.get("annotations", {})
     if not isinstance(annotations, dict):
         raise LabelError(f"{sidecar_path}: annotations: {annotations!r} is not an object")
+    benign_raw = payload.get("benign")
+    benign = None if benign_raw is None else _benign(sidecar_path, benign_raw)
     return Sidecar(
         path=sidecar_path,
         artifact=artifact,
@@ -153,6 +166,7 @@ def load_sidecar(path: Path | str) -> Sidecar:
         labels_provenance=provenance,
         facts=facts,
         annotations=dict(annotations),
+        benign=benign,
     )
 
 
@@ -240,6 +254,23 @@ def _string(path: Path, key: str, value: Any) -> str:
     if not isinstance(value, str) or not value:
         raise LabelError(f"{path}: {key}: {value!r} is not a non-empty string")
     return value
+
+
+def _benign(path: Path, value: Any) -> dict[str, Any]:
+    """Validate the additions-only ``benign`` flag against its closed ``reason_id`` set."""
+    if not isinstance(value, dict):
+        raise LabelError(f"{path}: benign: {value!r} is not an object")
+    unknown = sorted(set(value) - {"reason_id"})
+    if unknown:
+        raise LabelError(
+            f"{path}: benign: unknown key(s) {unknown} -- the flag is exactly {{'reason_id'}}"
+        )
+    reason_id = _string(path, "benign.reason_id", value.get("reason_id"))
+    if reason_id not in BENIGN_REASON_IDS:
+        raise LabelError(
+            f"{path}: benign.reason_id {reason_id!r} is not one of {list(BENIGN_REASON_IDS)}"
+        )
+    return {"reason_id": reason_id}
 
 
 def _empty(value: Any) -> bool:

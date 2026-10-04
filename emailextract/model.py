@@ -23,12 +23,17 @@ from docextract_core.codec import (
     to_json,
 )
 
+from .ids import NOT_BUILT_IN_PHASE1
 from .timeevent import Span, TimeEvent, Trust
 from .versions import EMAIL_PARSER_VERSION, FLAG_SCHEMA_VERSION, OUTPUT_SCHEMA_VERSION
 
 __all__ = [
+    "AXIS_IDS",
     "AttachmentOccurrence",
     "BodyView",
+    "BoundaryKind",
+    "BUILT_AXIS",
+    "CapRecord",
     "ChildLink",
     "ChildLinkState",
     "Classification",
@@ -50,6 +55,7 @@ __all__ = [
     "HitLocation",
     "MatchType",
     "PartRecord",
+    "QuoteBoundary",
     "QuoteCrossCheck",
     "REASON_TABLE",
     "RollupScope",
@@ -66,10 +72,20 @@ __all__ = [
     "TriValue",
     "TypeVerdicts",
     "TypeVerdictSource",
+    "UNRECOGNIZED",
+    "ViewLevel",
+    "axis_id",
+    "built_axis",
+    "not_built_in_phase1",
     "reason_required",
     "reasons_for",
     "record_from_bytes",
     "record_to_bytes",
+    "type_disagreement",
+    "type_family",
+    "type_family_of",
+    "type_unknown",
+    "type_winner",
 ]
 
 
@@ -168,6 +184,20 @@ class TriState(str, Enum):
     UNKNOWN = "unknown"
 
 
+class BoundaryKind(str, Enum):
+    """D3: what a quote boundary is; only ``quote`` is quoted history (decision 15).
+
+    An inline forward, a signature, a list footer and an unrecognised boundary are
+    recorded at level 0 and never advance the quote ordinal.
+    """
+
+    QUOTE = "quote"
+    FORWARD = "forward"
+    SIGNATURE = "signature"
+    LIST_FOOTER = "list_footer"
+    UNKNOWN = "unknown"
+
+
 class DecorativeHintState(str, Enum):
     """``decorative_hint`` is ``rule_id | absent`` -- never a boolean."""
 
@@ -212,7 +242,13 @@ class RollupScope(str, Enum):
 
 REASON_TABLE: Final[Mapping[Status, tuple[str, ...]]] = {
     Status.PARSED: (),
-    Status.SKIPPED: ("size_cap", "total_size_cap", "depth_cap"),
+    Status.SKIPPED: (
+        "size_cap",
+        "total_size_cap",
+        "depth_cap",
+        "part_count_cap",
+        "header_bytes_cap",
+    ),
     Status.UNSUPPORTED: (),
     Status.NOT_INSTALLED: (),
     Status.FAILED: ("extractor_error", "decode_failed", "sibling_contract_error"),
@@ -276,6 +312,82 @@ class TriValue:
             _non_empty(self.reason_id, "tri-state reason_id")
         else:
             raise CodecError(f"tri-state value: unknown state {self.state!r}")
+
+
+# --------------------------------------------------------------------------
+# Decision 6: the not-built idiom and the per-record axis fields
+# --------------------------------------------------------------------------
+
+#: The closed axis-id tuple (decision 6): a wildcard id is banned.
+AXIS_IDS: Final[tuple[str, ...]] = (
+    "attachment.status",
+    "attachment.route",
+    "document.times",
+    "document.thread_edges",
+    "document.children",
+    "document.same_message_candidates",
+)
+
+#: The value a built axis carries: ``TriValue(state=VALUE, value=BUILT_AXIS)``.
+BUILT_AXIS: Final[str] = "built"
+
+
+def axis_id(value: str) -> str:
+    """Return ``value`` when it is a member of the closed axis-id tuple, else raise."""
+    if value not in AXIS_IDS:
+        raise CodecError(f"axis id {value!r} is not one of the closed axis ids {AXIS_IDS}")
+    return value
+
+
+def not_built_in_phase1() -> TriValue:
+    """The single encoding of "not built": ``TriValue(UNKNOWN, not_built_in_phase1)``."""
+    return TriValue(state=TriState.UNKNOWN, reason_id=NOT_BUILT_IN_PHASE1)
+
+
+def built_axis() -> TriValue:
+    """The axis marker a present value field carries: ``TriValue(VALUE, "built")``."""
+    return TriValue(state=TriState.VALUE, value=BUILT_AXIS)
+
+
+def _axis_present(value: object) -> bool:
+    """Whether a value field carries something: a non-``None`` scalar, or a non-empty list."""
+    if value is None:
+        return False
+    if isinstance(value, (list, tuple)):
+        return bool(value)
+    return True
+
+
+def _check_axis_pair(value: object, axis: object, *, value_name: str, axis_name: str) -> None:
+    """Decision 6's pairing invariant (I3/I4), enforced at construction.
+
+    A value field and its axis field agree in exactly one of two ways and nothing
+    else: a **present** value carries ``TriValue(VALUE, BUILT_AXIS)``, and a value
+    that is **not present** (``None``, or a genuinely empty list) carries
+    ``UNKNOWN(reason)`` -- ``not_built_in_phase1`` in a Phase 1 build, or another
+    reason for a consulted-and-unknown axis. The rule is structural and never
+    depends on the current phase: I2 is what a Phase 1 build *does*, not what the
+    contract forbids. ``None`` (no such axis, or the input did not exercise the
+    field) and an empty list (genuinely empty) both keep their single meaning and
+    are never the encoding of "not built"; a union ``X | NotBuilt`` is not used,
+    because the core codec decodes a union by its first non-``None`` member and
+    would not round-trip (see :mod:`emailextract.ids`).
+    """
+    if not isinstance(axis, TriValue):
+        raise CodecError(f"{axis_name} must be a TriValue, got {axis!r}")
+    if _axis_present(value):
+        if axis.state is not TriState.VALUE or axis.value != BUILT_AXIS:
+            raise CodecError(
+                f"{value_name} is set, so {axis_name} must be "
+                f"TriValue(state=value, value={BUILT_AXIS!r}); got {axis!r} -- a present "
+                "value and the not-built marker are mutually exclusive"
+            )
+    elif axis.state is not TriState.UNKNOWN:
+        raise CodecError(
+            f"{value_name} is not set, so {axis_name} must be "
+            f"TriValue(state=unknown, reason_id=...); got {axis!r} -- neither None nor an "
+            "empty list is ever the encoding of 'not built'"
+        )
 
 
 @dataclass(frozen=True)
@@ -374,21 +486,109 @@ class DecodeChain:
             raise CodecError("decode_chain.fallback_fired must be bool")
 
 
+#: The magic verdict's sentinel for "consulted and nothing matched" (decision 7): a
+#: closed value, never ``UNKNOWN``, so a consulted-and-clean part is not confused
+#: with a part nothing looked at.
+UNRECOGNIZED: Final[str] = "unrecognized"
+
+
+def type_family(token: str) -> str | None:
+    """The media-type family a verdict value names, or ``None`` when it names none.
+
+    A MIME type reduces to its subtype (``application/pdf`` -> ``pdf``,
+    ``text/plain`` -> ``plain``); a short magic name is already a family
+    (``pdf`` -> ``pdf``). Parameters are dropped, and the closed
+    ``UNRECOGNIZED`` sentinel names no family, so it never fires a disagreement and
+    never supplies a winner. A pure function over a string: it parses no bytes.
+    """
+    if not isinstance(token, str):
+        raise CodecError(f"type family: {token!r} is not a str")
+    head = token.split(";", 1)[0].strip().lower()
+    if not head or head == UNRECOGNIZED:
+        return None
+    return head.rsplit("/", 1)[-1] if "/" in head else head
+
+
+def type_family_of(verdict: TriValue) -> str | None:
+    """A verdict's media-type family when ``state = VALUE``; else ``None`` (D4)."""
+    if not isinstance(verdict, TriValue):
+        raise CodecError(f"type family: {verdict!r} is not a TriValue")
+    if verdict.state is not TriState.VALUE:
+        return None
+    return type_family(verdict.value)  # type: ignore[arg-type]
+
+
+def type_disagreement(*verdicts: TriValue) -> bool:
+    """``attach.type_disagreement`` (decision 6): two families, at least.
+
+    True iff at least two verdicts are in state ``VALUE`` with a media-type family
+    and the set of families has size >= 2. ``UNRECOGNIZED`` and ``UNKNOWN``
+    contribute no family and so never fire it.
+    """
+    families = {
+        family for verdict in verdicts if (family := type_family_of(verdict)) is not None
+    }
+    return len(families) >= 2
+
+
+def type_unknown(*verdicts: TriValue) -> bool:
+    """``attach.type_unknown`` (decision 6): true iff no verdict yields a family."""
+    return all(type_family_of(verdict) is None for verdict in verdicts)
+
+
+def type_winner(
+    declared_mime: TriValue,
+    magic: TriValue,
+    container_introspection: TriValue,
+) -> TypeVerdictSource | None:
+    """The winning verdict source: ``magic`` over ``declared_mime`` over introspection.
+
+    The first verdict, in that priority order, that names a media-type family wins
+    (decision 7: bytes beat claims), so a consulted ``UNRECOGNIZED`` magic yields no
+    winner. ``None`` when no verdict names a family (``attach.type_unknown``).
+    """
+    for source, verdict in (
+        (TypeVerdictSource.MAGIC, magic),
+        (TypeVerdictSource.DECLARED_MIME, declared_mime),
+        (TypeVerdictSource.CONTAINER_INTROSPECTION, container_introspection),
+    ):
+        if type_family_of(verdict) is not None:
+            return source
+    return None
+
+
 @dataclass(frozen=True)
 class TypeVerdicts:
-    """The three type verdicts plus winner plus disagreement (Turn 0.1)."""
+    """The three type verdicts plus winner plus disagreement (Turn 0.1; decision 6).
 
-    declared_mime: str | None = None
-    magic: str | None = None
-    container_introspection: str | None = None
+    Each verdict is a :class:`TriValue` (design D4: ``value | unknown``). A verdict
+    consulted with nothing matching is ``VALUE(UNRECOGNIZED)``; not computed (a
+    zero-length part, a cap hit, a decode failure) is ``UNKNOWN(reason_id)``; the
+    container introspection is ``UNKNOWN(not_built_in_phase1)`` until Phase 2.
+    """
+
+    declared_mime: TriValue = field(default_factory=TriValue)
+    magic: TriValue = field(default_factory=TriValue)
+    container_introspection: TriValue = field(default_factory=TriValue)
     winner: TypeVerdictSource | None = None
     disagreement: bool = False
 
     def __post_init__(self) -> None:
+        for name in ("declared_mime", "magic", "container_introspection"):
+            verdict = getattr(self, name)
+            if not isinstance(verdict, TriValue):
+                raise CodecError(f"type_verdicts.{name} must be a TriValue, got {verdict!r}")
         if not isinstance(self.disagreement, bool):
             raise CodecError("type_verdicts.disagreement must be bool")
-        if self.winner is not None and getattr(self, self.winner.value) is None:
-            raise CodecError(f"type_verdicts: winner {self.winner.value!r} has no verdict")
+        if self.winner is not None:
+            if not isinstance(self.winner, TypeVerdictSource):
+                raise CodecError(
+                    f"type_verdicts.winner must be a TypeVerdictSource, got {self.winner!r}"
+                )
+            if getattr(self, self.winner.value).state is not TriState.VALUE:
+                raise CodecError(
+                    f"type_verdicts: winner {self.winner.value!r} names no known verdict"
+                )
 
 
 @dataclass(frozen=True)
@@ -485,6 +685,77 @@ class PartRecord:
 
 
 @dataclass(frozen=True)
+class QuoteBoundary:
+    """One quote boundary in one body view (D3; decision 2).
+
+    ``rule_id`` names the table rule that fired, ``kind`` what it found, ``span`` the
+    view's code points it covers and ``prefix_depth`` the ``>``-family depth **per
+    line** (never averaged into a per-view scalar). Only ``kind = quote`` advances
+    ``ordinal`` (the rank within the view): a ``forward``, ``signature``,
+    ``list_footer`` or ``unknown`` boundary carries ordinal 0 (or None) at level 0.
+    """
+
+    rule_id: str
+    kind: BoundaryKind
+    span: Span
+    ordinal: int | None = None
+    prefix_depth: list[int] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        _non_empty(self.rule_id, "quote_boundary.rule_id")
+        if not isinstance(self.kind, BoundaryKind):
+            raise CodecError(f"quote_boundary.kind must be a BoundaryKind, got {self.kind!r}")
+        if not isinstance(self.span, Span):
+            raise CodecError(f"quote_boundary.span must be a Span, got {self.span!r}")
+        if self.ordinal is not None and (
+            isinstance(self.ordinal, bool) or not isinstance(self.ordinal, int)
+        ):
+            raise CodecError("quote_boundary.ordinal must be an int or None")
+        if self.kind is BoundaryKind.QUOTE:
+            if not isinstance(self.ordinal, int) or isinstance(self.ordinal, bool) or self.ordinal < 1:
+                raise CodecError(
+                    "quote_boundary: a quote boundary advances the ordinal, so its ordinal is >= 1"
+                )
+        elif self.ordinal not in (0, None):
+            raise CodecError(
+                f"quote_boundary: only kind=quote advances the ordinal; {self.kind.value!r} "
+                f"carries ordinal 0 or None, got {self.ordinal!r}"
+            )
+        for depth in self.prefix_depth:
+            if isinstance(depth, bool) or not isinstance(depth, int) or depth < 0:
+                raise CodecError(f"quote_boundary.prefix_depth must be ints >= 0, got {depth!r}")
+
+
+@dataclass(frozen=True)
+class ViewLevel:
+    """One body view's resolved quote level and the rule that resolved it (decision 2).
+
+    ``quote_level`` is a **derived rank** (``level = ordinal`` where a structural
+    quote rule fired in the span, else ``level = prefix_depth``); it carries its
+    resolution ``rule_id`` so no consumer has to re-derive it, and nothing may
+    threshold its magnitude. ``disagreement`` is ``view.quote_level_disagreement``:
+    recorded iff a non-zero prefix depth and a structural quote ordinal resolve to
+    different ranks on the same span.
+    """
+
+    view_id: str
+    span: Span
+    quote_level: int
+    resolution_rule_id: str
+    disagreement: bool = False
+
+    def __post_init__(self) -> None:
+        _non_empty(self.view_id, "view_level.view_id")
+        if not isinstance(self.span, Span):
+            raise CodecError(f"view_level.span must be a Span, got {self.span!r}")
+        if isinstance(self.quote_level, bool) or not isinstance(self.quote_level, int):
+            raise CodecError("view_level.quote_level must be an int (a derived rank)")
+        _non_empty(self.resolution_rule_id, "view_level.resolution_rule_id")
+        if not isinstance(self.disagreement, bool):
+            raise CodecError("view_level.disagreement must be bool")
+
+
+@dataclass(frozen=True)
 class AttachmentOccurrence:
     """One attachment occurrence (D12): ``attachment_id`` is the sha256, the
     ``occurrence_path`` is the part path @ occurrence ordinal -- recorded as an
@@ -497,12 +768,14 @@ class AttachmentOccurrence:
     classification: Classification = Classification.UNKNOWN
     selection: Selection = Selection.NOT_APPLICABLE
     status: StatusOutcome | None = None
+    status_axis: TriValue = field(default_factory=not_built_in_phase1)
     filename_raw: str | None = None
     filename_decoded: TriValue = field(default_factory=TriValue)
     cid: str | None = None
     size_bytes: int | None = None
     sha256: str | None = None
     route: str | None = None
+    route_axis: TriValue = field(default_factory=not_built_in_phase1)
     encoding_source: EncodingSource | None = None
     decode_chain: DecodeChain = field(default_factory=DecodeChain)
     decorative_hint: DecorativeHint = field(default_factory=DecorativeHint)
@@ -513,6 +786,10 @@ class AttachmentOccurrence:
         _non_empty(self.attachment_id, "attachment_occurrence.attachment_id")
         _non_empty(self.occurrence_path, "attachment_occurrence.occurrence_path")
         _non_empty(self.part_id, "attachment_occurrence.part_id")
+        _check_axis_pair(
+            self.status, self.status_axis, value_name="status", axis_name="status_axis"
+        )
+        _check_axis_pair(self.route, self.route_axis, value_name="route", axis_name="route_axis")
 
 
 @dataclass(frozen=True)
@@ -625,24 +902,57 @@ class FlagSection:
 
 
 @dataclass(frozen=True)
+class CapRecord:
+    """One structural cap a run hit (decision 6, "not merged: caps").
+
+    ``cap_id`` names the cap, ``cap_value_bytes`` the value the caller set and
+    ``declared_size_bytes`` the declared size that exceeded it. Phase 0 could record
+    only one; a run that hits depth and total bytes records both.
+    """
+
+    cap_id: str
+    cap_value_bytes: int
+    declared_size_bytes: int | None = None
+
+    def __post_init__(self) -> None:
+        _non_empty(self.cap_id, "cap_record.cap_id")
+        if isinstance(self.cap_value_bytes, bool) or not isinstance(self.cap_value_bytes, int):
+            raise CodecError("cap_record.cap_value_bytes must be an int")
+        if self.cap_value_bytes < 0:
+            raise CodecError("cap_record.cap_value_bytes must be >= 0")
+        if self.declared_size_bytes is not None:
+            if isinstance(self.declared_size_bytes, bool) or not isinstance(
+                self.declared_size_bytes, int
+            ):
+                raise CodecError("cap_record.declared_size_bytes must be an int or None")
+            if self.declared_size_bytes < 0:
+                raise CodecError("cap_record.declared_size_bytes must be >= 0")
+
+
+@dataclass(frozen=True)
 class RunRecord:
-    """Run metadata (D6): the run record keeps cap id, cap value and declared size,
-    so a raised cap is a different run. ``not_installed``/``unsupported`` are
-    environmental and live here: re-running with an extra installed flips them
-    without changing content.
+    """Run metadata (D6): the run record keeps **every** cap it hit, so a raised cap is
+    a different run. ``not_installed``/``unsupported`` are environmental and live here:
+    re-running with an extra installed flips them without changing content.
+
+    Migrated in Turn 1.0b: the single ``cap_id``/``cap_value_bytes``/
+    ``declared_size_bytes`` triple is now a list of :class:`CapRecord`, each carrying
+    those three members' meaning; a run that hit one cap (the only shape Phase 0 could
+    produce) is ``caps=[CapRecord(cap_id=..., cap_value_bytes=..., declared_size_bytes=...)]``.
     """
 
     run_id: str
     email_parser_version: str = EMAIL_PARSER_VERSION
     output_schema_version: str = OUTPUT_SCHEMA_VERSION
-    cap_id: str | None = None
-    cap_value_bytes: int | None = None
-    declared_size_bytes: int | None = None
+    caps: list[CapRecord] = field(default_factory=list)
     environment: dict[str, str] = field(default_factory=dict)
     flags: FlagSection = field(default_factory=FlagSection)
 
     def __post_init__(self) -> None:
         _non_empty(self.run_id, "run_record.run_id")
+        for cap in self.caps:
+            if not isinstance(cap, CapRecord):
+                raise CodecError(f"run_record.caps must hold CapRecords, got {cap!r}")
 
 
 @dataclass(frozen=True)
@@ -662,9 +972,13 @@ class EmailDocument:
     parts: list[PartRecord] = field(default_factory=list)
     attachments: list[AttachmentOccurrence] = field(default_factory=list)
     children: list[ChildLink] = field(default_factory=list)
+    children_axis: TriValue = field(default_factory=not_built_in_phase1)
     thread_edges: list[ThreadEdge] = field(default_factory=list)
+    thread_edges_axis: TriValue = field(default_factory=not_built_in_phase1)
     times: list[TimeEvent] = field(default_factory=list)
+    times_axis: TriValue = field(default_factory=not_built_in_phase1)
     same_message_candidates: list[SameMessageCandidate] = field(default_factory=list)
+    same_message_candidates_axis: TriValue = field(default_factory=not_built_in_phase1)
     classification_hint: ClassificationClaim | None = None
     run_record: RunRecord | None = None
     output_schema_version: str = OUTPUT_SCHEMA_VERSION
@@ -678,6 +992,18 @@ class EmailDocument:
             raise CodecError("content_fingerprint must be a ContentFingerprint")
         if not isinstance(self.status, StatusOutcome):
             raise CodecError("status must be a StatusOutcome")
+        for value_name, axis_name in (
+            ("times", "times_axis"),
+            ("thread_edges", "thread_edges_axis"),
+            ("children", "children_axis"),
+            ("same_message_candidates", "same_message_candidates_axis"),
+        ):
+            _check_axis_pair(
+                getattr(self, value_name),
+                getattr(self, axis_name),
+                value_name=value_name,
+                axis_name=axis_name,
+            )
 
 
 # --------------------------------------------------------------------------

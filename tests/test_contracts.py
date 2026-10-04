@@ -66,6 +66,13 @@ from emailextract import (
     record_from_bytes,
     record_to_bytes,
 )
+from emailextract.model import (
+    BoundaryKind,
+    CapRecord,
+    QuoteBoundary,
+    ViewLevel,
+    built_axis,
+)
 
 
 def _flag_hit() -> FlagHit:
@@ -156,8 +163,8 @@ def _email_document() -> EmailDocument:
                 ),
                 decorative_hint=DecorativeHint(state=DecorativeHintState.RULE_ID, rule_id="decorative.rule.border"),
                 type_verdicts=TypeVerdicts(
-                    declared_mime="text/html",
-                    magic="text/html",
+                    declared_mime=TriValue(state=TriState.VALUE, value="text/html"),
+                    magic=TriValue(state=TriState.VALUE, value="text/html"),
                     winner=TypeVerdictSource.DECLARED_MIME,
                     disagreement=False,
                 ),
@@ -171,16 +178,22 @@ def _email_document() -> EmailDocument:
                 classification=Classification.ATTACHMENT,
                 selection=Selection.NOT_APPLICABLE,
                 status=StatusOutcome(status=Status.SKIPPED, reason="size_cap"),
+                status_axis=built_axis(),
                 filename_raw="=?utf-8?b?ZmlsZS56aXA=?=",
                 filename_decoded=TriValue(state=TriState.UNKNOWN, reason_id="decode_failed"),
                 cid="<img-1@example>",
                 size_bytes=1234,
                 sha256="e" * 64,
                 route="mime",
+                route_axis=built_axis(),
                 encoding_source=EncodingSource.FALLBACK,
                 decode_chain=DecodeChain(used_charset="windows-1252", fallback_fired=True),
                 decorative_hint=DecorativeHint(),
-                type_verdicts=TypeVerdicts(magic="application/zip", winner=TypeVerdictSource.MAGIC, disagreement=True),
+                type_verdicts=TypeVerdicts(
+                    magic=TriValue(state=TriState.VALUE, value="application/zip"),
+                    winner=TypeVerdictSource.MAGIC,
+                    disagreement=True,
+                ),
             )
         ],
         children=[
@@ -192,6 +205,7 @@ def _email_document() -> EmailDocument:
                 found_version="1",
             )
         ],
+        children_axis=built_axis(),
         thread_edges=[
             ThreadEdge(
                 child_message_id="<b@example>",
@@ -201,7 +215,9 @@ def _email_document() -> EmailDocument:
                 cross_check=QuoteCrossCheck.CONFLICTS,
             )
         ],
+        thread_edges_axis=built_axis(),
         times=[_time_event()],
+        times_axis=built_axis(),
         same_message_candidates=[
             SameMessageCandidate(
                 left_container_hash="f" * 64,
@@ -211,12 +227,15 @@ def _email_document() -> EmailDocument:
                 body_digest_view=BodyView.HTML,
             )
         ],
+        same_message_candidates_axis=built_axis(),
         classification_hint=ClassificationClaim(hint="msip.label", source="exchange_property"),
         run_record=RunRecord(
             run_id="run-1",
-            cap_id="attachment_size",
-            cap_value_bytes=262144,
-            declared_size_bytes=1234,
+            caps=[
+                CapRecord(
+                    cap_id="attachment_size", cap_value_bytes=262144, declared_size_bytes=1234
+                )
+            ],
             environment={"olefile": "installed"},
         ),
         output_schema_version="1",
@@ -235,7 +254,28 @@ RECORDS = {
     StatusOutcome: StatusOutcome(status=Status.FAILED, reason="extractor_error"),
     ClassificationClaim: ClassificationClaim(hint="msip.label", source="exchange_property"),
     DecodeChain: DecodeChain(declared_cte="base64", used_cte="base64", fallback_fired=True),
-    TypeVerdicts: TypeVerdicts(magic="application/pdf", winner=TypeVerdictSource.MAGIC, disagreement=True),
+    TypeVerdicts: TypeVerdicts(
+        magic=TriValue(state=TriState.VALUE, value="application/pdf"),
+        winner=TypeVerdictSource.MAGIC,
+        disagreement=True,
+    ),
+    CapRecord: CapRecord(
+        cap_id="attachment_size", cap_value_bytes=262144, declared_size_bytes=1234
+    ),
+    QuoteBoundary: QuoteBoundary(
+        rule_id="on_wrote_en",
+        kind=BoundaryKind.QUOTE,
+        span=Span(start=30, end=290),
+        ordinal=1,
+        prefix_depth=[0, 0, 0, 0],
+    ),
+    ViewLevel: ViewLevel(
+        view_id="plain",
+        span=Span(start=0, end=300),
+        quote_level=1,
+        resolution_rule_id="on_wrote_en",
+        disagreement=False,
+    ),
     ContainerFacts: ContainerFacts({"line_endings": "crlf"}),
     ContentFingerprint: ContentFingerprint(body_digest="b" * 64, body_digest_view=BodyView.PLAIN),
     SameMessageCandidate: SameMessageCandidate("a" * 64, "b" * 64, "<a@example>", "c" * 64, BodyView.PLAIN),

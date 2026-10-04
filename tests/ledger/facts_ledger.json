@@ -1,0 +1,26 @@
+{
+  "_comment": "The declared facts of Phase 1 and the closed deferred set. 'phase1' is the exact set of fact ids whose FACTS phase is 1; 'deferred' is the closed list of fact ids deliberately filed at a later phase than 1 (empty by default). A change to a fact's phase in emailextract/evals/l1.py fails tests/test_facts_ledger.py unless this file changes in the same commit.",
+  "phase1": [
+    "document.axes",
+    "headers.projection",
+    "headers.addresses",
+    "headers.date",
+    "headers.decoded",
+    "headers.parameters",
+    "body.text",
+    "body.alternative_group",
+    "body.selection",
+    "body.html_spans",
+    "body.cid_refs",
+    "body.plain_effectively_empty",
+    "body.quote_boundaries",
+    "body.view_levels",
+    "attach.manifest",
+    "attach.types",
+    "attach.filename",
+    "attach.decorative",
+    "attach.cid_use",
+    "gaps.later"
+  ],
+  "deferred": []
+}

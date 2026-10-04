@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Final
 
-OUTPUT_SCHEMA_VERSION: Final[str] = "3"
+OUTPUT_SCHEMA_VERSION: Final[str] = "4"
 """Version of the output record shapes (EmailDocument and everything it carries).
 
 Moves when a record's serialized shape changes in a way that invalidates cached
@@ -35,6 +35,12 @@ stamped). No existing record's fields changed.
 ledger's contracts fingerprint hashes, so the fingerprint moved; no existing
 record's fields changed and the walker's output did not move. Those records carry
 their own matcher version, not this constant.
+
+4: Turn 1.0b (Phase 1 contract turn) declared the not-built axis fields
+(``AttachmentOccurrence.status_axis``/``route_axis`` and the four
+``EmailDocument`` axes), turned the three type verdicts into ``TriValue``, added
+the quote-boundary and view-level records, and replaced ``RunRecord``'s single
+cap with a list of ``CapRecord``. The walker's output did not move.
 """
 
 TEXTMODEL_VERSION: Final[str] = "1"

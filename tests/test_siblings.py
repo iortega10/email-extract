@@ -32,7 +32,9 @@ from emailextract.model import (
     ChildLinkState,
     Status,
     TriState,
+    TriValue,
     TypeVerdicts,
+    built_axis,
 )
 from emailextract.siblings import (
     ROUTE_FORM,
@@ -72,7 +74,11 @@ def _occurrence(*, attachment_id: str = HASH, occurrence_path: str = OCCURRENCE,
         size_bytes=2048,
         sha256=attachment_id,
         route=ROUTE_WORD,
-        type_verdicts=TypeVerdicts(declared_mime=DOCX_TYPE, winner=model.TypeVerdictSource.DECLARED_MIME),
+        route_axis=built_axis(),
+        type_verdicts=TypeVerdicts(
+            declared_mime=TriValue(state=TriState.VALUE, value=DOCX_TYPE),
+            winner=model.TypeVerdictSource.DECLARED_MIME,
+        ),
     )
     fields.update(overrides)
     return AttachmentOccurrence(**fields)  # type: ignore[arg-type]
@@ -181,7 +187,7 @@ def test_a_deleted_child_store_yields_store_absent_and_keeps_the_manifest_useful
     assert occurrence.filename_raw == "filing.docx"
     assert occurrence.size_bytes == 2048
     assert occurrence.sha256 == HASH
-    assert occurrence.type_verdicts.declared_mime == DOCX_TYPE
+    assert occurrence.type_verdicts.declared_mime.value == DOCX_TYPE
     # And only the child-derived facts went unknown.
     assert result.facts.page_count.state is TriState.UNKNOWN
 
