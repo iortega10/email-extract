@@ -388,8 +388,19 @@ test: tests/test_htmltree.py::test_the_tree_records_a_projected_span_per_element
 test: tests/test_htmltree.py::test_the_tree_records_the_referenced_cid_set
 test: tests/test_htmltree.py::test_an_unclosed_container_is_recorded_not_closed
 test: tests/test_htmltree.py::test_style_and_script_are_dropped_from_the_projection
+test: tests/test_htmltree.py::test_the_tree_is_bounded_and_a_cap_hit_is_a_recorded_state
+test: tests/test_htmltree.py::test_a_stray_end_tag_a_mis_nesting_and_a_duplicate_attribute_are_recorded
+test: tests/test_htmltree.py::test_the_implied_end_table_closes_the_open_element
+test: tests/test_htmltree.py::test_the_tree_never_raises_over_a_seeded_mutation_set
 test: tests/test_htmltext.py::test_the_projection_is_stamped_with_htmltext_version
 test: tests/test_htmltext.py::test_an_img_and_an_href_projection_match_the_tree_spans
+test: tests/test_htmltext.py::test_the_projection_rule_id_is_the_htmltext_versions_projection_input
+test: tests/test_htmltext.py::test_the_node_to_span_map_nests_and_siblings_are_ordered
+test: tests/test_htmltext.py::test_the_committed_html_spans_labels_agree_except_the_reported_findings
+test: tests/test_htmltext.py::test_the_projection_never_touches_the_network_or_the_filesystem
+test: tests/test_htmltext.py::test_a_remote_or_data_uri_alt_is_not_projected
+test: tests/test_htmltext.py::test_a_project_cap_is_a_recorded_state_not_an_exception
+test: tests/test_htmltext.py::test_odd_inputs_project_without_raising
 test: tests/test_selection.py::test_the_display_rule_selects_the_plain_alternative
 test: tests/test_selection.py::test_a_selected_html_alternative_marks_the_plain_unselected
 test: tests/test_selection.py::test_an_alternative_group_id_is_message_local
@@ -400,10 +411,24 @@ test: tests/test_htmltree.py::test_the_cid_reference_set_feeds_cid_dangling_and_
 stop: after htmltree.py and the node-to-span map, before selection and the cid set
 ```
 
+**Turn 1.5 as executed.** The four extra `tests/test_htmltree.py` cases (the cap state, the
+stray/mis-nesting/duplicate records, the implied-end table, the seeded mutation sweep) and
+the six extra `tests/test_htmltext.py` cases (the rule-id key, the nesting/ordering map,
+the label-agreement sweep with its pinned findings, the no-network/no-file guard, the
+remote/`data:` projection, the cap state and the odd-input sweep) are the **extras the
+turn's own prompt allowed** ("add any extra to the block, which is allowed, and say so").
+They are declared here and collected. Turn 1.5 stopped at its pre-declared stop point
+(after ``htmltree.py`` and the node-to-span map), so the ``selection.py`` cases and
+``test_the_cid_reference_set_feeds_cid_dangling_and_unreferenced`` are **declared but not
+yet collected**: the turn is not appended to ``BUILT_TURNS`` until its tests all land.
+
 Allow-list (`turn=1.5`): `emailextract/htmltree.py`, `emailextract/htmltext.py`,
 `emailextract/selection.py`, `emailextract/versions.py`, `tests/test_htmltree.py`,
-`tests/test_htmltext.py`, `tests/test_selection.py`, `docs/design/phase1-turn-declarations.md`. Not
-`fixtures/**`.
+`tests/test_htmltext.py`, `tests/test_selection.py`, `tests/support/stdlib_scanner.py`,
+`tests/ledger/label_ledger.json`, `tests/ledger/behavior_ledger.json`,
+`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`, and the narrow
+forced edits the turn reports (`tests/test_phase0_scope.py`, `tests/test_html_parser_experiment.py`).
+Not `fixtures/**`.
 
 ## The quote catalogue increment (between 1.5 and 1.6)
 

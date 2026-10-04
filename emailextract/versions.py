@@ -92,7 +92,7 @@ def _htmltext_version_key(
 HTMLTEXT_VERSION: Final[str] = _htmltext_version_key(
     candidate="htmlparser",
     cpython=".".join(str(part) for part in sys.version_info[:2]),
-    projection="verbatim-non-style-script",
+    projection="verbatim+drop=style,script,head,comment+noelementtext",
     unclosed="recorded-not-closed",
 )
 """Version of the HTML text projection (the key of its four recorded inputs).
@@ -105,10 +105,18 @@ changes. A pure refactor of the projection that changes none of those does not m
 
 Turn 1.0d recorded the HTML parser decision as the experiment in
 ``docs/design/html-parser-experiment.md``: the stdlib tree was chosen, so the CPython
-minor is one of the key's inputs and the lxml wheel is not. This constant ships here
-**symbolically only**; the module the projection lives in (``htmltext.py``) is Turn 1.5,
-and nothing emits output through this constant yet, so the behavior ledger keys nothing
-by it.
+minor is one of the key's inputs and the lxml wheel is not.
+
+Turn 1.5 built ``htmltext.py``, the module the projection actually lives in, and moved
+the ``projection`` input from the experiment's ``verbatim-non-style-script`` to the
+projection's three stated rule ids (``htmltext.PROJECTION_RULE_ID``): the whitespace rule
+(``verbatim``, text nodes uncollapsed), the dropped set
+(``drop=style,script,head,comment``) and the block rule (``noelementtext``, no element
+inserts a character). The frozen ``body.html_spans`` labels decide the whitespace and
+block halves: an open ``<p>`` and an ``<img>`` add nothing while the trailing ``\\r\\n``
+counts, so a collapse or block-newline rule would contradict them. The parser tree
+(``htmltree.py``) and the unclosed rule are unchanged from Turn 1.0d; nothing emits output
+through this constant yet, so the behavior ledger keys nothing by it.
 """
 
 DECODE_CHAIN_VERSION: Final[str] = "2"

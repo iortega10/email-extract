@@ -190,14 +190,14 @@ def test_htmltext_version_gates_the_projection() -> None:
     assert versions.HTMLTEXT_VERSION == key(
         candidate="htmlparser",
         cpython=cpython,
-        projection="verbatim-non-style-script",
+        projection="verbatim+drop=style,script,head,comment+noelementtext",
         unclosed="recorded-not-closed",
     )
     assert versions.HTMLTEXT_VERSION.startswith("1+htmlparser+")
     base = dict(
         candidate="htmlparser",
         cpython=cpython,
-        projection="verbatim-non-style-script",
+        projection="verbatim+drop=style,script,head,comment+noelementtext",
         unclosed="recorded-not-closed",
     )
     for change in (

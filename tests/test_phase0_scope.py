@@ -36,6 +36,8 @@ EXPECTED_LIBRARY = {
     "container.py",
     "dates.py",
     "headers.py",
+    "htmltext.py",
+    "htmltree.py",
     "ids.py",
     "model.py",
     "parse.py",
@@ -70,12 +72,18 @@ BANNED_IMPORTS = {
     "lxml",
     "bs4",
     "html5lib",
-    "html",
     "openpyxl",
     "talon",
     "tnefparse",
     "email_reply_parser",
 }
+
+#: The **only** library modules allowed to import the stdlib ``html`` package: the own tree
+#: (``htmltree.py``) and the projection (``htmltext.py``), both Turn 1.5. The ``html`` ban
+#: moved to this per-module list when the HTML tree landed; it did not disappear, so every
+#: other library module is still refused it (and ``lxml``/``bs4``/``html5lib`` stay banned
+#: everywhere: the parser decision is the stdlib tree, never a third-party parser).
+HTML_MODULES = {"htmltree.py", "htmltext.py"}
 
 #: Substrings that name a piece of later-phase machinery in a function or class name.
 FORBIDDEN_NAME_PARTS = (
@@ -159,7 +167,12 @@ def test_the_modules_are_exactly_the_phase_0_set() -> None:
 
 
 def test_no_library_module_imports_later_phase_machinery() -> None:
-    """The library is contracts: it never opens a CFB, parses HTML, reads `.msg`, or routes."""
+    """The library is contracts: it never opens a CFB, reads `.msg`, or routes.
+
+    The HTML half moved in Turn 1.5: ``html`` is legal **only** in the two modules that own
+    the decided parser (``htmltree.py``/``htmltext.py``); every other module is still
+    refused it, and ``lxml``/``bs4``/``html5lib`` are refused everywhere.
+    """
     offenders: list[str] = []
     for path in _all_modules():
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
@@ -171,7 +184,10 @@ def test_no_library_module_imports_later_phase_machinery() -> None:
             else:
                 continue
             for name in names:
-                if name.split(".")[0] in BANNED_IMPORTS:
+                root = name.split(".")[0]
+                if root in BANNED_IMPORTS:
+                    offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}: {name}")
+                elif root == "html" and path.name not in HTML_MODULES:
                     offenders.append(f"{path.relative_to(ROOT)}:{node.lineno}: {name}")
     assert not offenders, f"a module imports later-phase machinery: {offenders}"
 
