@@ -33,9 +33,12 @@ EVALS = PACKAGE / "evals"
 EXPECTED_LIBRARY = {
     "__init__.py",
     "container.py",
+    "headers.py",
     "ids.py",
     "model.py",
     "parse.py",
+    "rfc2047.py",
+    "rfc2231.py",
     "seam.py",
     "siblings.py",
     "store.py",

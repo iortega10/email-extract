@@ -37,12 +37,15 @@ The oracle measures two facts about the labels rather than the message:
 from __future__ import annotations
 
 import enum
+from collections import Counter
 from dataclasses import dataclass
 from pathlib import Path
 from types import MappingProxyType
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Final, Mapping
 
+from .. import headers as header_stage
 from ..container import EmlContainer
+from ..parse import Limits
 from ..walk import WalkResult, walk
 from .labels import DEFAULT_FIXTURES, Fact, Sidecar, load_sidecar, load_sidecars
 
@@ -59,6 +62,7 @@ __all__ = [
     "check",
     "check_all",
     "check_path",
+    "deferral_counts",
 ]
 
 #: The phase this package claims to be at. Bumping it is what turns "not yet measurable"
@@ -81,10 +85,12 @@ class Measured:
 
     ``result`` is the walker's output, or ``None`` when walking raised: a broken
     measurement is reported ``unmeasurable`` per fact, never allowed to escape as a crash.
+    ``raw`` is the fixture's bytes (read once), the address space every span points into.
     """
 
     sidecar: Sidecar
     result: WalkResult | None
+    raw: bytes = b""
     problem: str | None = None
 
     def walked(self) -> WalkResult:
@@ -192,6 +198,123 @@ def _labels_undetermined(measured: Measured) -> Any:
     return measured.sidecar.facts["labels.undetermined"].value
 
 
+# ------------------------------------------------ Turn 1.1: the header-stage facts
+
+#: The work budget the oracle hands the RFC 2047 decoder: the caller's own limit
+#: (``Limits.max_work_units_per_input_byte``), never a module default the decoder chose.
+WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_work_units_per_input_byte
+
+#: The **live** gap ids of Turn 1.1: the only ``gaps.later`` rows this turn's components
+#: can emit. A label row naming any other id waits for its own turn (``not_yet``).
+LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
+    {
+        header_stage.GAP_HEADERS_DUPLICATE_HEADER,
+        header_stage.GAP_HEADERS_LEADING_BOM,
+        header_stage.GAP_HEADERS_MBOX_FROM_LINE,
+        header_stage.GAP_BODY_LONE_CR_LINE_TERMINATOR,
+        header_stage.GAP_HEADERS_ENCODED_WORD_INVALID,
+    }
+)
+
+#: The turn each deferred ``parsed_value`` column goes live in -- reported by name, never
+#: computed here (no stdlib ``parseaddr``/``parsedate`` to make the gate pass).
+DEFERRED_PARSED_VALUE_TURNS: Final[Mapping[str, str]] = MappingProxyType(
+    {"address_list": "1.2", "date_time": "1.3"}
+)
+
+
+def _region(measured: Measured) -> header_stage.HeaderRegion:
+    """The message's top-level header region, scanned once per fact (cheap; the walk is done)."""
+    return header_stage.header_region(
+        measured.raw, measured.walked(), max_work_units=WORK_UNITS_PER_INPUT_BYTE
+    )
+
+
+def _headers_projection(measured: Measured) -> list[list[Any]]:
+    """``headers.projection`` rows: raw beside parsed, one row per field (folds kept)."""
+    return header_stage.projection_rows(_region(measured))
+
+
+def _headers_decoded(measured: Measured) -> list[list[Any]]:
+    """``headers.decoded`` rows: ``[ordinal, decoded_text]`` for fields with a decoded word."""
+    return header_stage.decoded_rows(_region(measured))
+
+
+def _headers_parameters(measured: Measured) -> list[list[Any]]:
+    """``headers.parameters`` rows for the structured parameters the reader decodes."""
+    return header_stage.parameter_rows(measured.raw, _region(measured))
+
+
+def _gaps_later(measured: Measured) -> list[list[Any]]:
+    """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``."""
+    return [
+        [gap_id, locator, 1, ""]
+        for gap_id, locator in header_stage.later_gaps(_region(measured))
+    ]
+
+
+def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
+    """Compare ``headers.projection`` row by row, deferring the parsed scalar by name.
+
+    Columns 0-3 (ordinal, name, raw_value, parsed_kind) are compared for every row; the
+    parsed scalar (column 4) is compared only where a parser exists this turn (``text``,
+    ``message_id``, ``message_id_list``). For ``address_list`` (Turn 1.2) and ``date_time``
+    (Turn 1.3) the column is **not** compared and the count is reported by name -- never
+    silently skipped, never computed with a stdlib parser to make it pass.
+    """
+    if not isinstance(expected, list) or not isinstance(actual, list):
+        return expected == actual, None
+    if len(expected) != len(actual):
+        return False, f"{len(expected)} labelled row(s), {len(actual)} measured"
+    deferred: Counter[str] = Counter()
+    for labelled, measured in zip(expected, actual):
+        if list(labelled[:4]) != list(measured[:4]):
+            return False, f"row {labelled[0]}: labelled {labelled[:4]}, measured {measured[:4]}"
+        kind = labelled[3]
+        if kind in DEFERRED_PARSED_VALUE_TURNS:
+            deferred[kind] += 1
+            continue
+        if labelled[4] != measured[4]:
+            return (
+                False,
+                f"row {labelled[0]} ({labelled[1]}): parsed_value labelled {labelled[4]!r}, "
+                f"measured {measured[4]!r}",
+            )
+    if not deferred:
+        return True, None
+    return True, "parsed_value not compared this turn: " + ", ".join(
+        f"{count} {kind} row(s) (live in Turn {DEFERRED_PARSED_VALUE_TURNS[kind]})"
+        for kind, count in sorted(deferred.items())
+    )
+
+
+def _gaps_later_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
+    """Compare ``gaps.later`` on this turn's live ids only; other rows wait for their turn.
+
+    A live row is compared on ``(gap_id, locator, phase)`` -- its ``reason`` is prose the
+    package does not write, so it is not compared. A label row naming an id outside
+    :data:`LIVE_GAP_IDS` is reported deferred, never silently dropped.
+    """
+    if not isinstance(expected, list) or not isinstance(actual, list):
+        return expected == actual, None
+    live = sorted(
+        tuple(row[:3]) for row in expected if row and row[0] in LIVE_GAP_IDS
+    )
+    measured = sorted(tuple(row[:3]) for row in actual)
+    if live != measured:
+        return False, f"labelled {live}, measured {measured}"
+    deferred = sum(1 for row in expected if row and row[0] not in LIVE_GAP_IDS)
+    detail = f"{deferred} row(s) name a gap of a later turn (not compared)" if deferred else None
+    return True, detail
+
+
+def _gaps_later_is_deferred(value: Any) -> bool:
+    """A ``gaps.later`` label whose every row names a later turn is deferred whole."""
+    if not isinstance(value, list):
+        return False
+    return not any(isinstance(row, list) and row and row[0] in LIVE_GAP_IDS for row in value)
+
+
 # ----------------------------------------------------------- comparison rules
 
 
@@ -231,13 +354,22 @@ class Measure:
     ``function`` is absent for a fact whose phase has not arrived: the fact is still
     *declared*, with its phase, so a sidecar labelling it is checked for agreement instead
     of being skipped, and so a later phase cannot silently forget it. ``compare`` defaults
-    to equality; only a fact whose sidecar convention is not plain equality overrides it.
+    to equality; only a fact whose sidecar convention is not plain equality overrides it
+    (a partial comparison returns ``(agrees, detail | None)``).
+
+    ``live`` marks a fact whose measurer has **shipped while its phase has not arrived**:
+    ``CURRENT_PHASE`` stays 0, so a declared phase-1 fact is ``not_yet`` -- unless it is
+    ``live``, which is how a turn makes a subset of a phase's facts measurable without
+    claiming the whole phase. ``defer`` lets a live fact still defer per sidecar (a
+    ``gaps.later`` whose every row names a later turn's gap).
     """
 
     phase: int
     function: Callable[[Measured], Any] | None = None
-    compare: Callable[[Any, Any], bool] = _equal
+    compare: Callable[[Any, Any], Any] = _equal
     note: str | None = None
+    live: bool = False
+    defer: Callable[[Any], bool] | None = None
 
 
 #: The published fact ids and the phase each becomes checkable at -- the one place allowed
@@ -282,12 +414,22 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             "alternative display rule (D3/D16; needs the parser)",
         ),
         "headers.decoded": Measure(
-            1, note="[[ordinal, decoded_text]] the RFC 2047-decoded header values (needs the parser)"
+            1,
+            _headers_decoded,
+            live=True,
+            note="[[ordinal, decoded_text]] the RFC 2047-decoded header values (live from Turn 1.1)",
         ),
         "gaps.later": Measure(
             1,
+            _gaps_later,
+            compare=_gaps_later_compare,
+            defer=_gaps_later_is_deferred,
+            live=True,
             note="[[gap_id, locator, phase, reason]] gaps a later phase records, named so a "
-            "later phase cannot mistake silence for agreement",
+            "later phase cannot mistake silence for agreement; Turn 1.1 compares only its own "
+            "live gap ids (headers.duplicate_header / headers.leading_bom / "
+            "headers.mbox_from_line / body.lone_cr_line_terminator / "
+            "headers.encoded_word_invalid) and defers the rest by name",
         ),
         # Phase 1: the parser's fact ids (Turn 1.0b declaration). Every one is declared
         # here at phase 1 with its exact value shape and **no measurer** until its turn
@@ -303,10 +445,15 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "headers.projection": Measure(
             1,
+            _headers_projection,
+            compare=_projection_compare,
+            live=True,
             note="[[ordinal, name, raw_value, parsed_kind, parsed_value], ...] raw beside parsed, "
             "one row per field; the raw value keeps its folds (latin-1 view); parsed_kind is "
             "text|address_list|date_time|message_id|message_id_list|unparsed; parsed_value is null "
-            "where parsed_kind=unparsed",
+            "where parsed_kind=unparsed; live from Turn 1.1, but the parsed_value column is compared "
+            "by name only where a parser exists (text/message_id/message_id_list -- address_list is "
+            "Turn 1.2, date_time Turn 1.3)",
         ),
         "headers.addresses": Measure(
             1,
@@ -325,11 +472,13 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "headers.parameters": Measure(
             1,
+            _headers_parameters,
+            live=True,
             note="[[ordinal, field_name, parameter, decoded_value, decode_state, fallback_reason], "
             "...] one row per structured parameter (a boundary, a charset, a name, a filename); "
             "decode_state is decoded|fallback|undecodable; fallback_reason is null unless "
             "decode_state=fallback, then encoded_word_in_parameter|empty_charset|"
-            "missing_continuation_index|duplicate_continuation_index",
+            "missing_continuation_index|duplicate_continuation_index; live from Turn 1.1",
         ),
         "body.text": Measure(
             1,
@@ -555,13 +704,31 @@ def check_path(
     return check(load_sidecar(path), phase=phase)
 
 
+def deferral_counts(root: Path | str = DEFAULT_FIXTURES) -> dict[str, int]:
+    """How many ``parsed_value`` columns the live ``headers.projection`` left **deferred**.
+
+    Keyed ``headers.projection.<kind>:<turn>`` so the gate can print the counts by name:
+    a ``parsed_value`` comparison deferred to a later turn is reported, never skipped.
+    """
+    counts: Counter[str] = Counter()
+    for sidecar in load_sidecars(root).values():
+        fact = sidecar.facts.get("headers.projection")
+        if fact is None or not isinstance(fact.value, list):
+            continue
+        for row in fact.value:
+            if isinstance(row, list) and len(row) >= 4 and row[3] in DEFERRED_PARSED_VALUE_TURNS:
+                counts[f"headers.projection.{row[3]}:{DEFERRED_PARSED_VALUE_TURNS[row[3]]}"] += 1
+    return dict(counts)
+
+
 def _measure(sidecar: Sidecar) -> Measured:
     """Walk the fixture once; a failure walking is recorded, not raised."""
     try:
-        result = walk(EmlContainer(sidecar.artifact.read_bytes()))
+        raw = sidecar.artifact.read_bytes()
+        result = walk(EmlContainer(raw))
     except Exception as error:  # noqa: BLE001 -- reported per fact, see Measured
         return Measured(sidecar=sidecar, result=None, problem=f"{type(error).__name__}: {error}")
-    return Measured(sidecar=sidecar, result=result)
+    return Measured(sidecar=sidecar, result=result, raw=raw)
 
 
 def _ordered(sidecar: Sidecar) -> list[Fact]:
@@ -583,7 +750,7 @@ def _check_one(measured: Measured, fact: Fact, *, phase: int) -> Outcome:
             f"phase {measure.phase} -- the labels and the harness are out of step, so neither "
             "the pass nor the failure would mean anything"
         )
-    if fact.phase > phase:
+    if fact.phase > phase and not measure.live:
         return Outcome(
             fact_id=fact.id,
             phase=fact.phase,
@@ -591,6 +758,15 @@ def _check_one(measured: Measured, fact: Fact, *, phase: int) -> Outcome:
             where=sidecar.stem,
             expected=fact.value,
             detail=f"due at phase {fact.phase}, the oracle is at phase {phase}",
+        )
+    if measure.defer is not None and measure.defer(fact.value):
+        return Outcome(
+            fact_id=fact.id,
+            phase=fact.phase,
+            status=Status.NOT_YET,
+            where=sidecar.stem,
+            expected=fact.value,
+            detail="every row this sidecar asserts belongs to a later turn",
         )
     if measure.function is None:
         raise OracleError(
@@ -612,12 +788,16 @@ def _check_one(measured: Measured, fact: Fact, *, phase: int) -> Outcome:
 
 
 def _compare(measured: Measured, fact: Fact, measure: Measure, actual: Any) -> Outcome:
-    if measure.compare(fact.value, actual):
+    outcome = measure.compare(fact.value, actual)
+    if isinstance(outcome, tuple):
+        agrees, detail = outcome
+    else:
+        agrees, detail = outcome, None
+    if agrees:
         status = Status.OK
-        detail = None
     else:
         status = Status.MISMATCH
-        detail = f"labelled {_short(fact.value)}, measured {_short(actual)}"
+        detail = detail or f"labelled {_short(fact.value)}, measured {_short(actual)}"
     return Outcome(
         fact_id=fact.id,
         phase=fact.phase,

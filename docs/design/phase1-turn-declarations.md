@@ -209,6 +209,8 @@ test: tests/test_rfc2047.py::test_a_valid_word_decodes
 test: tests/test_rfc2047.py::test_an_invalid_word_records_the_gap
 test: tests/test_rfc2047.py::test_whitespace_between_encoded_words_is_dropped
 test: tests/test_rfc2047.py::test_a_split_character_joins_only_for_the_same_charset
+test: tests/test_rfc2047.py::test_a_split_character_joins_across_spellings_of_one_charset
+test: tests/test_rfc2047.py::test_an_rfc2231_language_suffix_on_the_charset_is_accepted
 test: tests/test_rfc2047.py::test_unfold_keeps_the_whitespace
 test: tests/test_rfc2231.py::test_continuations_reassemble_by_index
 test: tests/test_rfc2231.py::test_a_missing_or_duplicate_index_is_an_error
@@ -220,6 +222,9 @@ test: tests/test_headers.py::test_the_walker_tolerance_bumps_the_parser_version
 test: tests/test_stdlib_header_scanner.py::test_field_names_and_order_match_the_stdlib_raw_view
 test: tests/test_stdlib_header_scanner.py::test_the_scanner_disagrees_only_where_the_stdlib_shares_the_misreading
 test: tests/test_headers.py::test_gap_falsification_duplicate_header_and_leading_bom
+test: tests/test_headers.py::test_a_seeded_fuzz_of_the_header_stage_never_raises
+test: tests/test_rfc2047.py::test_a_seeded_fuzz_of_the_word_decoder_never_raises
+test: tests/test_rfc2231.py::test_a_seeded_fuzz_of_the_parameter_parser_never_raises
 stop: after headers, folds and raw spans; rfc2047.py becomes its own turn if it grows past its ceiling
 ```
 

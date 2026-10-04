@@ -149,6 +149,8 @@ def test_run_record_carries_every_cap_and_the_two_new_reasons() -> None:
 def test_output_schema_version_is_four() -> None:
     """``OUTPUT_SCHEMA_VERSION`` moved 3 to 4; the records default to the constant."""
     assert versions.OUTPUT_SCHEMA_VERSION == "4"
-    assert model.EMAIL_PARSER_VERSION == versions.EMAIL_PARSER_VERSION == "1"
+    # Turn 1.1 bumped the parser version to 2 (the walker's BOM/mbox tolerance); the default
+    # is still the constant, so the records follow it.
+    assert model.EMAIL_PARSER_VERSION == versions.EMAIL_PARSER_VERSION == "2"
     assert model.RunRecord(run_id="r").output_schema_version == "4"
-    assert model.RunRecord(run_id="r").email_parser_version == "1"
+    assert model.RunRecord(run_id="r").email_parser_version == "2"

@@ -47,6 +47,7 @@ __all__ = [
     "UnknownSection",
     "WalkResult",
     "header_fields_at",
+    "leading_prelude",
     "walk",
 ]
 
@@ -75,6 +76,9 @@ GAP_BODY_DECODE_DESTROYED_BYTES = "body.decode_destroyed_bytes"
 
 _FOLD_PREFIXES = (b" ", b"\t")
 _NAME_STOP = 58  # ':' -- RFC 5322 ftext is %d33-57 / %d59-126
+#: The tolerated leading prelude (decision 14): a UTF-8 BOM and an mbox ``From `` line.
+_UTF8_BOM = b"\xef\xbb\xbf"
+_MBOX_PREFIX = b"From "
 _TEXT_LADDER = ("us-ascii", "utf-8", "windows-1252")
 
 
@@ -131,8 +135,9 @@ class Region:
 
     ``kind`` is ``headers`` (a part's header block, its closing blank line
     included), ``body`` (a leaf body), ``preamble`` / ``epilogue`` (a multipart's
-    own accounted bytes) or ``delimiter`` (a boundary line, its preceding CRLF
-    attached per RFC 2046). The regions tile the raw message exactly.
+    own accounted bytes), ``delimiter`` (a boundary line, its preceding CRLF
+    attached per RFC 2046) or ``prelude`` (the tolerated leading BOM / mbox line,
+    decision 14). The regions tile the raw message exactly.
     """
 
     kind: str
@@ -192,6 +197,26 @@ def walk(container: Container) -> WalkResult:
 
 
 # --------------------------------------------------------------------- lines
+
+
+def leading_prelude(raw: bytes, start: int) -> tuple[int, int]:
+    """``(bom_bytes, mbox_bytes)`` for the tolerated leading prelude (decision 14).
+
+    A UTF-8 BOM (``EF BB BF``) at ``start`` and/or an mbox ``From `` envelope line (a first
+    line starting with ``From `` and terminated by LF or CRLF, after the optional BOM) is a
+    leading **prelude**: its own region, so spans still tile exactly, and the header scan
+    starts after it. The mbox line must be terminated -- a ``From `` prefix at EOF with no
+    line ending is not an envelope line. This is the one definition both the walker and
+    :mod:`emailextract.headers` use.
+    """
+    bom = len(_UTF8_BOM) if raw[start : start + len(_UTF8_BOM)] == _UTF8_BOM else 0
+    position = start + bom
+    mbox = 0
+    if raw[position : position + len(_MBOX_PREFIX)] == _MBOX_PREFIX:
+        newline = raw.find(b"\n", position)
+        if newline != -1:
+            mbox = newline + 1 - position
+    return bom, mbox
 
 
 def _iter_lines(raw: bytes, start: int, end: int):
@@ -380,7 +405,18 @@ def _walk_part(
 ) -> None:
     headers, body, gaps = _split_headers_body(raw, span.offset, span.end)
     fields, field_gaps = header_fields_at(raw, span.offset, headers.end)
+    prelude_span = None
+    if path == "1":
+        bom, mbox = leading_prelude(raw, span.offset)
+        prelude_len = bom + mbox
+        if prelude_len:
+            prelude_span = RawSpan(span.offset, prelude_len, path)
+            header_start = span.offset + prelude_len
+            headers, body, gaps = _split_headers_body(raw, header_start, span.end)
+            fields, field_gaps = header_fields_at(raw, header_start, headers.end)
     gaps.extend(field_gaps)
+    if prelude_span is not None:
+        regions.append(Region("prelude", path, prelude_span))
 
     content_type_value = _header_value(fields, raw, "content-type")
     media, params = _split_params(content_type_value) if content_type_value else ("", {})

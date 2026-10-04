@@ -119,7 +119,7 @@ TIMEEVENT_VERSION: Final[str] = "1"
 Moves when that shape changes.
 """
 
-EMAIL_PARSER_VERSION: Final[str] = "1"
+EMAIL_PARSER_VERSION: Final[str] = "2"
 """Version of the email parser behavior.
 
 Moves when the walker's output changes for unchanged input bytes.
@@ -130,6 +130,12 @@ records a version-constant default **symbolically** -- the constant's name, not
 its value -- so bumping this is not a contract change. Before that it was: the
 binary-part charset fix moved ``DECODE_CHAIN_VERSION`` to 2 and not this one for
 exactly that reason.)
+
+2: Turn 1.1 tolerates a leading UTF-8 BOM and/or an mbox ``From `` line as its own
+``prelude`` region (decision 14) instead of reading it as a malformed first field, so
+the walker's regions and the top-level part's header span move for a message with a
+BOM or an mbox line -- the two corpus-3-and-later inputs ``leading_utf8_bom`` and
+``mbox_from_line_at_zero``. The decode chain is unchanged.
 """
 
 MATCHER_VERSION: Final[str] = "1"

@@ -70,3 +70,40 @@ py -V:Astral/CPython3.11.15 tools/html_experiment.py --json   # CPython 3.11.15
 at import from `sys.version_info[:2]` (`emailextract/versions.py`). The lxml wheel is
 **not** a key input, because the chosen candidate does not use it. The constant ships
 symbolically only (`htmltext.py` is Turn 1.5) and the behavior ledger keys nothing by it.
+
+## Turn 1.1 — the header stage, its live facts and the walker tolerance
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.1; the
+command and its output are the record.
+
+* **The L1 oracle now compares 30 more facts, all green.** Command:
+  `python -m emailextract.evals`. Output (both interpreters identical):
+  `L1 matched=777 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=155, phase 3=26`.
+  Before this turn the gate was `matched=747`, `not_yet: phase 1=185, phase 3=26`; the 30
+  newly-live sidecar facts are `headers.projection` (12 sidecars), `headers.decoded` (6),
+  `headers.parameters` (6) and the live `gaps.later` rows (6).
+* **The `parsed_value` column is partial by design.** `headers.projection` compares
+  `(ordinal, name, raw_value, parsed_kind)` on every row and the parsed scalar only where a
+  parser exists this turn. The counts of the deferred column, from
+  `emailextract.evals.l1.deferral_counts()`:
+  `headers.projection.address_list:1.2 = 25`, `headers.projection.date_time:1.3 = 12`. They
+  are deferred **by name** (never computed with a stdlib parser, never silently skipped).
+* **The walker tolerance is a versioned behaviour change.** `EMAIL_PARSER_VERSION` 1 to 2;
+  the behaviour ledger appended five `walk` lines under the new key `2|2|corpus:N`
+  (corpora 1 to 5); the `decode_chain` and `contracts` lines did not move. Command:
+  `python tools/update_behavior_ledger.py` (and `--check` exits 0 on both interpreters).
+  Only `leading_utf8_bom` (corpus 3 and later) and `mbox_from_line_at_zero` change what the
+  walker emits, and by design their sidecars type only `container.sha256` /
+  `container.size_bytes` at phase 0, so no frozen phase-0 label moves.
+* **The stdlib scanner's disagreements are a closed catalogue.** Command:
+  `python -m pytest tests/test_stdlib_header_scanner.py -q` (2 passed). Field-name/order
+  disagreements occur only for `leading_utf8_bom` (shared BOM misreading), `malformed_mime`
+  and `nul_in_header_name` (the package fails open, the stdlib stops at the malformed line),
+  while `mbox_from_line_at_zero` / `lone_cr_in_header_region` agree but prove nothing (listed
+  in the shared-misreading catalogue). The content-type tree disagrees only for
+  `message/rfc822` nesting (2 fixtures, Phase 2 recursion) and the digest child's
+  RFC 2046 5.1.5 default (`body.digest_default_not_applied`). The decoded values agree on
+  every fixture with a valid word.
+* **The fuzz loops are seeded and bounded.** `Random(11_1001)` / `Random(11_2047)` /
+  `Random(11_2231)`; 600 header-region mutations and 1200 + 1200 decoder/parameter inputs.
+  No defect found: the three functions never raised on mutated bytes.
