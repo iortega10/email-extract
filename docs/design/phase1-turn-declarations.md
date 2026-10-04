@@ -156,6 +156,7 @@ Allow-list (`turn=1.0c-C`): `fixtures/generated/`, `fixtures/raw/` (`SHA256SUMS`
 ```declaration turn=1.0d
 module: emailextract/parse.py
 module: emailextract/versions.py
+module: tools/html_experiment.py
 module: docs/design/html-parser-experiment.md
 module: docs/design/phase1-empirical.md
 test: tests/test_parse_entry.py::test_parse_requires_limits_with_no_default
@@ -164,12 +165,20 @@ test: tests/test_parse_entry.py::test_parse_sniffs_cfb_msg_as_a_named_error
 test: tests/test_parse_entry.py::test_parse_sniffs_rfc822_after_an_optional_bom
 test: tests/test_parse_entry.py::test_parse_returns_a_named_error_on_garbage
 test: tests/test_parse_entry.py::test_parse_container_kind_overrides_the_sniff
+test: tests/test_parse_entry.py::test_parse_carries_invalid_input_for_a_non_bytes_input
+test: tests/test_parse_entry.py::test_parse_returns_input_over_cap_before_any_sniff
+test: tests/test_parse_entry.py::test_parse_returns_invalid_container_kind
+test: tests/test_parse_entry.py::test_every_invalid_limits_field_raises_the_named_error
+test: tests/test_parse_entry.py::test_limits_construction_is_the_only_named_error_raised
+test: tests/test_parse_entry.py::test_parse_never_raises_on_hostile_bytes
+test: tests/test_parse_entry.py::test_parse_module_does_not_import_the_stdlib_email_module
 test: tests/test_html_parser_experiment.py::test_the_experiment_runs_over_every_html_fixture
 test: tests/test_html_parser_experiment.py::test_the_experiment_records_the_libxml2_version_and_error_log
 test: tests/test_html_parser_experiment.py::test_the_chosen_candidate_places_quote_containers_identically
 test: tests/test_html_parser_experiment.py::test_an_unclosed_blockquote_is_recorded_not_closed
 test: tests/test_html_parser_experiment.py::test_the_experiment_document_names_the_pinned_wheel
 test: tests/test_html_parser_experiment.py::test_htmltext_version_gates_the_projection
+test: tests/test_html_parser_experiment.py::test_the_package_imports_with_lxml_blocked
 stop: after the HTML decision document and the entry point's named errors
 ```
 

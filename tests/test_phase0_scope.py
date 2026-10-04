@@ -8,9 +8,9 @@ point: the scope is checked where it can be, and the check is loud when it is no
 
 What is asserted here:
 
-* the modules under ``emailextract/`` are exactly the Phase 0 set (``versions``, ``model``,
-  ``timeevent``, ``container``, ``ids``, ``walk``, ``siblings``, ``store``, ``seam`` and
-  ``evals/*``);
+* the modules under ``emailextract/`` are exactly the Phase 0 set plus the Phase 1 entry
+  point (``versions``, ``model``, ``timeevent``, ``container``, ``ids``, ``walk``,
+  ``parse``, ``siblings``, ``store``, ``seam`` and ``evals/*``);
 * no **library** module imports a CFB reader, an HTML parser, a quote/thread library, ``openpyxl``
   or a GPL package;
 * no function or class anywhere in the package is named like a later phase's machinery;
@@ -35,6 +35,7 @@ EXPECTED_LIBRARY = {
     "container.py",
     "ids.py",
     "model.py",
+    "parse.py",
     "seam.py",
     "siblings.py",
     "store.py",

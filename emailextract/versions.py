@@ -11,6 +11,7 @@ is an ordinary field of the record and part of every cache key.
 
 from __future__ import annotations
 
+import sys
 from typing import Final
 
 OUTPUT_SCHEMA_VERSION: Final[str] = "4"
@@ -55,10 +56,44 @@ HEADERTEXT_VERSION: Final[str] = "1"
 Moves when header rendering or normalization changes.
 """
 
-HTMLTEXT_VERSION: Final[str] = "1"
-"""Version of the HTML text projection.
+HTMLTEXT_SCHEMA: Final[str] = "1"
 
-Moves when HTML-to-text extraction changes.
+
+def _htmltext_version_key(
+    *, candidate: str, cpython: str, projection: str, unclosed: str
+) -> str:
+    """The deterministic HTML-text projection key (Turn 1.0d, decision 1).
+
+    The key is a pure function of four recorded inputs: the **parser candidate**
+    (``htmlparser`` for the stdlib tree, or the lxml route), the **interpreter or
+    wheel** the projection ran under (the CPython ``major.minor`` for the stdlib
+    candidate, the pinned lxml wheel / libxml2 for the lxml route), the **projection
+    whitespace rule** and the **unclosed-container rule**. Changing any one moves the
+    constant, so a reader can see exactly what a projection was rendered by.
+    """
+    return "+".join((HTMLTEXT_SCHEMA, candidate, cpython, projection, unclosed))
+
+
+HTMLTEXT_VERSION: Final[str] = _htmltext_version_key(
+    candidate="htmlparser",
+    cpython=".".join(str(part) for part in sys.version_info[:2]),
+    projection="verbatim-non-style-script",
+    unclosed="recorded-not-closed",
+)
+"""Version of the HTML text projection (the key of its four recorded inputs).
+
+Moves when the parser candidate changes (the stdlib tree versus the lxml route), when
+the interpreter or wheel the projection ran under changes -- the CPython ``major.minor``
+for the stdlib candidate, or the pinned lxml wheel with its libxml2 for the lxml route
+-- when the projection whitespace rule changes, or when the unclosed-container rule
+changes. A pure refactor of the projection that changes none of those does not move it.
+
+Turn 1.0d recorded the HTML parser decision as the experiment in
+``docs/design/html-parser-experiment.md``: the stdlib tree was chosen, so the CPython
+minor is one of the key's inputs and the lxml wheel is not. This constant ships here
+**symbolically only**; the module the projection lives in (``htmltext.py``) is Turn 1.5,
+and nothing emits output through this constant yet, so the behavior ledger keys nothing
+by it.
 """
 
 DECODE_CHAIN_VERSION: Final[str] = "2"
