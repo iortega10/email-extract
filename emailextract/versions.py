@@ -56,6 +56,21 @@ HEADERTEXT_VERSION: Final[str] = "1"
 Moves when header rendering or normalization changes.
 """
 
+TEXTPART_VERSION: Final[str] = "1"
+"""Version of the per-part text projection (``emailextract/text.py``, Turn 1.4).
+
+Moves when the part's decoded text changes for unchanged body bytes: the strict/fallback
+decode rule, the RFC 3676 space-unstuffing rule, the ``format=flowed`` detection, or the
+charset alias table's canonicalisation. The offset map's *coordinate space* (the part's
+decoded code points, un-normalised) moving would move this too, because the text and the map
+are one projection.
+
+Nothing emits output through this constant yet: ``text.py``'s records are internal to the
+package (like ``headers.HeaderRegion``), so no contract record and no behavior-ledger line
+keys on it. It ships so a later turn that *does* stamp a citation with the projection has the
+constant already owned by the module that defines the projection.
+"""
+
 HTMLTEXT_SCHEMA: Final[str] = "1"
 
 

@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import base64
 import binascii
-import codecs
 import re
 from dataclasses import dataclass
 from typing import Final
@@ -69,24 +68,25 @@ def canonical_charset(charset: str) -> str | None:
     An RFC 2231 section 5 language suffix (``utf-8*en``) is not part of the charset and is
     stripped first. Two spellings of one charset (``UTF-8``, ``utf8``, ``utf-8``) resolve to
     the same name, which is what "the same charset" means for a split character.
+
+    Turn 1.4 moved the resolution itself into :func:`emailextract.text.canonical_charset`, whose
+    closed alias table is the package's **one** charset resolution point; this is the delegation
+    the rest of the header stage keeps calling.
     """
-    name = charset.split("*", 1)[0]
-    if not name:
-        return None
-    try:
-        return codecs.lookup(name).name
-    except (LookupError, ValueError, TypeError):
-        return None
+    from .text import canonical_charset as _canonical
+
+    return _canonical(charset)
 
 
 def charset_known(charset: str) -> bool:
     """Whether ``charset`` resolves to a codec (the package's one charset resolution point).
 
-    The same resolution the walker's decode chain uses when it calls ``bytes.decode(name)``:
-    a name ``Python`` does not know is unknown here too. Turn 1.4's ``text.py`` owns the
-    alias table; until then this is the single place a charset name is resolved.
+    Turn 1.4: :mod:`emailextract.text` owns the alias table; this delegates to it, so a name
+    Python does not know is unknown in both places.
     """
-    return canonical_charset(charset) is not None
+    from .text import charset_known as _known
+
+    return _known(charset)
 
 
 def unfold(value: bytes) -> bytes:

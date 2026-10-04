@@ -44,6 +44,7 @@ EXPECTED_LIBRARY = {
     "seam.py",
     "siblings.py",
     "store.py",
+    "text.py",
     "timeevent.py",
     "versions.py",
     "walk.py",

@@ -339,12 +339,43 @@ test: tests/test_text.py::test_the_charset_ladder_only_runs_over_text_parts
 test: tests/test_text.py::test_the_splitter_line_starts_equal_iter_lines_over_a_cr_body
 test: tests/test_text.py::test_flowed_space_unstuffing_runs_before_gt_counting
 test: tests/test_text.py::test_flowed_soft_break_join_is_the_recorded_gap
+test: tests/test_text.py::test_the_splitter_does_not_break_on_form_feed_or_u2028
+test: tests/test_text.py::test_no_second_line_splitter_in_text_py
+test: tests/test_text.py::test_the_text_part_decision_is_not_widened
+test: tests/test_text.py::test_the_alias_table_is_closed_sorted_and_collision_free
+test: tests/test_text.py::test_an_unknown_charset_name_is_unknown_not_an_exception
+test: tests/test_text.py::test_an_alias_never_widens_a_charset
+test: tests/test_text.py::test_the_alias_table_is_the_single_charset_resolution_point
+test: tests/test_text.py::test_every_emitted_gap_id_has_an_anti_vacuity_case
+test: tests/test_text.py::test_every_gap_emitted_over_the_corpus_is_catalogued
+test: tests/test_text.py::test_the_flowed_declaration_is_read_case_insensitively
+test: tests/test_text.py::test_text_properties_hold_over_a_seeded_fuzz
+test: tests/test_text.py::test_a_planted_raiser_makes_the_fuzz_fail
+test: tests/test_text.py::test_the_decode_and_the_map_are_linear_on_a_megabyte_body
+test: tests/test_text.py::test_the_committed_body_text_labels_are_green_on_a_copy
+test: tests/test_text.py::test_a_wrong_body_text_fails_the_gate
+test: tests/test_text.py::test_a_wrong_body_text_precision_fails_the_gate
+test: tests/test_text.py::test_a_wrong_body_text_reason_fails_the_gate
+test: tests/test_text.py::test_a_missing_body_text_row_fails_the_gate
+test: tests/test_text.py::test_the_stdlib_scanner_agrees_on_benign_leaf_text
+test: tests/test_text.py::test_the_stdlib_text_exclusions_are_closed_and_reachable
 stop: after the offset map and the shared line model, before the alias table's full sweep
 ```
 
+The block above is Turn 1.4 as executed. The last twenty `test:` lines are the **extras the
+turn's own prompt allowed** ("add any extra to the block, which is allowed, and say so"): the
+source test that forbids a second line splitter, the form-feed/U+2028 anti-`splitlines` test,
+the no-widening tests for the text-part decision and the alias table, the alias-table closure
+and single-resolution-point tests, the gap catalogue with its anti-vacuity case, the seeded
+fuzz with its planted raiser, the 1 MB linearity test and the five L1 falsifiability tests for
+`body.text`. They are declared here and collected.
+
 Allow-list (`turn=1.4`): `emailextract/text.py`, `emailextract/walk.py`, `emailextract/versions.py`,
-`tests/test_text.py`, `docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`. Not
-`fixtures/**`.
+`emailextract/rfc2047.py`, `emailextract/evals/l1.py`, `tests/test_text.py`,
+`tests/support/stdlib_scanner.py`, `tests/ledger/label_ledger.json`, `tests/ledger/behavior_ledger.json`,
+`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`, and the narrow forced
+edits the turn reports (`tests/test_phase0_scope.py`, `tests/test_turn_declarations.py`,
+`tests/test_versions.py`, `tests/test_l1_gate.py`). Not `fixtures/**` or `*.expected.json`.
 
 ## Turn 1.5 -- selection, `htmltree.py`, `htmltext.py`
 

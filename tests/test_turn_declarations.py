@@ -37,7 +37,7 @@ DECLARATIONS = ROOT / "docs" / "design" / "phase1-turn-declarations.md"
 #: turn's allow-list), so "a declaration cannot over-promise" stays true as turns land.
 #: A turn whose block carries a ``pending:`` line is skipped until its family lands: its
 #: declared tests do not exist yet, and the line is removed by the commit that lands it.
-BUILT_TURNS = ("1.0b", "1.0c-A", "1.0c-B", "1.0c-C", "1.0d", "1.1", "1.2", "1.3")
+BUILT_TURNS = ("1.0b", "1.0c-A", "1.0c-B", "1.0c-C", "1.0d", "1.1", "1.2", "1.3", "1.4")
 
 #: The frozen Phase 0 baseline: the node ids collected before Turn 1.0b wrote a test.
 #: Captured at Turn 1.0b and never edited.

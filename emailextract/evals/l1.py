@@ -45,6 +45,7 @@ from typing import Any, Callable, Final, Mapping
 
 from .. import dates as date_stage
 from .. import headers as header_stage
+from .. import text as text_stage
 from ..container import EmlContainer
 from ..parse import Limits
 from ..walk import WalkResult, walk
@@ -205,11 +206,11 @@ def _labels_undetermined(measured: Measured) -> Any:
 #: (``Limits.max_work_units_per_input_byte``), never a module default the decoder chose.
 WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_work_units_per_input_byte
 
-#: The **live** gap ids of Turns 1.1-1.3: the only ``gaps.later`` rows these turns'
+#: The **live** gap ids of Turns 1.1-1.4: the only ``gaps.later`` rows these turns'
 #: components can emit. A label row naming any other id waits for its own turn (``not_yet``).
 #: Turn 1.3 adds the three date gaps (``headers.no_date`` / ``headers.invalid_date`` /
-#: ``headers.date_no_zone``), carried in the header stage's own gap channel (never the
-#: walker's ``part.gaps``).
+#: ``headers.date_no_zone``); Turn 1.4 adds the body stage's ``body.flowed_reflow_unresolved``,
+#: all carried in their stage's own gap channel (never the walker's ``part.gaps``).
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
         header_stage.GAP_HEADERS_DUPLICATE_HEADER,
@@ -220,6 +221,7 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         date_stage.GAP_HEADERS_NO_DATE,
         date_stage.GAP_HEADERS_INVALID_DATE,
         date_stage.GAP_HEADERS_DATE_NO_ZONE,
+        text_stage.GAP_BODY_FLOWED_REFLOW_UNRESOLVED,
     }
 )
 
@@ -266,11 +268,25 @@ def _headers_parameters(measured: Measured) -> list[list[Any]]:
 
 
 def _gaps_later(measured: Measured) -> list[list[Any]]:
-    """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``."""
-    return [
-        [gap_id, locator, 1, ""]
-        for gap_id, locator in header_stage.later_gaps(_region(measured))
+    """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``.
+
+    The header stage's gaps (Turn 1.1-1.3) and the body stage's (Turn 1.4, the flowed part's
+    deferred reflow), each from its own channel -- never the walker's ``part.gaps``.
+    """
+    pairs = [
+        *header_stage.later_gaps(_region(measured)),
+        *text_stage.body_gaps(measured.raw, measured.walked()),
     ]
+    return [[gap_id, locator, 1, ""] for gap_id, locator in pairs]
+
+
+def _body_text(measured: Measured) -> list[list[Any]]:
+    """``body.text`` rows: ``[part, text, verbatim_precision, verbatim_reason]`` per text part.
+
+    A part the walker did not read as text (a multipart, a pdf, a png, an office zip) has no
+    row at all -- the walker's own text-part decision, reused, never widened.
+    """
+    return text_stage.part_text_rows(measured.raw, measured.walked())
 
 
 def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
@@ -546,10 +562,13 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "body.text": Measure(
             1,
+            _body_text,
+            live=True,
             note="[[part, text, verbatim_precision, verbatim_reason], ...]; verbatim_precision is "
             "exact|part_level; verbatim_reason is null when exact, else cte_not_identity|"
             "multibyte_without_offset_map|decode_fallback; a part_level row carries no within-part "
-            "byte span; the coordinate space is the decoded text in code points, un-normalised",
+            "byte span; the coordinate space is the decoded text in code points, un-normalised. "
+            "Live from Turn 1.4 (text.py); a part the walker does not read as text has no row",
         ),
         "body.alternative_group": Measure(
             1,

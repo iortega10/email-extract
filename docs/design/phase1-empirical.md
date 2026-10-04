@@ -196,3 +196,50 @@ uses only its own integer calendar arithmetic, so the date rules cannot drift be
   scanner would show ~4.0), so no run of a repeated delimiter blows up. Runtime ~0.9 s.
 * **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
   run input, never keyed on; the two runs' date results are identical.
+
+## Turn 1.4 — the per-part text projection, the alias table and the offset map
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.4; the
+command and its output are the record. Both interpreters run the suite and the values below are
+identical on CPython **3.14.3** and **3.11.15** (the module imports no stdlib ``email``, and its
+only version-sensitive input is the ``codecs`` table, which is the same on both).
+
+* **The L1 oracle now compares 9 more facts, all green.** Command:
+  `python -m emailextract.evals` (output sha256
+  `3409d6f51ed5f74f2121239a79e81aac2be38119cb9387736fc860a119eaaa10`). Output: `L1 matched=801
+  mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=131, phase 3=26`. Before this turn
+  the gate was `matched=792`, `not_yet: phase 1=140`; the 9 newly-live sidecar facts are
+  `body.text` (8 sidecars: `body_plain_multipart_baseline` 2 rows and 6 raw-body fixtures) and
+  the one `gaps.later` row (`body.flowed_reflow_unresolved` on `flowed_unstuffed_soft_break`).
+* **The corpus's text projection, counted.** Over the 90 committed fixtures the walker measures
+  **180 parts**; **103** of them are text parts and carry a `body.text` row. **95** are `exact`
+  (identity CTE, stateless charset, strict decode, and a map that validates structurally) and
+  **8** are `part_level`: 4 `cte_not_identity`, 3 `decode_fallback`,
+  1 `multibyte_without_offset_map`. Command: the `corpus_text_parts` sweep in
+  `tests/test_text.py` (walking the corpus once) plus `python -m emailextract.evals`.
+* **The stdlib text comparison, extended (the third comparison's text half).** Command:
+  `python -m pytest tests/test_text.py -q`. Over the 90 fixtures, **73** benign leaf texts are
+  comparable and **every one agrees**, byte for byte, between
+  `tests/support/stdlib_scanner.py`'s own reading and `text.py`. **11** closed exclusion reasons
+  fire over the corpus (`non_identity_cte` 18 fixtures, `decode_fallback` 4, `truncated_base64`
+  3, `leaf_count_mismatch` 3, `no_recursion` 2, `flowed` 1, `malformed_qp` 1,
+  `stateful_charset` 1, `leading_bom` 1, `malformed_header_line` 1, `unknown_charset` 0-but-
+  registered): each is a case where the two read different bytes or the stdlib shares the
+  misreading, so a comparison would prove nothing. Two of them were found by *running* the
+  comparison rather than by reasoning: the stdlib reads a leading UTF-8 BOM plus the first
+  header line as the body (`leading_bom`), and a NUL in a field name ends its header block
+  earlier than the walker's fail-open rule does (`malformed_header_line`).
+* **The fuzz loop is seeded and bounded.** `Random(20250304)`; **3536** seeds (34 charset
+  spellings — the alias table's 26 rows plus 8 junk/unknown names — × 4 CTEs including
+  `x-uuencode` × flowed on/off × 13 bodies, with per-seed byte mutations and truncations). No
+  defect found: the analyser never raised, every `exact` result satisfied all five properties,
+  every `part_level` result carried no map, and decoding twice gave an identical record. A
+  planted raiser in `_merge` makes the fuzz fail with the seed, so the loop is not vacuous.
+  Runtime ~1 s.
+* **The decode and the map are linear.** `tests/test_text.py::test_the_decode_and_the_map_are_linear_on_a_megabyte_body`
+  doubles a 1 MB body of `A` and a 1 MB body of `€` and measures one pass each:
+  ascii **0.289 s → 0.556 s** (1.92×) and multibyte **0.987 s → 2.209 s** (2.24×). A quadratic
+  map would show ~4× or worse, so no body size blows the map up; the map is one entry per run,
+  and the all-one-byte-per-code-point case (the 1 MB ASCII body) is a single entry.
+* **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
+  run input, never keyed on; the two runs' text results are identical.

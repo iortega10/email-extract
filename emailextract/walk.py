@@ -245,6 +245,19 @@ def _iter_lines(raw: bytes, start: int, end: int):
         position = cut + 2 if (cut < end - 1 and raw[cut : cut + 2] == b"\r\n") else cut + 1
 
 
+def iter_lines(raw: bytes, start: int, end: int):
+    """The **public** name of the one line model (decision 8): :func:`_iter_lines`.
+
+    The quote splitter, the ``>``-depth counter, the offset map and the quote rules all
+    consume this model and no other -- it lives here, once, and
+    :mod:`emailextract.text` re-exports it rather than copying it. A lone CR is a line
+    terminator, CRLF is one terminator, LF is one; ``str.splitlines``/``bytes.splitlines``
+    are **forbidden** for body text (they also break on form feed, vertical tab, U+2028 and
+    -- after decoding -- U+0085).
+    """
+    return _iter_lines(raw, start, end)
+
+
 def header_fields_at(raw: bytes, start: int, end: int) -> tuple[list[RawHeaderField], list[str]]:
     """The raw-header scanner (spike c01: stdlib offers no byte offsets at all).
 
