@@ -1,0 +1,14 @@
+FROM: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+SUBJECT: mixed case header and param names
+DATE: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <mixed-case-names-1004@example.test>
+mime-version: 1.0
+CONTENT-TYPE: multipart/MIXED; Boundary="b0-MixedCase-20250304"
+
+--b0-MixedCase-20250304
+content-type: text/PLAIN; CHARSET=UTF-8
+
+Mixed case body.
+
+--b0-MixedCase-20250304--

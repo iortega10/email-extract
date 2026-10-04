@@ -1,0 +1,344 @@
+{
+  "fixture": "header_line_over_998_bytes.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message with a single header line longer than 998 bytes (X-Long, 1001 value bytes); the design records the over-long line as a FACT, not a gap",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a 1000-byte run of 'a' is exactly the byte literal a generator table would obscure",
+    "phase_0_facts": "container.*, headers.fields (ordinal 3 is the 1001-byte X-Long value, kept verbatim), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256",
+    "phase_1_facts": "headers.projection (the over-long line is recorded, with no gap id) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9); the 1001-byte value is the byte string the fixture itself carries, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space, so the X-Long value is 1 + 1000 bytes",
+    "expected_gaps": "none: a header line over 998 bytes is a recorded fact in the design, not a gap id",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "e4bae4950a04f0a941f9ba98c3bbface65eadfa3b3f167f6a0f8b3c9206437b6"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 1310
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " header line over 998 bytes",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            27
+          ],
+          [
+            74,
+            37
+          ]
+        ],
+        [
+          3,
+          "X-Long",
+          " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "ok",
+          [
+            111,
+            6
+          ],
+          [
+            118,
+            1001
+          ],
+          [
+            111,
+            1010
+          ]
+        ],
+        [
+          4,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            1121,
+            4
+          ],
+          [
+            1126,
+            31
+          ],
+          [
+            1121,
+            38
+          ]
+        ],
+        [
+          5,
+          "Message-ID",
+          " <long-line-2005@example.test>",
+          "ok",
+          [
+            1159,
+            10
+          ],
+          [
+            1170,
+            30
+          ],
+          [
+            1159,
+            43
+          ]
+        ],
+        [
+          6,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            1202,
+            12
+          ],
+          [
+            1215,
+            4
+          ],
+          [
+            1202,
+            19
+          ]
+        ],
+        [
+          7,
+          "Content-Type",
+          " text/plain; charset=us-ascii",
+          "ok",
+          [
+            1221,
+            12
+          ],
+          [
+            1234,
+            29
+          ],
+          [
+            1221,
+            44
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            1310
+          ],
+          [
+            0,
+            1267
+          ],
+          [
+            1267,
+            43
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            1267
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            1267,
+            43
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "us-ascii",
+          "7bit",
+          "us-ascii",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "281976278eedbaee3df694e66d1b3032d8d789dd2cc069e7b3ce9ba9fdb41af9"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "address_list",
+          "ada@example.test"
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "address_list",
+          "ben@example.test"
+        ],
+        [
+          2,
+          "Subject",
+          " header line over 998 bytes",
+          "text",
+          "header line over 998 bytes"
+        ],
+        [
+          3,
+          "X-Long",
+          " aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "text",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        ],
+        [
+          4,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "date_time",
+          "2025-03-04T08:05:00+00:00"
+        ],
+        [
+          5,
+          "Message-ID",
+          " <long-line-2005@example.test>",
+          "message_id",
+          "<long-line-2005@example.test>"
+        ],
+        [
+          6,
+          "MIME-Version",
+          " 1.0",
+          "text",
+          "1.0"
+        ],
+        [
+          7,
+          "Content-Type",
+          " text/plain; charset=us-ascii",
+          "text",
+          "text/plain; charset=us-ascii"
+        ]
+      ]
+    }
+  }
+}

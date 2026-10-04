@@ -1,0 +1,96 @@
+{
+  "fixture": "rfc2231_empty_charset_fallback.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one base64 application/octet-stream part whose Content-Disposition carries an RFC 2231 extended parameter with an EMPTY charset (filename*=''run.log); an empty charset is decoded with a recorded fallback, never called unparsable (decision 5)",
+    "generator": "tools/make_fixtures.py, from _fixture_rfc2231_empty_charset_fallback (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <rfc2231-empty-charset-1010@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today; the part is not text, so the used charset is null",
+    "phase_1_facts": "headers.parameters and attach.filename: the empty charset is a recorded fallback (fallback_reason empty_charset) and the value decodes to 'run.log'",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D5/D9, RFC 2231), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; headers.parameters rows are per structured parameter of the message's own (top-level) header block",
+    "expected_gaps": "none: the wild form producers emit (an empty charset) is a decode with a recorded fallback, not attach.filename_unparsable",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, the attachment manifest, body views, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "cd5cda71bfce081d91e66b90dd5f480b4fc81edb8885e0de3b4e94968bd4356f"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 416
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " rfc2231 empty charset fallback", "ok", [74, 7], [82, 31], [74, 41]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [115, 4], [120, 31], [115, 38]],
+        [4, "Message-ID", " <rfc2231-empty-charset-1010@example.test>", "ok", [153, 10], [164, 42], [153, 55]],
+        [5, "MIME-Version", " 1.0", "ok", [208, 12], [221, 4], [208, 19]],
+        [6, "Content-Type", " application/octet-stream", "ok", [227, 12], [240, 25], [227, 40]],
+        [7, "Content-Disposition", " attachment; filename*=''run.log", "ok", [267, 19], [287, 32], [267, 54]],
+        [8, "Content-Transfer-Encoding", " base64", "ok", [321, 25], [347, 7], [321, 35]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "application/octet-stream", [0, 416], [0, 358], [358, 58]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 358]],
+        ["body", "1", [358, 58]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "31771aae324d40f9daf258756ab83620203546ae08e68e6131e9ca98b17dd746"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [7, "Content-Disposition", "filename", "run.log", "fallback", "empty_charset"]
+      ]
+    },
+    "attach.filename": {
+      "phase": 1,
+      "value": [
+        ["1", "''run.log", "fallback", "run.log", "empty_charset"]
+      ]
+    }
+  }
+}

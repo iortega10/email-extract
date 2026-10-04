@@ -1,0 +1,8 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: date absent
+Message-ID: <date-absent-1013@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+There is no Date field at all.

@@ -1,0 +1,101 @@
+{
+  "fixture": "rfc2231_segment0_charset.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain message whose Content-Type carries an RFC 2231 extended parameter in two segments with the charset on segment 0 only (name*0*=utf-8''r%C3%A9sum%C3%A9 and name*1*=.txt); the declared charset is utf-8",
+    "generator": "tools/make_fixtures.py, from _fixture_rfc2231_segment0_charset (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <rfc2231-segment0-1008@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today (the scanner reads the media type and the charset, and leaves the extended parameters to Phase 1)",
+    "phase_1_facts": "headers.projection and headers.parameters: the two segments reassemble by index into name 'r\u00e9sum\u00e9.txt' with the charset carried on segment 0 (a legal placement), and the charset parameter itself is decoded",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D5/D9, RFC 2231), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; headers.parameters rows are per structured parameter of the message's own (top-level) header block",
+    "expected_gaps": "none: segment 0 carries the charset and both segment indices are present exactly once, so there is no missing/duplicate continuation index fallback",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "d4370f4e3d1bb6f0e84162046b1b672abac86a14f955d919a651e779f1b7a5a4"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 343
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " rfc2231 segment0 charset", "ok", [74, 7], [82, 25], [74, 35]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [109, 4], [114, 31], [109, 38]],
+        [4, "Message-ID", " <rfc2231-segment0-1008@example.test>", "ok", [147, 10], [158, 37], [147, 50]],
+        [5, "MIME-Version", " 1.0", "ok", [197, 12], [210, 4], [197, 19]],
+        [6, "Content-Type", " text/plain; charset=utf-8; name*0*=utf-8''r%C3%A9sum%C3%A9; name*1*=.txt", "ok", [216, 12], [229, 73], [216, 88]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 343], [0, 306], [306, 37]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 306]],
+        ["body", "1", [306, 37]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "18d34e0daec21c5af05776b55af1e1007261f79924d28712ffc81cb01c4523e9"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " rfc2231 segment0 charset", "text", "rfc2231 segment0 charset"],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [4, "Message-ID", " <rfc2231-segment0-1008@example.test>", "message_id", "<rfc2231-segment0-1008@example.test>"],
+        [5, "MIME-Version", " 1.0", "text", "1.0"],
+        [6, "Content-Type", " text/plain; charset=utf-8; name*0*=utf-8''r%C3%A9sum%C3%A9; name*1*=.txt", "text", "text/plain; charset=utf-8; name*0*=utf-8''r%C3%A9sum%C3%A9; name*1*=.txt"]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [6, "Content-Type", "charset", "utf-8", "decoded", null],
+        [6, "Content-Type", "name", "r\u00e9sum\u00e9.txt", "decoded", null]
+      ]
+    }
+  }
+}

@@ -1,0 +1,96 @@
+{
+  "fixture": "nul_in_header_value.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message with a NUL byte inside a header VALUE (`X-Nul: be\\x00fore`); the field name is well formed, so the field still parses (parse_status ok) and the raw value keeps the NUL",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a NUL byte in a value is exactly what a text generator cannot emit",
+    "phase_0_facts": "container.*, headers.fields (the NUL is in the value, so the field is ordinal 3 with parse_status ok and the raw value ' be\\x00fore'), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256",
+    "phase_1_facts": "headers.projection (a NUL in a value is recorded, not repaired) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space and the NUL byte",
+    "expected_gaps": "none: a NUL in a value is not a malformed line (the NAME is what must be well formed), so headers.malformed_line does not fire",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "6506f27983afca2d51b798e4078f237f8e53f90b9770cc2348122c43a94fe9df"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 316
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " nul in header value", "ok", [74, 7], [82, 20], [74, 30]],
+        [3, "X-Nul", " be\u0000fore", "ok", [104, 5], [110, 8], [104, 16]],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [120, 4], [125, 31], [120, 38]],
+        [5, "Message-ID", " <nul-value-2006@example.test>", "ok", [158, 10], [169, 30], [158, 43]],
+        [6, "MIME-Version", " 1.0", "ok", [201, 12], [214, 4], [201, 19]],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "ok", [220, 12], [233, 29], [220, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 316], [0, 266], [266, 50]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 266]],
+        ["body", "1", [266, 50]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "4241395c21c00c875ed1435df3c825f815a1f852abd0347bcc85c191d4c0b941"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " nul in header value", "text", "nul in header value"],
+        [3, "X-Nul", " be\u0000fore", "text", "be\u0000fore"],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [5, "Message-ID", " <nul-value-2006@example.test>", "message_id", "<nul-value-2006@example.test>"],
+        [6, "MIME-Version", " 1.0", "text", "1.0"],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    }
+  }
+}

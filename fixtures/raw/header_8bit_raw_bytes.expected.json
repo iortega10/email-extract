@@ -1,0 +1,96 @@
+{
+  "fixture": "header_8bit_raw_bytes.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii-body message with 8-bit bytes in a header VALUE (`X-8bit: caf\\xe9 \\x81 end`); the value is viewed losslessly as latin-1 (D2), so the bytes 0xE9 and 0x81 are U+00E9 and U+0081 in the label",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a generator writing UTF-8 text cannot emit the lone 8-bit byte 0x81",
+    "phase_0_facts": "container.*, headers.fields (ordinal 3 keeps the raw 8-bit value as latin-1 text), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256; the BODY is plain ASCII, so the declared us-ascii charset decodes strictly",
+    "phase_1_facts": "headers.projection (the raw value beside its parsed latin-1 view) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2, D13), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a byte span is counted in bytes, not characters, so the single-byte 0xE9 and 0x81 each count one",
+    "expected_gaps": "none: 8-bit bytes in a header value are recorded verbatim and are not a malformed line (the name is ASCII)",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "8ab2e22ef2e88e33fcb5b8d328c7fc364cec6be6823b50d896cc94d39db91562"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 336
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " header 8bit raw bytes", "ok", [74, 7], [82, 22], [74, 32]],
+        [3, "X-8bit", " caf\u00e9 \u0081 end", "ok", [106, 6], [113, 11], [106, 20]],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [126, 4], [131, 31], [126, 38]],
+        [5, "Message-ID", " <header-8bit-2008@example.test>", "ok", [164, 10], [175, 32], [164, 45]],
+        [6, "MIME-Version", " 1.0", "ok", [209, 12], [222, 4], [209, 19]],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "ok", [228, 12], [241, 29], [228, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 336], [0, 274], [274, 62]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 274]],
+        ["body", "1", [274, 62]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "a9e25b5443c53135d8cbc6c8750cb4a046338240fd9f58881a983360f2f2de2f"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " header 8bit raw bytes", "text", "header 8bit raw bytes"],
+        [3, "X-8bit", " caf\u00e9 \u0081 end", "text", "caf\u00e9 \u0081 end"],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [5, "Message-ID", " <header-8bit-2008@example.test>", "message_id", "<header-8bit-2008@example.test>"],
+        [6, "MIME-Version", " 1.0", "text", "1.0"],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    }
+  }
+}

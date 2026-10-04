@@ -99,7 +99,10 @@ class Multi:
 
 
 def _header_block(headers: tuple[tuple[str, str], ...]) -> bytes:
-    return b"".join(name.encode("ascii") + b": " + value.encode("ascii") + CRLF for name, value in headers)
+    # Values are encoded UTF-8: byte-identical to ASCII for every pure-ASCII
+    # value (so the Turn 0.3 fixtures are unchanged), and it lets a fixture
+    # carry the non-ASCII header bytes an IDN or SMTPUTF8 address needs.
+    return b"".join(name.encode("ascii") + b": " + value.encode("utf-8") + CRLF for name, value in headers)
 
 
 def render_part(node) -> bytes:
@@ -597,6 +600,329 @@ def _fixture_preamble_epilogue() -> bytes:
     )
 
 
+# ------------------------------- Family A : headers, date and address fixtures
+
+
+def _fixture_headers_plain_baseline() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Cc", "Cara Copy <cara@example.test>"),
+                ("Subject", _encoded_word("baseline \u2605")),
+                ("Date", PINNED_DATE_0800),
+                ("Message-ID", "<headers-baseline-1001@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"Baseline body.\r\n",
+        )
+    )
+
+
+def _fixture_duplicate_header_mime_version() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "duplicate mime version"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<dup-mime-version-1002@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"Two MIME-Version fields.\r\n",
+        )
+    )
+
+
+def _fixture_mime_version_missing() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "mime version missing"),
+                ("Date", PINNED_DATE_0800),
+                ("Message-ID", "<mime-version-missing-1003@example.test>"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"No MIME-Version field here.\r\n",
+        )
+    )
+
+
+def _fixture_mixed_case_header_and_param_names() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("FROM", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("SUBJECT", "mixed case header and param names"),
+                ("DATE", PINNED_DATE_0805),
+                ("Message-ID", "<mixed-case-names-1004@example.test>"),
+                ("mime-version", "1.0"),
+                ("CONTENT-TYPE", 'multipart/MIXED; Boundary="b0-MixedCase-20250304"'),
+            ],
+            "b0-MixedCase-20250304",
+            [
+                Leaf([("content-type", "text/PLAIN; CHARSET=UTF-8")], b"Mixed case body.\r\n"),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_encoded_word_valid() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", _encoded_word("valid \u2605 word")),
+                ("Date", PINNED_DATE_0800),
+                ("Message-ID", "<encoded-word-valid-1005@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"One valid encoded word.\r\n",
+        )
+    )
+
+
+def _fixture_encoded_word_mixed_charsets() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "=?utf-8?b?TWl4ZWQg?= =?iso-8859-1?q?charsets?="),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<encoded-word-mixed-1006@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"Two adjacent encoded words, two charsets.\r\n",
+        )
+    )
+
+
+def _fixture_encoded_word_split_across_fold() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "=?utf-8?b?4g==?=\r\n =?utf-8?b?mIU=?="),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<encoded-word-split-1007@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"One multibyte character split across two words over a fold.\r\n",
+        )
+    )
+
+
+def _fixture_rfc2231_segment0_charset() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "rfc2231 segment0 charset"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<rfc2231-segment0-1008@example.test>"),
+                ("MIME-Version", "1.0"),
+                (
+                    "Content-Type",
+                    "text/plain; charset=utf-8; name*0*=utf-8''r%C3%A9sum%C3%A9; name*1*=.txt",
+                ),
+            ],
+            b"RFC 2231 charset on segment 0 only.\r\n",
+        )
+    )
+
+
+def _fixture_rfc2231_continuations() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "rfc2231 continuations"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<rfc2231-continuations-1009@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "application/octet-stream"),
+                (
+                    "Content-Disposition",
+                    'attachment; filename*0="report-"; filename*1="part.pdf"',
+                ),
+                ("Content-Transfer-Encoding", "base64"),
+            ],
+            _b64(b"RFC 2231 numbered continuations.\n"),
+        )
+    )
+
+
+def _fixture_rfc2231_empty_charset_fallback() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "rfc2231 empty charset fallback"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<rfc2231-empty-charset-1010@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "application/octet-stream"),
+                ("Content-Disposition", "attachment; filename*=''run.log"),
+                ("Content-Transfer-Encoding", "base64"),
+            ],
+            _b64(b"An empty charset is a recorded fallback.\n"),
+        )
+    )
+
+
+def _fixture_date_stated_zone() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "date stated zone"),
+                ("Date", "Tue, 4 Mar 2025 08:05:00 +0000"),
+                ("Message-ID", "<date-stated-zone-1011@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"A Date with a stated zone.\r\n",
+        )
+    )
+
+
+def _fixture_date_minus_zero() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "date minus zero"),
+                ("Date", "Tue, 4 Mar 2025 08:05:00 -0000"),
+                ("Message-ID", "<date-minus-zero-1012@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"A Date whose zone token is -0000.\r\n",
+        )
+    )
+
+
+def _fixture_date_absent() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "date absent"),
+                ("Message-ID", "<date-absent-1013@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"There is no Date field at all.\r\n",
+        )
+    )
+
+
+def _fixture_address_group() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Friends: ben@example.test, cara@example.test;"),
+                ("Subject", "address group"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<address-group-1014@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"A To field that is a group with two members.\r\n",
+        )
+    )
+
+
+def _fixture_address_undisclosed_recipients() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "undisclosed-recipients:;"),
+                ("Subject", "address undisclosed recipients"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<address-undisclosed-1015@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"A zero-member group in the To field.\r\n",
+        )
+    )
+
+
+def _fixture_address_quoted_comma_display_name() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", '"Doe, Jane" <jane@example.test>'),
+                ("Subject", "address quoted comma display name"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<address-quoted-comma-1016@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"A quoted display name that contains a comma.\r\n",
+        )
+    )
+
+
+def _fixture_address_idn_domain() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ada Sender <ada@b\u00fcro.example.test>"),
+                ("Subject", "address idn domain"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<address-idn-1017@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"An IDN domain kept verbatim.\r\n",
+        )
+    )
+
+
+def _fixture_address_smtputf8_local_part() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Jos\u00e9 <jos\u00e9@example.test>"),
+                ("Subject", "address smtputf8 local part"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<address-smtputf8-1018@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=us-ascii"),
+            ],
+            b"An SMTPUTF8 local part kept verbatim.\r\n",
+        )
+    )
+
+
 # ------------------------------------------- the five TimeEvent conflict fixtures
 
 
@@ -710,6 +1036,24 @@ FIXTURES = {
     "inline_cid_referenced_and_not": _fixture_inline_cid_referenced_and_not,
     "thread_three_refs_chain": _fixture_thread_three_refs_chain,
     "preamble_epilogue": _fixture_preamble_epilogue,
+    "headers_plain_baseline": _fixture_headers_plain_baseline,
+    "duplicate_header_mime_version": _fixture_duplicate_header_mime_version,
+    "mime_version_missing": _fixture_mime_version_missing,
+    "mixed_case_header_and_param_names": _fixture_mixed_case_header_and_param_names,
+    "encoded_word_valid": _fixture_encoded_word_valid,
+    "encoded_word_mixed_charsets": _fixture_encoded_word_mixed_charsets,
+    "encoded_word_split_across_fold": _fixture_encoded_word_split_across_fold,
+    "rfc2231_segment0_charset": _fixture_rfc2231_segment0_charset,
+    "rfc2231_continuations": _fixture_rfc2231_continuations,
+    "rfc2231_empty_charset_fallback": _fixture_rfc2231_empty_charset_fallback,
+    "date_stated_zone": _fixture_date_stated_zone,
+    "date_minus_zero": _fixture_date_minus_zero,
+    "date_absent": _fixture_date_absent,
+    "address_group": _fixture_address_group,
+    "address_undisclosed_recipients": _fixture_address_undisclosed_recipients,
+    "address_quoted_comma_display_name": _fixture_address_quoted_comma_display_name,
+    "address_idn_domain": _fixture_address_idn_domain,
+    "address_smtputf8_local_part": _fixture_address_smtputf8_local_part,
 }
 
 FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)

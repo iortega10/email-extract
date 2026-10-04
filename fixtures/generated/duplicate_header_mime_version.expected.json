@@ -1,0 +1,102 @@
+{
+  "fixture": "duplicate_header_mime_version.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message with two MIME-Version fields (byte-identical); identity of a field is by ordinal, never by name (D2), and the duplicate is a phase-1 gap",
+    "generator": "tools/make_fixtures.py, from _fixture_duplicate_header_mime_version (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <dup-mime-version-1002@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today (the duplicate is kept as two fields, ordinals 5 and 6)",
+    "phase_1_facts": "headers.projection (both MIME-Version rows) and the gap headers.duplicate_header, which the walker does not emit today and so rides in gaps.later",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line",
+    "expected_gaps": "headers.duplicate_header (first emitted in Turn 1.1) on part 1; no phase-0 gap",
+    "not_yet_labelled": "addresses, the Date projection, encoded words (none decoded here), body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "7c11952b6c54185a95e54127e081ea326956842bc216be1ebcd9799ed56d3caf"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 305
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " duplicate mime version", "ok", [74, 7], [82, 23], [74, 33]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [107, 4], [112, 31], [107, 38]],
+        [4, "Message-ID", " <dup-mime-version-1002@example.test>", "ok", [145, 10], [156, 37], [145, 50]],
+        [5, "MIME-Version", " 1.0", "ok", [195, 12], [208, 4], [195, 19]],
+        [6, "MIME-Version", " 1.0", "ok", [214, 12], [227, 4], [214, 19]],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "ok", [233, 12], [246, 29], [233, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 305], [0, 279], [279, 26]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 279]],
+        ["body", "1", [279, 26]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "700c85044be3193b2ff42ae2ce74bd8708a0e70edc07b4385372d77c508fc772"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " duplicate mime version", "text", "duplicate mime version"],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [4, "Message-ID", " <dup-mime-version-1002@example.test>", "message_id", "<dup-mime-version-1002@example.test>"],
+        [5, "MIME-Version", " 1.0", "text", "1.0"],
+        [6, "MIME-Version", " 1.0", "text", "1.0"],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["headers.duplicate_header", "1", 1, "two MIME-Version fields, byte-identical: identity is by ordinal (D2) and walk._header_value takes the first, so the duplicate is recorded as a gap rather than dropped silently"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ada Sender <ada@büro.example.test>
+Subject: address idn domain
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <address-idn-1017@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+An IDN domain kept verbatim.

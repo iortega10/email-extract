@@ -1,0 +1,116 @@
+{
+  "fixture": "headers_plain_baseline.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message: eight header fields (From, To, Cc, an encoded-word Subject, Date, Message-ID, MIME-Version, Content-Type), one blank line, one body; no multipart, no attachment, no gaps",
+    "generator": "tools/make_fixtures.py, from _fixture_headers_plain_baseline (pinned Date Tue, 4 Mar 2025 08:00:00 +0000 and Message-ID <headers-baseline-1001@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "the whole header projection: headers.projection (raw value beside parsed), headers.addresses (one span per address), headers.date (a stated zone) and headers.decoded (the Subject's one encoded word)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; name_span is the name bytes; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the regions tile the message exactly (D9)",
+    "expected_gaps": "none: the message is well formed, its declared charset decodes strictly and its body is plain ASCII",
+    "not_yet_labelled": "body views and quote boundaries (this fixture has no quoting), attachment manifest (none), statuses (phase 2), thread edges and TimeEvents (phase 3)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "93f904a9a9b3507ee0b11ab7958629f80e56ba7cdf533d53f01f79ccba851657"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 317
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Cc", " Cara Copy <cara@example.test>", "ok", [74, 2], [77, 30], [74, 35]],
+        [3, "Subject", " =?utf-8?b?YmFzZWxpbmUg4piF?=", "ok", [109, 7], [117, 29], [109, 39]],
+        [4, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "ok", [148, 4], [153, 31], [148, 38]],
+        [5, "Message-ID", " <headers-baseline-1001@example.test>", "ok", [186, 10], [197, 37], [186, 50]],
+        [6, "MIME-Version", " 1.0", "ok", [236, 12], [249, 4], [236, 19]],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "ok", [255, 12], [268, 29], [255, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 317], [0, 301], [301, 16]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 301]],
+        ["body", "1", [301, 16]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "9ec94f4bf94c4d2da7c2a8c7a1c5bd2c2182d8d2534f67bb50a14f639c5e5546"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Cc", " Cara Copy <cara@example.test>", "address_list", "cara@example.test"],
+        [3, "Subject", " =?utf-8?b?YmFzZWxpbmUg4piF?=", "text", "baseline \u2605"],
+        [4, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "date_time", "2025-03-04T08:00:00+00:00"],
+        [5, "Message-ID", " <headers-baseline-1001@example.test>", "message_id", "<headers-baseline-1001@example.test>"],
+        [6, "MIME-Version", " 1.0", "text", "1.0"],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    },
+    "headers.addresses": {
+      "phase": 1,
+      "value": [
+        [0, "From", [[5, 30, "Ada Sender", "ada@example.test", "parsed", null]]],
+        [1, "To", [[40, 32, "Ben Receiver", "ben@example.test", "parsed", null]]],
+        [2, "Cc", [[77, 30, "Cara Copy", "cara@example.test", "parsed", null]]]
+      ]
+    },
+    "headers.date": {
+      "phase": 1,
+      "value": [
+        [4, " Tue, 4 Mar 2025 08:00:00 +0000", "zone_stated", "+0000", "2025-03-04T08:00:00+00:00"]
+      ]
+    },
+    "headers.decoded": {
+      "phase": 1,
+      "value": [
+        [3, "baseline \u2605"]
+      ]
+    }
+  }
+}

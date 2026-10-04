@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: =?utf-8?b?SGVsbG8?= and =?utf-8?q?a=b?=
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <encoded-word-invalid-2009@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+A B-word with wrong padding and a Q-word with a stray equals.

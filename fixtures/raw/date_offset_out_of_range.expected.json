@@ -1,0 +1,94 @@
+{
+  "fixture": "date_offset_out_of_range.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose Date offset token is +9960 -- outside the design's +/-9959 limit; the offset token is kept as stated and the instant is unknown",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- the generator's pinned dates all carry a legal offset",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256",
+    "phase_1_facts": "headers.date: the zone state stays zone_stated (a token is present) and the offset column keeps '+9960', but the UTC instant cannot be trusted, so utc is ['unknown', 'headers.invalid_date']",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2, RFC 5322 3.3), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space",
+    "expected_gaps": "none at phase 0; the design names no registry id for an out-of-range offset, so the date is recorded as invalid through its utc reason and no new gap id is invented",
+    "not_yet_labelled": "addresses, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "17d6fe5548c16bdb6e0bc841aca13fb5abbf10e171e624ec9cc4329644606a06"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 296
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " date offset out of range", "ok", [74, 7], [82, 25], [74, 35]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +9960", "ok", [109, 4], [114, 31], [109, 38]],
+        [4, "Message-ID", " <date-offset-2011@example.test>", "ok", [147, 10], [158, 32], [147, 45]],
+        [5, "MIME-Version", " 1.0", "ok", [192, 12], [205, 4], [192, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [211, 12], [224, 29], [211, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 296], [0, 257], [257, 39]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 257]],
+        ["body", "1", [257, 39]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "5e49d22c6e77c614115662adb2e7ff9e19bf459192ab75aab083744648fd8bd2"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.date": {
+      "phase": 1,
+      "value": [
+        [3, " Tue, 4 Mar 2025 08:05:00 +9960", "zone_stated", "+9960", ["unknown", "headers.invalid_date"]]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["headers.date", "1", "the design fixes the +/-9959 offset limit and says an invalid date sorts at a named end, but does not say whether an out-of-range offset keeps zone_state 'zone_stated' or becomes 'zone_absent'; zone_stated with the token kept is typed here"]
+      ]
+    }
+  }
+}

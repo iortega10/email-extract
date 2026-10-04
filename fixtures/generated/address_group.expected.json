@@ -1,0 +1,94 @@
+{
+  "fixture": "address_group.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose To field is a group with two members (Friends: ben@example.test, cara@example.test;)",
+    "generator": "tools/make_fixtures.py, from _fixture_address_group (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <address-group-1014@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "headers.addresses: one span per address; the group contributes a group row whose span covers the group name and colon, and each member a parsed row",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, RFC 5322 3.4), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "address spans are BYTE spans into the raw message; the group row's span covers 'Friends:' and each member row the addr-spec bytes, all inside the To field's value span",
+    "expected_gaps": "none: the group syntax is legal and both members are addr-specs",
+    "not_yet_labelled": "the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "593a920a5bc032b922d189dbd36b435720755d90db4fb64a5e37116d1e322115"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 308
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Friends: ben@example.test, cara@example.test;", "ok", [37, 2], [40, 46], [37, 51]],
+        [2, "Subject", " address group", "ok", [88, 7], [96, 14], [88, 24]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [112, 4], [117, 31], [112, 38]],
+        [4, "Message-ID", " <address-group-1014@example.test>", "ok", [150, 10], [161, 34], [150, 47]],
+        [5, "MIME-Version", " 1.0", "ok", [197, 12], [210, 4], [197, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [216, 12], [229, 29], [216, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 308], [0, 262], [262, 46]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 262]],
+        ["body", "1", [262, 46]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "7f6709b56bad63bb9ce9fde04a426b19461a4de4798d81aa5db12dcd1c02a874"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.addresses": {
+      "phase": 1,
+      "value": [
+        [1, "To", [[41, 8, null, null, "group", null], [50, 16, null, "ben@example.test", "parsed", null], [68, 17, null, "cara@example.test", "parsed", null]]]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["headers.addresses", "1", "the FACTS table shows a group as a flat row beside its members but its prose says a zero-member group's member list is [], so the exact nesting of group members in headers.addresses is not fixed; the flat reading is typed here"]
+      ]
+    }
+  }
+}

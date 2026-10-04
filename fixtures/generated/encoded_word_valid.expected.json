@@ -1,0 +1,88 @@
+{
+  "fixture": "encoded_word_valid.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose Subject is a single well-formed RFC 2047 B-word (=?utf-8?b?dmFsaWQg4piFIHdvcmQ=?=); the rest is ASCII",
+    "generator": "tools/make_fixtures.py, from _fixture_encoded_word_valid (pinned Date Tue, 4 Mar 2025 08:00:00 +0000 and Message-ID <encoded-word-valid-1005@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today (the Subject is one field; the raw value keeps the encoded word verbatim)",
+    "phase_1_facts": "headers.decoded: the one valid encoded word decodes to 'valid \u2605 word'",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, RFC 2047), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line",
+    "expected_gaps": "none: the B-word is well formed (correct padding, a resolvable charset), so there is no headers.encoded_word_invalid",
+    "not_yet_labelled": "addresses, the Date projection, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "85d71bd689a0cc4fa3962716b9a4249bf25a6ddda1d668eb6e8da1db1129e668"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 297
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " =?utf-8?b?dmFsaWQg4piFIHdvcmQ=?=", "ok", [74, 7], [82, 33], [74, 43]],
+        [3, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "ok", [117, 4], [122, 31], [117, 38]],
+        [4, "Message-ID", " <encoded-word-valid-1005@example.test>", "ok", [155, 10], [166, 39], [155, 52]],
+        [5, "MIME-Version", " 1.0", "ok", [207, 12], [220, 4], [207, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [226, 12], [239, 29], [226, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 297], [0, 272], [272, 25]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 272]],
+        ["body", "1", [272, 25]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "5460b1d6bb5d1816e0df5344f62d836c26aa40c03bbd8b1f89ec7f8349e989e1"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.decoded": {
+      "phase": 1,
+      "value": [
+        [2, "valid \u2605 word"]
+      ]
+    }
+  }
+}

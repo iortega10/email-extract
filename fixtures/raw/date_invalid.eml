@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: date invalid
+Date: not a date at all
+Message-ID: <date-invalid-2010@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+An invalid Date is never repaired.

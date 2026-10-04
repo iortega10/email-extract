@@ -1,0 +1,90 @@
+{
+  "fixture": "rfc2231_continuations.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one base64 application/octet-stream part whose Content-Disposition carries RFC 2231 numbered continuations (filename*0=\"report-\" and filename*1=\"part.pdf\")",
+    "generator": "tools/make_fixtures.py, from _fixture_rfc2231_continuations (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <rfc2231-continuations-1009@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today; the part is not text, so no charset rung runs and the used charset is null",
+    "phase_1_facts": "headers.parameters: the two numbered segments reassemble by index into the filename 'report-part.pdf'",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D5/D9, RFC 2231), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; headers.parameters rows are per structured parameter of the message's own (top-level) header block",
+    "expected_gaps": "none: both continuation indices are present exactly once, so there is no missing/duplicate index fallback",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, the attachment manifest, body views, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "9c02e8f48ca6d3662121971aa48f8ba5d2269d1fcaee5c1900462b99e135817a"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 419
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " rfc2231 continuations", "ok", [74, 7], [82, 22], [74, 32]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [106, 4], [111, 31], [106, 38]],
+        [4, "Message-ID", " <rfc2231-continuations-1009@example.test>", "ok", [144, 10], [155, 42], [144, 55]],
+        [5, "MIME-Version", " 1.0", "ok", [199, 12], [212, 4], [199, 19]],
+        [6, "Content-Type", " application/octet-stream", "ok", [218, 12], [231, 25], [218, 40]],
+        [7, "Content-Disposition", " attachment; filename*0=\"report-\"; filename*1=\"part.pdf\"", "ok", [258, 19], [278, 56], [258, 78]],
+        [8, "Content-Transfer-Encoding", " base64", "ok", [336, 25], [362, 7], [336, 35]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "application/octet-stream", [0, 419], [0, 373], [373, 46]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 373]],
+        ["body", "1", [373, 46]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "916a4a464c0fdf4ff4cdd046b9ee6201d6d507aa2ecb419b047611eaf7fceb07"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [7, "Content-Disposition", "filename", "report-part.pdf", "decoded", null]
+      ]
+    }
+  }
+}

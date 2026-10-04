@@ -1,0 +1,94 @@
+{
+  "fixture": "address_undisclosed_recipients.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose To field is undisclosed-recipients:; -- a group with zero members",
+    "generator": "tools/make_fixtures.py, from _fixture_address_undisclosed_recipients (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <address-undisclosed-1015@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "headers.addresses: the zero-member group is one group row whose span covers 'undisclosed-recipients:;'",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, RFC 5322 3.4), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "address spans are BYTE spans into the raw message; the zero-member group row's span is the whole group token inside the To field's value span",
+    "expected_gaps": "none: undisclosed-recipients:; is a legal zero-member group, not an unparseable address",
+    "not_yet_labelled": "the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "2e30934bcdd5911a8b1c6dbf3496e4f5654b442969675cd88dd37290e3c7cd4f"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 302
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " undisclosed-recipients:;", "ok", [37, 2], [40, 25], [37, 30]],
+        [2, "Subject", " address undisclosed recipients", "ok", [67, 7], [75, 31], [67, 41]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [108, 4], [113, 31], [108, 38]],
+        [4, "Message-ID", " <address-undisclosed-1015@example.test>", "ok", [146, 10], [157, 40], [146, 53]],
+        [5, "MIME-Version", " 1.0", "ok", [199, 12], [212, 4], [199, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [218, 12], [231, 29], [218, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 302], [0, 264], [264, 38]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 264]],
+        ["body", "1", [264, 38]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "4d49249e0d0cb157d004ff6aad799534067a60120b61b9c925cacc49df191b02"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.addresses": {
+      "phase": 1,
+      "value": [
+        [1, "To", [[41, 24, null, "undisclosed-recipients:;", "group", null]]]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["headers.addresses", "1", "a zero-member group's address_list is written as one group row whose span is the whole 'undisclosed-recipients:;' token; the FACTS table's prose says such a group's member list is [] and its example shows a flat row, so the two readings are recorded here and the example's flat row is typed"]
+      ]
+    }
+  }
+}

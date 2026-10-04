@@ -1,0 +1,11 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: rfc2231 empty charset fallback
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <rfc2231-empty-charset-1010@example.test>
+MIME-Version: 1.0
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename*=''run.log
+Content-Transfer-Encoding: base64
+
+QW4gZW1wdHkgY2hhcnNldCBpcyBhIHJlY29yZGVkIGZhbGxiYWNrLgo=

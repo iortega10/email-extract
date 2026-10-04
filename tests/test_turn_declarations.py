@@ -5,11 +5,18 @@ test function names it will add; this test makes that declaration binding in bot
 directions. It reads the fenced ``declaration`` blocks from
 ``docs/design/phase1-turn-declarations.md`` and asserts:
 
-1. every declared ``test:`` id of a **built** turn is collected (a declared-but-absent
-   test fails, so a declaration cannot over-promise); and
-2. every collected id that neither the frozen Phase 0 baseline nor any declaration
+1. every declared ``test:`` id of a **built, non-pending** turn is collected (a
+   declared-but-absent test fails, so a declaration cannot over-promise); and
+2. every collected test that neither the frozen Phase 0 baseline nor any declaration
    accounts for fails (an undeclared new test fails, so a turn cannot add a test it
    did not declare).
+
+A declaration names a test **function** (``path::function``, the format
+``pytest --collect-only -q`` prints for a plain function test); the comparison is on that
+function part, because a test parametrized over the fixture corpus prints one id per
+parameter set and the corpus grows without a turn adding a function. A block whose body
+carries a ``pending:`` line names a turn that has not landed yet: its declared tests are
+not required to be collected and its declared modules are not required to exist.
 
 The Phase 0 baseline is the literal list of the node ids collected before Turn 1.0b
 wrote any test; it is frozen here and never edited.
@@ -28,7 +35,9 @@ DECLARATIONS = ROOT / "docs" / "design" / "phase1-turn-declarations.md"
 #: The turns whose declaration must be fully collected. A later turn appends its own
 #: turn name here, in the same commit as its tests (this file is in every Phase 1
 #: turn's allow-list), so "a declaration cannot over-promise" stays true as turns land.
-BUILT_TURNS = ("1.0b",)
+#: A turn whose block carries a ``pending:`` line is skipped until its family lands: its
+#: declared tests do not exist yet, and the line is removed by the commit that lands it.
+BUILT_TURNS = ("1.0b", "1.0c-A", "1.0c-B", "1.0c-C")
 
 #: The frozen Phase 0 baseline: the node ids collected before Turn 1.0b wrote a test.
 #: Captured at Turn 1.0b and never edited.
@@ -428,18 +437,21 @@ _BLOCK = re.compile(r"```declaration turn=(?P<turn>[^\s]+)\n(?P<body>.*?)```", r
 
 
 def _parse_declarations(text: str) -> dict[str, dict[str, list[str]]]:
-    """``turn -> {'tests': [...], 'modules': [...]}`` from the fenced declaration blocks."""
+    """``turn -> {'tests': [...], 'modules': [...], 'pending': str | None}``."""
     blocks: dict[str, dict[str, list[str]]] = {}
     for match in _BLOCK.finditer(text):
         tests: list[str] = []
         modules: list[str] = []
+        pending: str | None = None
         for line in match.group("body").splitlines():
             line = line.strip()
             if line.startswith("test:"):
                 tests.append(line[len("test:"):].strip())
             elif line.startswith("module:"):
                 modules.append(line[len("module:"):].strip())
-        blocks[match.group("turn")] = {"tests": tests, "modules": modules}
+            elif line.startswith("pending:"):
+                pending = line[len("pending:"):].strip()
+        blocks[match.group("turn")] = {"tests": tests, "modules": modules, "pending": pending}
     return blocks
 
 
@@ -459,19 +471,37 @@ def _collected() -> list[str]:
     return ids
 
 
+def _function(node_id: str) -> str:
+    """The ``path::function`` part of a node id: a parametrized id names one case.
+
+    A declared test is written ``path::function`` (the format the design fixes for a
+    declaration), while ``--collect-only -q`` prints one id **per parameter set**. A test
+    parametrized over the fixture corpus therefore grows new collected ids as the corpus
+    grows, without a turn adding a test function; comparing the function part keeps the
+    declaration bindable in both directions.
+    """
+    return node_id.split("[", 1)[0]
+
+
 def _missing_declared(
     blocks: dict[str, dict[str, list[str]]], collected: list[str], turns: tuple[str, ...]
 ) -> list[str]:
-    """Every declared test of a built turn that is not collected (direction 1)."""
-    present = set(collected)
+    """Every declared test of a built turn that is not collected (direction 1).
+
+    A turn whose block carries a ``pending:`` line has not landed yet, so its declared
+    tests are not required to be collected.
+    """
+    present = {_function(node_id) for node_id in collected}
     problems: list[str] = []
     for turn in turns:
         block = blocks.get(turn)
         if block is None:
             problems.append(f"turn {turn!r} has no declaration block in the document")
             continue
+        if block.get("pending"):
+            continue
         for test_id in block["tests"]:
-            if test_id not in present:
+            if _function(test_id) not in present:
                 problems.append(f"{test_id} is declared by turn {turn!r} but not collected")
     return problems
 
@@ -480,10 +510,10 @@ def _undeclared(
     collected: list[str], blocks: dict[str, dict[str, list[str]]], baseline: tuple[str, ...]
 ) -> list[str]:
     """Every collected test that neither the baseline nor a declaration accounts for (2)."""
-    allowed = set(baseline)
+    allowed = {_function(node_id) for node_id in baseline}
     for block in blocks.values():
-        allowed.update(block["tests"])
-    return [test_id for test_id in collected if test_id not in allowed]
+        allowed.update(_function(test_id) for test_id in block["tests"])
+    return [test_id for test_id in collected if _function(test_id) not in allowed]
 
 
 def _read_blocks() -> dict[str, dict[str, list[str]]]:
@@ -496,19 +526,35 @@ def test_every_declared_test_is_collected() -> None:
     collected = _collected()
     problems = _missing_declared(blocks, collected, BUILT_TURNS)
     assert not problems, problems
-    # The module lines are checked weakly: the declared file exists.
+    # The module lines are checked weakly: the declared file exists. A pending turn's
+    # modules are not required to exist yet.
     missing = [
         module
         for turn in BUILT_TURNS
+        if not blocks[turn].get("pending")
         for module in blocks[turn]["modules"]
         if not (ROOT / module).exists()
     ]
     assert not missing, missing
     # Direction 1 can fail: a declared-but-absent test is a problem, not a pass.
-    fake = {"1.0b": {"tests": ["tests/test_nope.py::test_absent"], "modules": []}}
+    fake = {"1.0b": {"tests": ["tests/test_nope.py::test_absent"], "modules": [], "pending": None}}
     assert _missing_declared(fake, collected, ("1.0b",)) == [
         "tests/test_nope.py::test_absent is declared by turn '1.0b' but not collected"
     ]
+    # ... still for a NON-pending turn (so an undeclared family cannot hide behind the flag)...
+    landed = "1.0c-A"
+    assert not blocks[landed].get("pending"), f"{landed} must be a landed, checked turn"
+    fake_landed = {
+        landed: {"tests": ["tests/test_nope.py::test_absent"], "modules": [], "pending": None}
+    }
+    assert _missing_declared(fake_landed, collected, (landed,)) == [
+        f"tests/test_nope.py::test_absent is declared by turn {landed!r} but not collected"
+    ]
+    # ... and the flag does exempt a pending turn.
+    fake_pending = {
+        "1.0c-C": {"tests": ["tests/test_nope.py::test_absent"], "modules": [], "pending": "not yet"}
+    }
+    assert _missing_declared(fake_pending, collected, ("1.0c-C",)) == []
 
 
 def test_every_undeclared_test_fails_the_declaration() -> None:

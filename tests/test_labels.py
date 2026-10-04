@@ -56,12 +56,12 @@ def test_the_loader_loads_in_a_bare_interpreter_without_the_parser() -> None:
     )
     assert result.returncode == 0, result.stderr
     report = json.loads(result.stdout.strip().splitlines()[-1])
-    assert report["loaded"] == 16, f"expected 16 sidecars (11 messages + 5 time), got {report}"
+    assert report["loaded"] == 46, f"expected 46 sidecars (41 messages + 5 time), got {report}"
 
 
 def test_every_sidecar_under_fixtures_loads() -> None:
     loaded = load_sidecars(FIXTURES)
-    assert len(loaded) == 16
+    assert len(loaded) == 46
     for stem, sidecar in loaded.items():
         assert isinstance(sidecar, Sidecar)
         assert sidecar.stem == stem

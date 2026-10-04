@@ -1,0 +1,51 @@
+{
+  "fixture": "leading_utf8_bom.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a UTF-8 BOM (EF BB BF) at byte 0 followed by a well-formed text/plain us-ascii message; decision 14 tolerates the BOM as its own leading prelude region and starts the header scan after it",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- the generator's renderer writes headers as UTF-8 text and cannot emit a bare BOM before a field",
+    "phase_0_facts": "ONLY container.sha256 and container.size_bytes are typed at phase 0. The walker today reads the BOM and the first header line as ONE malformed field, losing the From field; decision 14 replaces that in Turn 1.1, so typing headers.fields/part.tree/part.regions/part.gaps/body.preamble_epilogue/decode.chain/body.content_sha256 here would enshrine behaviour that is about to change on purpose and would go red against the walker",
+    "phase_1_facts": "headers.projection carries the expected header-region bytes (the real headers after the prelude, with their raw values verbatim), and the gap headers.leading_bom rides in gaps.later",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, decision 14), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "headers.projection's raw_value column carries the verbatim field value that the header scan must find once the prelude is accounted for; the prelude's own bytes are the BOM (3 bytes) at the front of the message",
+    "expected_gaps": "headers.leading_bom (Phase 1, in gaps.later) on part 1",
+    "not_yet_labelled": "every other phase-0 fact (see phase_0_facts), addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "60c5ef46a33579e614e34ecc766466c83f45a0b2344ae6062a1704488eba4969"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 297
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " leading utf8 bom", "text", "leading utf8 bom"],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [4, "Message-ID", " <leading-bom-2002@example.test>", "message_id", "<leading-bom-2002@example.test>"],
+        [5, "MIME-Version", " 1.0", "text", "1.0"],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["headers.leading_bom", "1", 1, "a UTF-8 BOM sits at byte 0; decision 14 accounts for it as a leading prelude region and starts the header scan after it, and the walker today reads it and the first header line as one malformed field"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "fixture": "lone_cr_in_header_region.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message in which ONE header line is terminated by a lone CR (`X-Lone: one\\rX-Next: two\\r\\n`), so two fields share what a CRLF-only reader would call one line",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a lone CR is exactly the byte a generator's CRLF writer cannot emit",
+    "phase_0_facts": "container.*, headers.fields (nine fields: the lone CR is a line terminator, so X-Lone and X-Next are two fields), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256. Decision 17 keeps the walker's line model, so a lone CR is a line terminator today and the phase-0 facts record that",
+    "phase_1_facts": "document.axes, and the gap body.lone_cr_line_terminator in gaps.later (a Phase 1 id the walker does not emit today)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2, decision 17), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a lone CR is a line terminator, so X-Lone's raw_span ends at the CR (12 bytes) and X-Next's spans the following line; the regions still tile the message exactly",
+    "expected_gaps": "body.lone_cr_line_terminator (Phase 1, in gaps.later) on part 1; no phase-0 gap",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "e5ff08d51b90f74e3e2d5ae79529194b251e8f36dca154b47e947be75bc2465c"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 315
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "X-Lone", " one", "ok", [74, 6], [81, 4], [74, 12]],
+        [3, "X-Next", " two", "ok", [86, 6], [93, 4], [86, 13]],
+        [4, "Subject", " lone cr in header region", "ok", [99, 7], [107, 25], [99, 35]],
+        [5, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [134, 4], [139, 31], [134, 38]],
+        [6, "Message-ID", " <lone-cr-2004@example.test>", "ok", [172, 10], [183, 28], [172, 41]],
+        [7, "MIME-Version", " 1.0", "ok", [213, 12], [226, 4], [213, 19]],
+        [8, "Content-Type", " text/plain; charset=us-ascii", "ok", [232, 12], [245, 29], [232, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 315], [0, 278], [278, 37]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 278]],
+        ["body", "1", [278, 37]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "c1bd4b00a9d4236e9ea3fcd9635ecbd819bd7e9ff8d97e3a711076d2770d2f35"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["body.lone_cr_line_terminator", "1", 1, "a lone CR terminates a header line; decision 17 keeps the walker's line model, so the CR is a terminator and the standing gap is recorded rather than the framing being changed"]
+      ]
+    }
+  }
+}

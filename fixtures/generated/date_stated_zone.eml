@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: date stated zone
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <date-stated-zone-1011@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+A Date with a stated zone.

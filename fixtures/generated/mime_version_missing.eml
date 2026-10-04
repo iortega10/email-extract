@@ -1,0 +1,8 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: mime version missing
+Date: Tue, 4 Mar 2025 08:00:00 +0000
+Message-ID: <mime-version-missing-1003@example.test>
+Content-Type: text/plain; charset=us-ascii
+
+No MIME-Version field here.

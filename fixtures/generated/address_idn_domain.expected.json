@@ -1,0 +1,88 @@
+{
+  "fixture": "address_idn_domain.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii-body message whose To field carries an IDN U-label domain (ada@b\u00fcro.example.test) written as UTF-8 bytes in the header value; the domain is kept verbatim and never IDNA-normalised",
+    "generator": "tools/make_fixtures.py, from _fixture_address_idn_domain (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <address-idn-1017@example.test>); the generator writes the value as UTF-8",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today; headers.fields' raw_value is the latin-1 view of the raw bytes, so the UTF-8 domain shows as the mojibake 'b\u00c3\u00baro' there",
+    "phase_1_facts": "headers.addresses: the addr-spec keeps the U-label verbatim ('ada@b\u00fcro.example.test'), never converted to an A-label",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, RFC 5322 3.2.3), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "address spans are BYTE spans into the raw message; the To row's span is the field's value span in bytes (the UTF-8 bytes of the U-label are counted as bytes, not characters)",
+    "expected_gaps": "none: a verbatim U-label is a legal (if unusual) addr-spec and the design records IDN/SMTPUTF8 as kept, not repaired",
+    "not_yet_labelled": "the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "b6e53a64f328a77a0a3198a2242da15bc693b4595a0eab32d4a62bd1310f954e"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 285
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ada Sender <ada@b\u00c3\u00bcro.example.test>", "ok", [37, 2], [40, 36], [37, 41]],
+        [2, "Subject", " address idn domain", "ok", [78, 7], [86, 19], [78, 29]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [107, 4], [112, 31], [107, 38]],
+        [4, "Message-ID", " <address-idn-1017@example.test>", "ok", [145, 10], [156, 32], [145, 45]],
+        [5, "MIME-Version", " 1.0", "ok", [190, 12], [203, 4], [190, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [209, 12], [222, 29], [209, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 285], [0, 255], [255, 30]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 255]],
+        ["body", "1", [255, 30]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "5c8566f241f128028daf9f63a07b52a1c70a522ac4190bc528c08ebe3e9fffec"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.addresses": {
+      "phase": 1,
+      "value": [
+        [1, "To", [[40, 36, "Ada Sender", "ada@b\u00fcro.example.test", "parsed", null]]]
+      ]
+    }
+  }
+}

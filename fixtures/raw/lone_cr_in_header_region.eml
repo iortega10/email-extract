@@ -1,0 +1,10 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+X-Lone: oneX-Next: two
+Subject: lone cr in header region
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <lone-cr-2004@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+A lone CR terminates a header line.

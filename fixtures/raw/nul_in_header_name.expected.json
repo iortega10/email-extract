@@ -1,0 +1,96 @@
+{
+  "fixture": "nul_in_header_name.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose line `X-Nul\\x00Name: value` has a NUL in the FIELD NAME, so the name is not ftext (RFC 5322 %d33-57/%d59-126) and the line becomes its own unknown paragraph",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a NUL byte in a name is exactly what a text generator cannot emit",
+    "phase_0_facts": "container.*, headers.fields (ordinal 3 is the unknown paragraph: name '', parse_status 'unknown', an empty name_span, the line as its raw value), part.tree, part.regions, part.gaps (headers.malformed_line, which the walker emits TODAY), body.preamble_epilogue, decode.chain and body.content_sha256",
+    "phase_1_facts": "headers.projection (the unknown paragraph has parsed_kind unparsed and parsed_value null) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "an unknown paragraph has an empty name_span (length 0), its value_span covers the whole line content (no colon split), and its raw_span includes the line ending; the header region does NOT end (fail-open, D2)",
+    "expected_gaps": "headers.malformed_line on part 1 -- emitted by the walker today, so it stays in part.gaps",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "5f1728fe2ffae2475298aec19dae78e8f4444ae0e68ef5f67af9b2d399cbedb3"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 321
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " nul in header name", "ok", [74, 7], [82, 19], [74, 29]],
+        [3, "", "X-Nul\u0000Name: value", "unknown", [103, 0], [103, 17], [103, 19]],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [122, 4], [127, 31], [122, 38]],
+        [5, "Message-ID", " <nul-name-2007@example.test>", "ok", [160, 10], [171, 29], [160, 42]],
+        [6, "MIME-Version", " 1.0", "ok", [202, 12], [215, 4], [202, 19]],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "ok", [221, 12], [234, 29], [221, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 321], [0, 267], [267, 54]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 267]],
+        ["body", "1", [267, 54]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", ["headers.malformed_line"]]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "0555e67a6769e09da608b04c05edda959a3ad01152dce9cc6105e9e2abe40ab3"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " nul in header name", "text", "nul in header name"],
+        [3, "", "X-Nul\u0000Name: value", "unparsed", null],
+        [4, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [5, "Message-ID", " <nul-name-2007@example.test>", "message_id", "<nul-name-2007@example.test>"],
+        [6, "MIME-Version", " 1.0", "text", "1.0"],
+        [7, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    }
+  }
+}

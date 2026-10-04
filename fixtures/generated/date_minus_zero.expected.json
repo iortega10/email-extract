@@ -1,0 +1,88 @@
+{
+  "fixture": "date_minus_zero.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message whose Date zone token is -0000 (RFC 5322: no local time is known); it is never read as +0000",
+    "generator": "tools/make_fixtures.py, from _fixture_date_minus_zero (pinned Message-ID <date-minus-zero-1012@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "headers.date: the zone state is zone_stated_minus_zero with the offset token '-0000'; the UTC instant is the same instant a +0000 would give only because there is no local-time information to apply, and the STATE is what a reader must not lose (D2)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9, RFC 5322 3.3), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line",
+    "expected_gaps": "none: -0000 is a legal zone token and is recorded, never repaired",
+    "not_yet_labelled": "addresses, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "50a7e8040c3bc3d045bad0bd7c89d5688254b50edc4845b4d2256459652e40b5"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 287
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " date minus zero", "ok", [74, 7], [82, 16], [74, 26]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 -0000", "ok", [100, 4], [105, 31], [100, 38]],
+        [4, "Message-ID", " <date-minus-zero-1012@example.test>", "ok", [138, 10], [149, 36], [138, 49]],
+        [5, "MIME-Version", " 1.0", "ok", [187, 12], [200, 4], [187, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [206, 12], [219, 29], [206, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 287], [0, 252], [252, 35]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 252]],
+        ["body", "1", [252, 35]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "94b87effd4212f65b374aaca8b0c00569e61ac4e5f716ff6f78c1035ee3144b3"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.date": {
+      "phase": 1,
+      "value": [
+        [3, " Tue, 4 Mar 2025 08:05:00 -0000", "zone_stated_minus_zero", "-0000", "2025-03-04T08:05:00+00:00"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,92 @@
+{
+  "fixture": "mime_version_missing.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message with no MIME-Version field at all -- a legal state, not a gap",
+    "generator": "tools/make_fixtures.py, from _fixture_mime_version_missing (pinned Date Tue, 4 Mar 2025 08:00:00 +0000 and Message-ID <mime-version-missing-1003@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "headers.projection over six fields, and document.axes (every phase-1 axis is the not-built TriValue)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D6/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line",
+    "expected_gaps": "none: a missing MIME-Version is a legal state (RFC 2045 makes 1.0 the default) and the design records no id for it",
+    "not_yet_labelled": "addresses, the Date projection and encoded words (present but not this fixture's point), body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "6405ccdcb6fb639fd3093b84511f887cf65e146d8c7266787226d2467c7bb305"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 272
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " mime version missing", "ok", [74, 7], [82, 21], [74, 31]],
+        [3, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "ok", [105, 4], [110, 31], [105, 38]],
+        [4, "Message-ID", " <mime-version-missing-1003@example.test>", "ok", [143, 10], [154, 41], [143, 54]],
+        [5, "Content-Type", " text/plain; charset=us-ascii", "ok", [197, 12], [210, 29], [197, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 272], [0, 243], [243, 29]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 243]],
+        ["body", "1", [243, 29]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "ecf750a51023f6a2da9ff1ebd421699bc6e8c1ebed64db4f65eaa1b8cc09bf38"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " mime version missing", "text", "mime version missing"],
+        [3, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "date_time", "2025-03-04T08:00:00+00:00"],
+        [4, "Message-ID", " <mime-version-missing-1003@example.test>", "message_id", "<mime-version-missing-1003@example.test>"],
+        [5, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"]
+      ]
+    }
+  }
+}

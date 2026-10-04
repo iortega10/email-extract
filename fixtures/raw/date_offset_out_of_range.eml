@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: date offset out of range
+Date: Tue, 4 Mar 2025 08:05:00 +9960
+Message-ID: <date-offset-2011@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+An offset outside plus or minus 9959.

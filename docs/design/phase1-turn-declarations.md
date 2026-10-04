@@ -70,27 +70,67 @@ result to record.
 ## Turn 1.0c -- fixtures and hand-typed sidecars, by family
 
 **Three commits, one per family** (`docs/design/phase1-fixtures.md`); each family is at most 30 pairs and
-its tests are the family's loader check. The declaration is one block because the three commits are one
-turn's work; the **owner commit point is per family**.
+its tests are the family's loader check. The declaration is **split into three blocks -- 1.0c-A, 1.0c-B and
+1.0c-C -- so a commit that lands one family can be checked on its own**; the **owner commit point is per
+family**. The two later blocks carry a `pending:` line until their family lands: the declaration test
+(`tests/test_turn_declarations.py`) honours it by not requiring a pending turn's declared tests to be
+collected (they do not exist yet) and by not requiring its declared modules to exist. The `pending:` line is
+removed by the commit that lands that family, which also adds the family's structure tests to its block.
 
-```declaration turn=1.0c
+```declaration turn=1.0c-A
 module: tools/make_fixtures.py
 module: tools/write_raw_fixtures.py
 module: fixtures/generated/
 module: fixtures/raw/
+module: tests/ledger/label_ledger.json
 test: tests/test_fixture_census.py::test_every_design_phase1_fixture_is_in_the_catalogue
 test: tests/test_fixture_census.py::test_every_catalogue_row_has_a_committed_fixture
 test: tests/test_phase1_family_a.py::test_the_headers_family_labels_load_and_are_ledgered
+test: tests/test_phase1_family_a.py::test_every_family_a_fact_id_is_declared
+test: tests/test_phase1_family_a.py::test_every_typed_span_slices_the_fixture_bytes
+test: tests/test_phase1_family_a.py::test_every_family_a_gap_id_is_a_known_id
+test: tests/test_phase1_family_a.py::test_the_family_meets_the_facts_the_catalogue_names
+test: tests/test_phase1_family_a.py::test_the_new_fact_shapes_are_well_formed
+test: tests/test_phase1_family_a.py::test_the_span_check_fails_on_a_planted_wrong_span
+test: tests/test_phase1_family_a.py::test_the_coverage_check_fails_on_a_missing_fact
+stop: after the headers, date and address family (commit 1 of 3)
+```
+
+Allow-list (`turn=1.0c-A`): `fixtures/generated/`, `fixtures/raw/` (`SHA256SUMS` appended only),
+`tools/make_fixtures.py`, `tools/write_raw_fixtures.py`, `tests/ledger/label_ledger.json`,
+`tests/test_fixture_census.py`, `tests/test_phase1_family_a.py`, `docs/design/phase1-turn-declarations.md`.
+The `fixtures/**` and `*.expected.json` paths are **only** allowed in the three 1.0c commits and in no later
+turn.
+
+```declaration turn=1.0c-B
+pending: the body/HTML family (commit 2 of 3) has not landed yet
+module: tools/make_fixtures.py
+module: tools/write_raw_fixtures.py
+module: fixtures/generated/
+module: fixtures/raw/
+module: tests/ledger/label_ledger.json
 test: tests/test_phase1_family_b.py::test_the_body_family_labels_load_and_are_ledgered
+stop: after the body and HTML family (commit 2 of 3)
+```
+
+Allow-list (`turn=1.0c-B`): `fixtures/generated/`, `fixtures/raw/` (`SHA256SUMS` appended only),
+`tools/make_fixtures.py`, `tools/write_raw_fixtures.py`, `tests/ledger/label_ledger.json`,
+`tests/test_fixture_census.py`, `tests/test_phase1_family_b.py`, `docs/design/phase1-turn-declarations.md`.
+
+```declaration turn=1.0c-C
+pending: the attachments/caps family (commit 3 of 3) has not landed yet
+module: tools/make_fixtures.py
+module: tools/write_raw_fixtures.py
+module: fixtures/generated/
+module: fixtures/raw/
+module: tests/ledger/label_ledger.json
 test: tests/test_phase1_family_c.py::test_the_attachments_family_labels_load_and_are_ledgered
 stop: after the attachments/caps family (the last of the three), before Turn 1.0d
 ```
 
-Allow-list (`turn=1.0c`): `fixtures/generated/`, `fixtures/raw/`, `tools/make_fixtures.py`,
-`tools/write_raw_fixtures.py`, `tests/ledger/label_ledger.json`, `tests/test_fixture_census.py`,
-`tests/test_phase1_family_a.py`, `tests/test_phase1_family_b.py`, `tests/test_phase1_family_c.py`,
-`docs/design/phase1-turn-declarations.md`. The `fixtures/**` and `*.expected.json` paths are **only**
-allowed here and in no later turn.
+Allow-list (`turn=1.0c-C`): `fixtures/generated/`, `fixtures/raw/` (`SHA256SUMS` appended only),
+`tools/make_fixtures.py`, `tools/write_raw_fixtures.py`, `tests/ledger/label_ledger.json`,
+`tests/test_fixture_census.py`, `tests/test_phase1_family_c.py`, `docs/design/phase1-turn-declarations.md`.
 
 ## Turn 1.0d -- entry point, limits, named errors, the HTML decision experiment
 

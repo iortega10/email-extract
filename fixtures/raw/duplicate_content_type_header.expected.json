@@ -1,0 +1,102 @@
+{
+  "fixture": "duplicate_content_type_header.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain us-ascii message with two Content-Type fields (text/plain; charset=us-ascii then text/html; charset=utf-8); identity is by ordinal (D2) and the first wins",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- a duplicate-header mutation the generator would have to encode",
+    "phase_0_facts": "container.*, headers.fields (eight fields: the two Content-Type lines are ordinals 6 and 7), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain (which reads the FIRST Content-Type: text/plain, us-ascii) and body.content_sha256",
+    "phase_1_facts": "headers.projection over all eight fields and the gap headers.duplicate_header, which the walker does not emit today and so rides in gaps.later",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line",
+    "expected_gaps": "headers.duplicate_header (Phase 1, in gaps.later) on part 1; no phase-0 gap",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "604a2ec09abea8e1de284503c45628e7b0e52c4e33b8ddc8fd0feee25186fa7b"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 343
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " duplicate content type header", "ok", [74, 7], [82, 30], [74, 40]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [114, 4], [119, 31], [114, 38]],
+        [4, "Message-ID", " <dup-content-type-2001@example.test>", "ok", [152, 10], [163, 37], [152, 50]],
+        [5, "MIME-Version", " 1.0", "ok", [202, 12], [215, 4], [202, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [221, 12], [234, 29], [221, 44]],
+        [7, "Content-Type", " text/html; charset=utf-8", "ok", [265, 12], [278, 25], [265, 40]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 343], [0, 307], [307, 36]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 307]],
+        ["body", "1", [307, 36]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "719d0959235d11254b64c508ff979bda7304a2f4cead283381a15e805f3eaf1a"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "Subject", " duplicate content type header", "text", "duplicate content type header"],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [4, "Message-ID", " <dup-content-type-2001@example.test>", "message_id", "<dup-content-type-2001@example.test>"],
+        [5, "MIME-Version", " 1.0", "text", "1.0"],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "text", "text/plain; charset=us-ascii"],
+        [7, "Content-Type", " text/html; charset=utf-8", "text", "text/html; charset=utf-8"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["headers.duplicate_header", "1", 1, "two Content-Type fields that disagree (text/plain vs text/html); walk._header_value takes the first, so the duplicate is recorded as a gap rather than dropped silently"]
+      ]
+    }
+  }
+}

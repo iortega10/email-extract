@@ -103,7 +103,7 @@ def test_the_corpus_manifest_lists_each_version_oldest_first() -> None:
     names = behavior_ledger.discovered()
     assert corpora[-1]["files"] == names
     assert {name.split("/", 1)[0] for name in names} == {"generated", "raw", "time"}
-    assert len(names) == 16
+    assert len(names) == 46
 
 
 def test_the_fingerprints_are_stable_and_look_like_hashes() -> None:

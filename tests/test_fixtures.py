@@ -53,7 +53,7 @@ def test_the_raw_three_match_sha256sums() -> None:
     for line in (RAW / "SHA256SUMS").read_text(encoding="ascii").splitlines():
         digest, _, name = line.partition("  ")
         sums[name] = digest
-    assert sorted(sums) == ["bad_charset.eml", "malformed_mime.eml", "truncated_base64.eml"]
+    assert sorted(sums) == sorted(f"{name}.eml" for name in write_raw_fixtures.FIXTURES)
     for name, digest in sums.items():
         data = (RAW / name).read_bytes()
         assert _sha(data) == digest, f"{name} no longer matches its frozen digest"

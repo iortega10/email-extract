@@ -1,0 +1,107 @@
+{
+  "fixture": "mixed_case_header_and_param_names.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-MixedCase-20250304) with one text/plain child; every field name is written in a different case (FROM, To, SUBJECT, DATE, Message-ID, mime-version, CONTENT-TYPE) and the parameter names are mixed case too (Boundary, CHARSET)",
+    "generator": "tools/make_fixtures.py, from _fixture_mixed_case_header_and_param_names (pinned Date Tue, 4 Mar 2025 08:05:00 +0000 and Message-ID <mixed-case-names-1004@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today; the multipart media type is lowercased by the scanner (multipart/MIXED -> multipart/mixed) and the declared charset keeps its case (CHARSET=UTF-8 -> UTF-8)",
+    "phase_1_facts": "headers.projection (the field names verbatim) and headers.parameters (the top-level header block's boundary parameter, whose name is matched case-insensitively and whose value keeps its case)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the RFC and design rules (D2/D5/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "field names and values are verbatim (a mixed-case name stays mixed case, D2); the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "expected_gaps": "none at phase 0: both parts parse, the multipart is properly closed and the declared charset is spelled UTF-8; a mixed-case name is a legal field name, not a malformed line",
+    "not_yet_labelled": "addresses, the Date projection, encoded words, body views, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "481186f758a6b031895f0605b00827c7ede5f4268ce97ab62b87cfdee2ab167a"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 407
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "FROM", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "SUBJECT", " mixed case header and param names", "ok", [74, 7], [82, 34], [74, 44]],
+        [3, "DATE", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [118, 4], [123, 31], [118, 38]],
+        [4, "Message-ID", " <mixed-case-names-1004@example.test>", "ok", [156, 10], [167, 37], [156, 50]],
+        [5, "mime-version", " 1.0", "ok", [206, 12], [219, 4], [206, 19]],
+        [6, "CONTENT-TYPE", " multipart/MIXED; Boundary=\"b0-MixedCase-20250304\"", "ok", [225, 12], [238, 50], [225, 65]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 407], [0, 292], [292, 115]],
+        ["1.1", "1", "text/plain", [317, 61], [317, 43], [360, 18]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 292]],
+        ["delimiter", "1", [292, 25]],
+        ["headers", "1.1", [317, 43]],
+        ["body", "1.1", [360, 18]],
+        ["delimiter", "1", [378, 29]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "UTF-8", "7bit", "UTF-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "3f6be7f806b81c46fed5d8d3e37d6d7c4b20041f4dbe80e64da18e041d71f2f5"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.projection": {
+      "phase": 1,
+      "value": [
+        [0, "FROM", " Ada Sender <ada@example.test>", "address_list", "ada@example.test"],
+        [1, "To", " Ben Receiver <ben@example.test>", "address_list", "ben@example.test"],
+        [2, "SUBJECT", " mixed case header and param names", "text", "mixed case header and param names"],
+        [3, "DATE", " Tue, 4 Mar 2025 08:05:00 +0000", "date_time", "2025-03-04T08:05:00+00:00"],
+        [4, "Message-ID", " <mixed-case-names-1004@example.test>", "message_id", "<mixed-case-names-1004@example.test>"],
+        [5, "mime-version", " 1.0", "text", "1.0"],
+        [6, "CONTENT-TYPE", " multipart/MIXED; Boundary=\"b0-MixedCase-20250304\"", "text", "multipart/MIXED; Boundary=\"b0-MixedCase-20250304\""]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [6, "CONTENT-TYPE", "boundary", "b0-MixedCase-20250304", "decoded", null]
+      ]
+    }
+  }
+}

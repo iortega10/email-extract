@@ -131,9 +131,11 @@ def test_every_span_is_non_negative_and_in_range(stem: str) -> None:
 @pytest.mark.parametrize("stem", MESSAGE_IDS)
 def test_a_header_field_span_points_at_the_bytes_it_names(stem: str) -> None:
     raw = _raw(stem)
-    for ordinal, name, value, parse_status, name_span, value_span, raw_span in _facts(stem)[
-        "headers.fields"
-    ]:
+    # A Turn 1.0c fixture whose phase-0 header spans are deliberately left untyped (the
+    # walker's reading of it is about to change) names no headers.fields fact.
+    for ordinal, name, value, parse_status, name_span, value_span, raw_span in _facts(stem).get(
+        "headers.fields", []
+    ):
         name_offset, name_length = _span(name_span)
         value_offset, value_length = _span(value_span)
         raw_offset, raw_length = _span(raw_span)
