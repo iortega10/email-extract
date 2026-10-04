@@ -10,6 +10,15 @@ never both and never neither (:class:`TimeValue`). ``SEQUENCE``, ``UID`` and
 ``METHOD`` are calendar facts, NOT TimeEvents; only
 ``DTSTART/DTEND/DTSTAMP/CREATED/LAST-MODIFIED`` emit events.
 
+The shape's invariants are **enforced at construction**, not only documented
+(``__post_init__``): ``ambiguity=relative`` requires an unknown ``when_utc`` (a
+relative time is never resolved), ``trust=filesystem`` forbids
+``usable_for_arrival_ordering``, and the four enum fields coerce from their string
+values so a value outside the vocabulary raises there rather than only when a
+record is decoded from JSON. This mirrors ``workbookextract/timeevent.py`` (the
+second producer) so the two copies stay shape-equal; it is a mirror, not an
+import: neither package depends on the other.
+
 The shape version is ``TIMEEVENT_VERSION`` in :mod:`emailextract.versions`; this
 type lives here until a second producer exists, and moves to ``docextract-core``
 only when a third producer or a cross-package consumer appears (D15).
@@ -171,5 +180,25 @@ class TimeEvent:
             raise CodecError("timeevent.offset must be a TimeValue")
         if not isinstance(self.source, TimeSource):
             raise CodecError("timeevent.source must be a TimeSource")
+        # Records are canonical on construction: a string is coerced to its enum member and a value
+        # outside the vocabulary raises here, not only when a record is decoded from JSON.
+        for name, enum_type in (
+            ("offset_origin", OffsetOrigin),
+            ("precision", Precision),
+            ("ambiguity", Ambiguity),
+            ("trust", Trust),
+        ):
+            value = getattr(self, name)
+            if not isinstance(value, enum_type):
+                try:
+                    object.__setattr__(self, name, enum_type(value))
+                except ValueError:
+                    allowed = ", ".join(member.value for member in enum_type)
+                    raise CodecError(f"timeevent.{name}: {value!r} is not one of: {allowed}") from None
         if self.offset_origin == OffsetOrigin.ABSENT and not self.offset.is_unknown:
             raise CodecError("timeevent: offset_origin=absent requires offset to be unknown")
+        # The shape's invariants, enforced rather than merely documented:
+        if self.ambiguity == Ambiguity.RELATIVE and not self.when_utc.is_unknown:
+            raise CodecError("timeevent: a relative time is unknown(reason) and is never resolved")
+        if self.trust == Trust.FILESYSTEM and self.usable_for_arrival_ordering:
+            raise CodecError("timeevent: a filesystem time is never usable for arrival ordering")

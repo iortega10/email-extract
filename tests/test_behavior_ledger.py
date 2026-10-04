@@ -11,6 +11,7 @@ the whole suite and ``--check`` on both interpreters -- see the refusal test).
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import re
 import sys
@@ -32,6 +33,45 @@ EXTRA_MESSAGE = (
     b"\r\n"
     b"new body\r\n"
 )
+
+
+def _shape_copy(cls: type, *, types: dict[str, str] | None, defaults: dict[str, object] | None) -> type:
+    """A copy of a frozen record with some field types/defaults replaced.
+
+    It keeps ``cls``'s ``__qualname__``, so ``contracts_fingerprint`` sees it as the
+    same record: the copy stands in for the shape the record would have after the
+    edit it models (a version bump, a retype).
+    """
+    entries: list[tuple[str, object, object]] = []
+    for field_ in dataclasses.fields(cls):
+        field_type: object = (types or {}).get(field_.name, field_.type)
+        if field_.name in (defaults or {}):
+            default: object = (defaults or {})[field_.name]
+        elif field_.default is not dataclasses.MISSING:
+            default = field_.default
+        elif field_.default_factory is not dataclasses.MISSING:
+            default = dataclasses.field(default_factory=field_.default_factory)
+        else:
+            default = dataclasses.MISSING
+        entries.append((field_.name, field_type, default))
+    copy = dataclasses.make_dataclass(cls.__name__, entries, frozen=True)
+    copy.__qualname__ = cls.__qualname__
+    return copy
+
+
+def _retuned(cls: type, **defaults: object) -> type:
+    """``cls`` with the named fields' defaults replaced (a version bump's effect)."""
+    return _shape_copy(cls, types=None, defaults=defaults)
+
+
+def _retyped(cls: type, **types: str) -> type:
+    """``cls`` with the named fields' type text replaced (a retype)."""
+    return _shape_copy(cls, types=types, defaults=None)
+
+
+def _swapped(records: tuple[type, ...], cls: type, replacement: type) -> tuple[type, ...]:
+    """``records`` with ``cls`` replaced (by qualname, since ``cls`` is the identity)."""
+    return tuple(replacement if record is cls else record for record in records)
 
 
 def test_the_committed_ledger_agrees_with_the_code() -> None:
@@ -79,7 +119,12 @@ def test_the_version_strings_point_at_the_names_to_bump() -> None:
     strings = behavior_ledger.version_strings()
     assert strings["walk"] == f"{versions.EMAIL_PARSER_VERSION}|{versions.DECODE_CHAIN_VERSION}"
     assert strings["decode_chain"] == versions.DECODE_CHAIN_VERSION
+    assert strings["contracts"] == versions.OUTPUT_SCHEMA_VERSION
     assert behavior_ledger.VERSION_CONSTANTS["walk"].startswith("EMAIL_PARSER_VERSION")
+    assert behavior_ledger.VERSION_CONSTANTS["contracts"] == "OUTPUT_SCHEMA_VERSION"
+    # The core codec's version is not this package's to bump: no component is keyed
+    # by it any more (Turn 0.5's re-key).
+    assert all("docextract_core" not in name for name in behavior_ledger.VERSION_CONSTANTS.values())
 
 
 # ------------------------------------------------------------------ sensitivity
@@ -139,8 +184,81 @@ def test_a_contract_record_change_is_caught(monkeypatch) -> None:
     )
     problems = behavior_ledger.check()
     assert any(
-        p.startswith("contracts:") and "docextract_core.SCHEMA_VERSION" in p for p in problems
+        p.startswith("contracts:") and "OUTPUT_SCHEMA_VERSION" in p for p in problems
     )
+
+
+def test_a_retyped_field_moves_the_contracts_fingerprint() -> None:
+    """Retyping is a real shape change: the fingerprint must move for it."""
+    baseline = behavior_ledger.contracts_fingerprint()
+    records = _swapped(
+        behavior_ledger.contract_records(),
+        model.TypeVerdicts,
+        _retyped(model.TypeVerdicts, declared_mime="bytes | None"),
+    )
+    assert behavior_ledger.contracts_fingerprint(records) != baseline
+
+
+def test_a_parser_version_bump_is_not_a_contract_change() -> None:
+    """The Turn 0.5 defect: the defaults are written from the constants.
+
+    ``EmailDocument``/``RunRecord`` default ``email_parser_version`` (and
+    ``output_schema_version``) to the version constants, so a bump used to read as
+    a contract change. The fingerprint records those defaults symbolically now.
+    """
+    baseline = behavior_ledger.contracts_fingerprint()
+    bumped = _swapped(
+        behavior_ledger.contract_records(),
+        model.RunRecord,
+        _retuned(model.RunRecord, email_parser_version="99", output_schema_version="99"),
+    )
+    bumped = _swapped(bumped, model.EmailDocument, _retuned(model.EmailDocument, output_schema_version="99"))
+    assert behavior_ledger.contracts_fingerprint(bumped) == baseline
+
+
+def test_the_recorded_default_is_the_constant_name_not_its_value() -> None:
+    shapes = {
+        field.name: shape
+        for field, shape in (
+            (field_, behavior_ledger._field_shape(field_))
+            for field_ in dataclasses.fields(model.RunRecord)
+        )
+    }
+    assert shapes["email_parser_version"][2] == {"version_constant": "EMAIL_PARSER_VERSION"}
+    assert shapes["output_schema_version"][2] == {"version_constant": "OUTPUT_SCHEMA_VERSION"}
+
+
+def test_the_contracts_refusal_names_this_packages_constant() -> None:
+    """The re-key's point: a contract change is recorded by bumping *our* constant."""
+    ledger = behavior_ledger.load_ledger()
+    key = behavior_ledger.entry_key(
+        "contracts", versions.OUTPUT_SCHEMA_VERSION, behavior_ledger.latest_corpus(behavior_ledger.load_corpora())
+    )
+    assert key in ledger["contracts"]
+    tampered = {**ledger, "contracts": {**ledger["contracts"], key: "0" * 64}}
+    with pytest.raises(ValueError) as refused:
+        behavior_ledger.record(tampered)
+    assert "OUTPUT_SCHEMA_VERSION" in str(refused.value)
+    problems = behavior_ledger.check(tampered)
+    assert any("OUTPUT_SCHEMA_VERSION" in p for p in problems)
+
+
+def test_the_legacy_contracts_line_is_kept_and_never_compared() -> None:
+    """Turn 0.5 re-keyed 'contracts' from the core's SCHEMA_VERSION ('7') to ours.
+
+    The old line stays in the file (append-only) and is never compared again: a
+    tampered '7' is invisible to both ``check`` and ``record``.
+    """
+    ledger = behavior_ledger.load_ledger()
+    assert behavior_ledger.LEGACY_KEYS["contracts"] == ("7",)
+    assert "7" in ledger["contracts"], "the legacy line is kept, not deleted"
+    tampered = {**ledger, "contracts": {**ledger["contracts"], "7": "0" * 64}}
+    assert behavior_ledger.check(tampered) == []
+    updated, _lines = behavior_ledger.record(tampered)
+    assert updated["contracts"]["7"] == "0" * 64
+    # The ledger header says so, in the file a reviewer reads.
+    header = json.loads(behavior_ledger.LEDGER_PATH.read_text(encoding="utf-8"))["_comment"]
+    assert "LEGACY" in header and "OUTPUT_SCHEMA_VERSION" in header
 
 
 def test_a_version_bump_without_a_recorded_line_names_the_constant(monkeypatch) -> None:

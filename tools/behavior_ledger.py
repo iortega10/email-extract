@@ -8,11 +8,18 @@ the version constants in :mod:`emailextract.versions`:
   decode chains, accounted regions, gaps, unknown sections.
 * **decode_chain**, ``DECODE_CHAIN_VERSION``: the recorded decode chains alone,
   so a chain-rule change is named as itself and not as a walker change.
-* **contracts**, the core codec's ``SCHEMA_VERSION``: every persisted dataclass
-  shape -- name, field names, types and defaults -- of the contract and walker
-  records. A field added, removed, renamed or retyped changes this fingerprint,
-  which is exactly the contract change a schema bump is for. It is keyed by the
-  schema version **alone** and depends on no corpus.
+* **contracts**, this package's ``OUTPUT_SCHEMA_VERSION``: every persisted
+  dataclass shape -- name, field names, types and defaults -- of the contract and
+  walker records. A field added, removed, renamed or retyped changes this
+  fingerprint, which is exactly the contract change a schema bump is for. It is
+  keyed by that version **alone** and depends on no corpus.
+
+  **Re-keyed in Turn 0.5.** It was keyed by the core codec's ``SCHEMA_VERSION``
+  (``"7"``) before, which this package does not own: a contract change here could
+  never be recorded, because a change would have needed a bump of a constant owned
+  by ``docextract-core`` and the tool refuses to overwrite a recorded line. The old
+  ``7`` line stays in the ledger as **LEGACY** (append-only; see ``LEGACY_KEYS``)
+  and is never compared again.
 
 ``tests/ledger/behavior_ledger.json`` is an **append-only** map
 ``{component: {key: fingerprint}}`` where a key is ``"<version string>|corpus:<N>"``
@@ -33,6 +40,15 @@ written *type text*, so a purely cosmetic re-spelling (``str | None`` versus
 would hide a re-spelling a reviewer may still want to see -- and it is the same
 trade-off word-extract's ledger makes.
 
+**Version-constant defaults are symbolic, not literal.** A field that defaults to
+a version constant (``output_schema_version = OUTPUT_SCHEMA_VERSION``,
+``email_parser_version = EMAIL_PARSER_VERSION``, ``decode_chain_version``,
+``flag_schema_version``) is recorded as the constant's **name**. Bumping the
+parser version would otherwise read as a contract change -- the default is
+written from the constant, so its value moves with it -- while a real shape change
+still moves the fingerprint. The rule keys off the field *name*, so it cannot
+quietly stop applying when a value changes.
+
 **Cross-interpreter:** the fingerprints are reproducible across interpreters
 (stdlib ``email`` is never serialized back out; spans come from this package's
 own scanner). They are required to be identical on CPython 3.14 and 3.11 -- run
@@ -51,10 +67,10 @@ for _path in (_ROOT,):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from docextract_core import SCHEMA_VERSION, encode, sha256_json  # noqa: E402
+from docextract_core import encode, sha256_json  # noqa: E402
 
 from emailextract import ids as ids_module  # noqa: E402
-from emailextract import model, store, timeevent, versions  # noqa: E402
+from emailextract import model, siblings, store, timeevent, versions  # noqa: E402
 from emailextract import walk as walk_module  # noqa: E402
 from emailextract.container import EmlContainer  # noqa: E402
 
@@ -65,12 +81,18 @@ COMPONENTS = ("walk", "decode_chain", "contracts")
 VERSION_CONSTANTS = {
     "walk": "EMAIL_PARSER_VERSION (or DECODE_CHAIN_VERSION)",
     "decode_chain": "DECODE_CHAIN_VERSION",
-    "contracts": "docextract_core.SCHEMA_VERSION",
+    "contracts": "OUTPUT_SCHEMA_VERSION",
 }
 
 #: The components whose fingerprint is over the corpus. ``contracts`` is over the
-#: record definitions alone, so it is keyed by the schema version and nothing else.
+#: record definitions alone, so it is keyed by its version and nothing else.
 CORPUS_DEPENDENT = ("walk", "decode_chain")
+
+#: Keys a component recorded under a version this package no longer keys by: the
+#: re-key history, kept in the file (append-only) and **never compared again**.
+#: ``contracts`` was keyed by the core codec's ``SCHEMA_VERSION`` (``"7"``) before
+#: Turn 0.5; the tool appends under the current key and never looks at these.
+LEGACY_KEYS: Mapping[str, tuple[str, ...]] = {"contracts": ("7",)}
 
 LEDGER_PATH = _ROOT / "tests" / "ledger" / "behavior_ledger.json"
 CORPUS_PATH = _ROOT / "tests" / "ledger" / "corpus.json"
@@ -170,7 +192,10 @@ _HEADER = (
     "-- it is not a behavior change and bumps nothing; the tool refuses to record a "
     "new corpus if any older corpus's fingerprint moved (that is a behavior change "
     "that needs a bump). 'contracts' does not depend on the corpus and is keyed by "
-    "the schema version alone. Fingerprints are identical on CPython 3.14.3 and "
+    "this package's OUTPUT_SCHEMA_VERSION alone; before Turn 0.5 it was keyed by the "
+    "core codec's SCHEMA_VERSION, so the '7' line under 'contracts' is LEGACY -- kept "
+    "in place (append-only) and never compared again. Fingerprints are identical on "
+    "CPython 3.14.3 and "
     "3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 "
     "fixtures in Turn 0.3); a cross-interpreter difference is recorded "
     "here, never hidden. The history before this file is not reconstructed. Record "
@@ -286,17 +311,43 @@ def version_strings() -> dict[str, str]:
     return {
         "walk": f"{versions.EMAIL_PARSER_VERSION}|{versions.DECODE_CHAIN_VERSION}",
         "decode_chain": versions.DECODE_CHAIN_VERSION,
-        "contracts": SCHEMA_VERSION,
+        "contracts": versions.OUTPUT_SCHEMA_VERSION,
     }
 
 
 # ------------------------------------------------------------- the fingerprints
 
 
+def _version_constant_name(field_name: str) -> str | None:
+    """The ``*_VERSION`` constant a field's name mirrors, when there is one.
+
+    ``output_schema_version`` -> ``OUTPUT_SCHEMA_VERSION``,
+    ``email_parser_version`` -> ``EMAIL_PARSER_VERSION``, ``decode_chain_version``
+    and ``flag_schema_version`` likewise. The rule is by *name*, so it cannot
+    silently stop applying when a constant's value changes: a field default written
+    from a version constant is a version fact, not a shape fact.
+    """
+    candidate = field_name.upper()
+    if not candidate.endswith("_VERSION"):
+        return None
+    constant = vars(versions).get(candidate)
+    if isinstance(constant, str) and constant:
+        return candidate
+    return None
+
+
 def _field_shape(field_: Field) -> list[Any]:
-    """One field as ``[name, type, default]``; a factory is named, never called."""
-    if field_.default is not MISSING:
-        default: Any = encode(field_.default)
+    """One field as ``[name, type, default]``; a factory is named, never called.
+
+    A default written from a version constant is recorded as the constant's
+    **name**, so bumping the parser version is not a contract change while a real
+    shape change still is (see the module docstring).
+    """
+    constant = _version_constant_name(field_.name)
+    if constant is not None:
+        default: Any = {"version_constant": constant}
+    elif field_.default is not MISSING:
+        default = encode(field_.default)
     elif field_.default_factory is not MISSING:
         factory = field_.default_factory
         default = {"factory": getattr(factory, "__qualname__", type(factory).__name__)}
@@ -308,7 +359,7 @@ def _field_shape(field_: Field) -> list[Any]:
 def contract_records() -> tuple[type, ...]:
     """Every dataclass whose shape is part of the persisted contract, sorted by name."""
     shapes: list[type] = []
-    for module in (model, timeevent, ids_module, walk_module, store):
+    for module in (model, timeevent, ids_module, walk_module, store, siblings):
         shapes.extend(
             obj for obj in vars(module).values() if isinstance(obj, type) and is_dataclass(obj)
         )
@@ -542,6 +593,7 @@ __all__ = [
     "FIXTURES",
     "INLINE_CORPUS",
     "LEDGER_PATH",
+    "LEGACY_KEYS",
     "VERSION_CONSTANTS",
     "add_corpus_version",
     "all_fingerprints",

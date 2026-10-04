@@ -153,3 +153,65 @@ def test_timeevent_shape_has_its_own_version_constant() -> None:
     source = pathlib.Path(versions.__file__).read_text(encoding="utf-8")
     assert re.search(r"^TIMEEVENT_VERSION\s*[:=]", source, re.MULTILINE)
     assert not re.search(r"^TIMEEVENT_VERSION\s*=\s*OUTPUT_SCHEMA_VERSION", source, re.MULTILINE)
+
+
+# --------------------------------------------------- the invariants, enforced
+
+
+def test_a_relative_time_is_never_resolved() -> None:
+    """D15: a relative time is unknown(reason) *and* the shape refuses the other.
+
+    The invariant is enforced at construction (mirroring workbookextract's copy),
+    not only documented.
+    """
+    with pytest.raises(CodecError):
+        _event(when_utc=TimeValue(value="2026-01-01T10:00:00Z"), ambiguity=Ambiguity.RELATIVE)
+    with pytest.raises(CodecError):
+        _event(when_utc=TimeValue(value="2026-01-01T10:00:00Z"), ambiguity="relative")
+    # The legal neighbour: relative with an unknown when_utc constructs.
+    event = _event(
+        when_utc=TimeValue(unknown_reason="relative"),
+        offset=TimeValue(unknown_reason="absent"),
+        offset_origin=OffsetOrigin.ABSENT,
+        ambiguity=Ambiguity.RELATIVE,
+    )
+    assert event.ambiguity is Ambiguity.RELATIVE
+    assert event.when_utc.is_unknown
+
+
+def test_a_filesystem_time_is_never_usable_for_arrival_ordering() -> None:
+    """D15: the filesystem clock is not arrival evidence; the shape forbids the pair."""
+    with pytest.raises(CodecError):
+        _event(trust=Trust.FILESYSTEM, usable_for_arrival_ordering=True)
+    with pytest.raises(CodecError):
+        _event(trust="filesystem", usable_for_arrival_ordering=True)
+    # The legal neighbour: recorded, but no policy may place it.
+    event = _event(trust=Trust.FILESYSTEM, usable_for_arrival_ordering=False)
+    assert event.trust is Trust.FILESYSTEM
+    assert event.usable_for_arrival_ordering is False
+
+
+def test_enum_fields_coerce_from_strings_at_construction() -> None:
+    """A string value is coerced to its member, so a decoded record is canonical too."""
+    event = _event(
+        offset_origin="stated_in_text",
+        precision="second",
+        ambiguity="none",
+        trust="claimed",
+    )
+    assert event.offset_origin is OffsetOrigin.STATED_IN_TEXT
+    assert event.precision is Precision.SECOND
+    assert event.ambiguity is Ambiguity.NONE
+    assert event.trust is Trust.CLAIMED
+
+
+def test_a_value_outside_the_vocabulary_raises_at_construction() -> None:
+    """Not only when decoded from JSON: the vocabulary is closed on construction."""
+    with pytest.raises(CodecError):
+        _event(precision="fortnight")
+    with pytest.raises(CodecError):
+        _event(ambiguity="maybe")
+    with pytest.raises(CodecError):
+        _event(trust="everyone")
+    with pytest.raises(CodecError):
+        _event(offset_origin="somewhere")
