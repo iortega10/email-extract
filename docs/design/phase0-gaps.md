@@ -2,10 +2,19 @@
 
 Every gap id this package can record, one entry each, resolved from the design's
 "Known-gap ids (v1 registry)" section (`docs/design/email-extraction-design.md`) at build
-spec Turn 0.6. The registry is the authority: the ids below are the registry's ids
-**verbatim** -- none is invented, renamed or merged -- and `tests/test_phase0_gaps.py` runs the
-correspondence both ways. The design listed **81** ids; Phase 0.6 **prunes two**
-(`attach.size_cap_hit`, `attach.nesting_cap_hit`) leaving **79** entries (see "The prune").
+spec Turn 0.6, **extended at Phase 1 Turn 1.0a**. The registry is the authority: the ids below are
+the registry's ids **verbatim** -- none is invented, renamed or merged -- and
+`tests/test_phase0_gaps.py` runs the correspondence both ways. The design listed **81** ids;
+Phase 0.6 **prunes two** (`attach.size_cap_hit`, `attach.nesting_cap_hit`), leaving **79** (see
+"The prune"); Phase 1 Turn 1.0a **adds seven** (see "Phase 1") and **removes one**
+(`body.plain_effectively_empty`, resolved as a **fact** -- see "`body.plain_effectively_empty` is a
+fact"), leaving **85** entries.
+
+The file **keeps its name** `phase0-gaps.md`: its path is asserted by
+`tests/test_phase0_gaps.py` and by the design's registry heading, and renaming it would touch a
+test for no gain. A Phase 1 id is a gap in the same sense every entry here is -- a thing the
+package declines to **claim** -- so it belongs in this one vocabulary, under its own section, not in
+a second file a reader would have to know about.
 
 A gap is a thing the package **declines to claim**, recorded in the manifest (never in a log).
 Each entry answers four questions:
@@ -58,6 +67,29 @@ versus the `skipped` reasons. Decided: **both are pruned from the registry.**
 The registry in `docs/design/email-extraction-design.md` was edited to drop the two ids and to
 state the decision; `tests/test_phase0_gaps.py` holds both the registry and this document and
 asserts the pruned pair appears in neither.
+
+## `body.plain_effectively_empty` is a fact, not a gap (Turn 1.0a)
+
+`body.plain_effectively_empty` was listed as a gap id in the design's v1 registry. Phase 1 Turn 1.0a
+(Revision 3, decision 6 / D16) **resolves it as a fact**: a `text/plain` alternative that is present
+but effectively empty (whitespace or a stub) is a legal state, not a thing the package declines to
+claim -- the package *does* claim the part is present and that it carries no new text. It is therefore
+declared in `FACTS` (`emailextract/evals/l1.py`, Turn 1.0b) with the phase it becomes checkable at,
+exactly as the Phase 1 family's other facts are, and it **leaves the gap registry**: the design's
+"Known-gap ids" `body` bullet drops it in the same turn. Its four answers, in the entry format:
+
+- **Missing:** nothing is *declined*; the fact records that the plain alternative is effectively empty.
+  A gap entry is the wrong shape for a legal, claimed state.
+- **A reader must not infer:** that the plain body is the content, or that the alternative is the HTML
+  part. Emptiness is a legal alternative state, recorded, never silently swapped (D16). Matching and
+  `body_digest` (D14) consider **every non-empty alternative**, never one chosen "the body".
+- **First emitted by:** Phase 1 (view selection).
+- **Committed fixture:** none yet -- Turn 1.0c ships `plain_effectively_empty` (a real HTML body beside
+  an effectively-empty plain alternative), typed in `docs/design/phase1-fixtures.md`.
+
+This block is deliberately **not** the `### body.plain_effectively_empty` entry form: the id is no
+longer a registry id, and a reader must not find it in the gap entry list (a heading in that form would
+be read back as a registry id by `tests/test_phase0_gaps.py`).
 
 Phases named below: **0** the skeleton walker; **1** the RFC 822 parser (header projection, body
 views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses and recursion;
@@ -175,6 +207,12 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
 - **First emitted by:** Phase 0 (the skeleton walker).
 - **Committed fixture:** none yet -- proven against inline hand-typed bytes in
   `tests/test_gap_falsifiability.py` (no committed fixture carries it).
+- **Amendment (Revision 3, decision 3): the trigger.** In Phase 1 `body.no_boundary_found` is the
+  **absence** answer and nothing else: it fires only when **no** boundary rule fired and the text is
+  **not** a label-shaped unknown-language block. A class or id matching a known vendor prefix family
+  (`gmail_`, `moz-`, `yahoo_`, `RplyFwdMsg`) with no table row is `body.html_quote_rule_gap`; a
+  header-like run of short `Label:` lines directly after a boundary-looking line is
+  `body.i18n_reply_marker`; neither is `body.no_boundary_found`.
 
 ### `body.boundary_disagreement`
 - **Missing:** the declared boundary grammar and the bytes disagree -- an open delimiter with no
@@ -193,6 +231,14 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   gap in the rule list, not evidence of level 0 -- the worst failure for this tool (D3).
 - **First emitted by:** Phase 1 (body views and the DOM quote rules).
 - **Committed fixture:** none yet.
+- **Amendment (Revision 3, decisions 1, 3): the trigger.** The precise trigger is **a class or id
+  matching a known vendor prefix family** -- `gmail_`, `moz-`, `yahoo_`, `RplyFwdMsg` (and the `x_`
+  prefix Outlook adds on rewrite) -- **with no table row**. Such a construct is this gap, **never**
+  `body.no_boundary_found`. It is also what the **named unclosed-container rule** records when the
+  chosen HTML parser leaves a quote container unclosed (decision 1: the container is never silently
+  closed, because an unclosed `<blockquote>` otherwise swallows following new text). The Apple
+  attribution row and Yahoo `yahoo_quoted` are **not v1** (owner decision 13) and raise this gap until
+  the owner confirms them from a structure-only probe.
 
 ### `body.i18n_reply_marker`
 - **Missing:** a reply marker in a language the named rule list does not cover (e.g. `Am ... schrieb`,
@@ -201,6 +247,11 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   text. An English-only list must never present as "no boundary found" (D3).
 - **First emitted by:** Phase 1 (body views and the reply-marker rules).
 - **Committed fixture:** none yet.
+- **Amendment (Revision 3, decision 3): the trigger.** It fires **only on a label-shaped
+  unknown-language block** -- a header-like run of short `Label:` lines directly after a
+  boundary-looking line -- and **never on any absence**. Where no such block is present and no rule
+  fired, the answer is `body.no_boundary_found`. The named tables are **English, German and French**;
+  the language is per block, and every other language is this gap.
 
 ### `body.preamble_bytes`
 - **Missing:** bytes before the first boundary delimiter; they are their own accounted region, not
@@ -294,13 +345,12 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
 - **First emitted by:** Phase 1 (the HTML body view).
 - **Committed fixture:** none yet.
 
-### `body.plain_effectively_empty`
-- **Missing:** a `text/plain` alternative that is present but effectively empty (whitespace or a
-  stub), so it carries no new text even though the part exists (D16).
-- **A reader must not infer:** that the plain body is the content, or that the alternative is the
-  HTML part. Emptiness is a legal alternative state, recorded, never silently swapped (D16).
-- **First emitted by:** Phase 1 (view selection).
-- **Committed fixture:** none yet.
+### body.plain_effectively_empty (a fact, not a gap -- moved to its own block above)
+
+Removed from the gap registry in Phase 1 Turn 1.0a: it is now a **fact** declared in `FACTS`, with its
+four answers in the block "`body.plain_effectively_empty` is a fact, not a gap (Turn 1.0a)". The
+heading here is deliberately **not** in the backticked entry form, because the id is no longer a
+registry id and `tests/test_phase0_gaps.py` would otherwise read it back as one.
 
 ### `body.mixed_origin_quoting`
 - **Missing:** quoting of mixed origin -- e.g. a Gmail container wrapping an Outlook block -- kept
@@ -321,6 +371,15 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   disagreement. It is a recorded conflict (D3).
 - **First emitted by:** Phase 1 (body views and the per-view levels).
 - **Committed fixture:** none yet.
+- **Amendment (Revision 3, decision 2): the predicate.** It is recorded **iff**
+  `quote_prefix_depth >= 1` **and** a structural `quote` ordinal >= 1 on the **same span** **and** the
+  two resolved ranks differ. An **all-zero depth beside a fired structural rule is a normal state**,
+  never a disagreement (the measured Gmail-reply-quoting-Outlook case, where the plain alternative has
+  no `>` prefix at all). The comparison is per span, because `prefix_depth` is per line while the
+  ordinal counts boundaries crossed, so the two are unlike units and are never averaged: `quote_level`
+  is a **derived rank** (`level = ordinal` where a structural `quote` rule fired, else
+  `level = prefix_depth`) that carries its resolution `rule_id` and may not be thresholded by
+  magnitude.
 
 ### `view.gap_closing_contiguous`
 - **Missing:** a term whose occurrence would span a quoted interruption is **not** flagged:
@@ -341,6 +400,13 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   the truth. All three are recorded; the disagreement stays (D4).
 - **First emitted by:** Phase 1 (the attachment manifest).
 - **Committed fixture:** none yet.
+- **Amendment (Revision 3, decision 6): the trigger.** It fires **iff no verdict yields a media-type
+  family**. Each verdict is a `TriValue`: `UNKNOWN(reason_id)` (not computed -- a zero-length part, a
+  cap hit, a decode failure) and the sentinel `VALUE("unrecognized")` (magic consulted and nothing
+  matched) contribute **no family** and therefore neither fire this gap nor
+  `attach.type_disagreement`. `container_introspection` is `UNKNOWN(not_built_in_phase1)` until
+  Phase 2, so a part whose only family could come from introspection is `attach.type_unknown` -- an
+  honest "not built", not a claim of untypedness.
 
 ### `attach.type_disagreement`
 - **Missing:** the three type verdicts disagree; the winner is recorded with its source and the
@@ -349,6 +415,12 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   dropped. Every verdict is kept (D4).
 - **First emitted by:** Phase 1 (the attachment manifest).
 - **Committed fixture:** none yet.
+- **Amendment (Revision 3, decisions 6, 7): the trigger and the winner.** It fires **iff at least two
+  verdicts are in state `VALUE` with a media-type family and the set of families has size >= 2**.
+  `VALUE("unrecognized")` and any `UNKNOWN` contribute no family and never fire it. The **winner order
+  is `magic` over `declared_mime` over `container_introspection` where known** (bytes beat claims: a
+  `declared_mime=text/plain` with a `PK\x03\x04` prefix is a disagreement won by `magic`), and a winner
+  must name a known verdict. "zip" is an honest family; a zip is never guessed to be docx or xlsx.
 
 ### `attach.ole_container_unknown`
 - **Missing:** the bytes are a CFB/OLE container but its contents are not one of the recognised
@@ -731,3 +803,89 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   flag is the claim (D10).
 - **First emitted by:** Phase 1 (the body views).
 - **Committed fixture:** none yet.
+
+## Phase 1 (Turn 1.0a)
+
+The **seven** ids Phase 1 adds to the registry (Revision 3, decision 3 and the "New gap ids" list of
+`docs/design/phase1-build-spec.md`). Each keeps its family prefix -- `headers.`, `body.`, `attach.` --
+so it is found with the rest of its family in the registry, and each is registered here in Turn 1.0a but
+**first emitted** by the turn named below. The fixture column names the Turn 1.0c fixture that will
+exercise it (`docs/design/phase1-fixtures.md`); in Turn 1.0a none of them is emitted or labelled yet.
+The Phase 1 gap gate (`evals`, Turn 1.10) gives each a mutation case in the tightened anti-vacuity
+triple (the patch exists, was **reached**, and the observation differs from the baseline).
+
+### `headers.duplicate_header`
+- **Missing:** a header name appears more than once and the reader took one of them (the walker's
+  `walk._header_value` is **first-win** and silent). The rule generalises `headers.duplicate_message_id`
+  to every field: the fact that there are several values is recorded and the choice of "the" value is
+  not made silently.
+- **A reader must not infer:** that the first (or the last) repeat of a header is the authoritative
+  value. All the field paragraphs are kept, in order, with their ordinals (D2), and this gap says the
+  reduction to one value was a recorded choice, not the truth.
+- **First emitted by:** Phase 1, Turn 1.1 (`headers.py`), together with the fold and raw-span work.
+- **Committed fixture:** none yet, fixture named in the catalogue
+  (`duplicate_header_mime_version`, a message with two `MIME-Version` fields; the duplicate
+  `Content-Type` case is its mutation).
+
+### `headers.leading_bom`
+- **Missing:** the message begins with a UTF-8 BOM (`EF BB BF`). Decision 14 **tolerates** it rather
+  than letting it become a malformed first field (which loses the first real header, e.g. `From` or
+  `Received`): the BOM is its own leading `prelude` region, so spans still tile exactly, and the header
+  scan starts after it.
+- **A reader must not infer:** that the first header line is malformed, or that the first header was
+  dropped. The BOM is a recorded prelude, and the bytes are all accounted for.
+- **First emitted by:** Phase 1, Turn 1.1 (the walker tolerance of decision 14; `EMAIL_PARSER_VERSION`
+  **2** -- a versioned walker behaviour change, not a contract change).
+- **Committed fixture:** none yet, fixture named in the catalogue (`leading_utf8_bom`).
+
+### `headers.mbox_from_line`
+- **Missing:** the message begins with an mbox `From ` envelope line (a bare `From ` at byte 0, no
+  colon). Decision 14 **tolerates** it rather than reading it as a malformed first field: it is its own
+  leading `prelude` region, so spans tile exactly, and the header scan starts after it.
+- **A reader must not infer:** that the `From ` line is a header field, or that the first real header
+  was parsed. It is a recorded prelude, and the header region begins after it.
+- **First emitted by:** Phase 1, Turn 1.1 (decision 14; `EMAIL_PARSER_VERSION` **2**).
+- **Committed fixture:** none yet, fixture named in the catalogue (`mbox_from_line_at_zero`).
+
+### `body.digest_default_not_applied`
+- **Missing:** a part with **no `Content-Type`** inside a `multipart/digest` is `message/rfc822` by
+  RFC 2046 5.1.5, but the walker deliberately records `content_type = None` for a part that declares
+  none, so the Phase 1 reader must supply the default as a **projection**, never into the raw field. A
+  Content-Type-less digest child is therefore a recorded gap until that projection lands.
+- **A reader must not infer:** that a Content-Type-less part in a `multipart/digest` is `text/plain`
+  (the RFC 2045 5.2 default for other containers). It is `message/rfc822`; the default is a projection
+  over the raw field, not a rewrite of it.
+- **First emitted by:** Phase 1, Turn 1.5 (selection and the body/HTML projection).
+- **Committed fixture:** none yet, fixture named in the catalogue
+  (`multipart_digest_content_type_less_child`).
+
+### `body.flowed_reflow_unresolved`
+- **Missing:** a part declaring `format=flowed` (RFC 3676). Phase 1 performs **space-unstuffing** only
+  (so the `>`-family count is right); it does **not** join the soft line breaks, so the text still
+  carries the transport-added breaks. The join is the gap.
+- **A reader must not infer:** that a `format=flowed` text was unstuffed **and reflowed**. Only
+  unstuffing is v1; the soft-break join is deferred, and the text is recorded un-reflowed.
+- **First emitted by:** Phase 1, Turn 1.4 (`text.py`: per-part text, alias table, offset maps, the one
+  line model).
+- **Committed fixture:** none yet, fixture named in the catalogue (`flowed_unstuffed_soft_break`).
+
+### `body.lone_cr_line_terminator`
+- **Missing:** the walker's line model (`walk._iter_lines`) yields CRLF, LF **and** a lone CR as line
+  terminators. RFC 5322 2.2/2.3 allow CR and LF only as CRLF, so a lone CR is not an RFC-legal line
+  break -- but the walker splits on it, and the stdlib `feedparser` does the same, so reader, checker
+  and a model's label can share the misreading (owner decision 17: the line model **stays**). The gap is
+  recorded in the **header region**.
+- **A reader must not infer:** that a bare CR is an RFC-legal line break, or that a differential test
+  could see the framing error. The walker splits today; the gap makes the split visible; the independent
+  splitter fuzz cannot see a lone-CR bug and the documents say so.
+- **First emitted by:** Phase 1, Turn 1.1 (the header region scan; `EMAIL_PARSER_VERSION` **2**).
+- **Committed fixture:** none yet, fixture named in the catalogue (`lone_cr_in_header_region`).
+
+### `attach.duplicate_content_id`
+- **Missing:** two parts in one message carry the **same `Content-ID`**. The cid is recorded per part,
+  and the duplicate is a gap, because `cid:` in an HTML body then names more than one candidate.
+- **A reader must not infer:** that a Content-ID names exactly one part, or that the reference resolves
+  to the "real" one. Both parts are kept, both cids recorded, and the ambiguity is the gap.
+- **First emitted by:** Phase 1, Turn 1.8 (`attach.py`: the manifest, identity, occurrences,
+  classification, the three verdicts, cid sets, hints).
+- **Committed fixture:** none yet, fixture named in the catalogue (`duplicate_content_id`).

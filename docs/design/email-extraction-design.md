@@ -37,6 +37,216 @@ Honesty note: hearth's model still cannot run code; claims about real files were
 locally by Claude with a structure-only probe and are stated as measurements. Claims about
 stdlib `email` behavior remain design arguments until the Phase 0.0 spike.
 
+## Revision 3 (Phase 1 Turn 1.0a): decisions 1 to 20
+
+Phase 1 Turn 1.0a of `docs/design/phase1-build-spec.md` (revision 2) settles twenty decisions. They are
+recorded here **in the spec's own wording** -- decisions 1 to 12 are the spec's "Decisions (final; the
+debate's replacement text is the wording to use)" and decisions 13 to 20 are its "Owner questions,
+decided", copied verbatim -- so this design, the spec and `docs/design/phase1-debate.md` cannot drift.
+The **same turn** amends the design text below (D1, D2, D3, D4, D5, D6, D12, D16 and the reason-id text)
+and the "Known-gap ids" registry; the design is revised **once**, here, and no later turn revises it
+again (spec: "the design is revised **once**, in 1.0a"). This is a documents-only revision: no code, no
+test, no fixture, no sidecar and no ledger file changes in Turn 1.0a, so every shape it names is
+**specified here and built later** (the contract and the `FACTS` declarations in 1.0b, the fixtures in
+1.0c, the entry point and the HTML decision experiment in 1.0d).
+
+Decisions 1 to 12 (verbatim from the spec):
+
+1. **HTML parser.** Decided in Turn 1.0d by a recorded experiment, not by preference. Candidate A: stdlib
+   `html.parser` plus an own stack-based element tree. Candidate B: `lxml.html`. The experiment runs a
+   `HTMLParser` subclass that emits the `(event, text, get_starttag_text())` sequence over every HTML fixture,
+   the resulting element tree, the fired DOM-rule spans and the projection hash, on **both pinned
+   interpreters**, and for B the same plus the **libxml2 version** and `error_log`; the document states that B
+   is pinned by the **wheel**, not the interpreter, and that a two-interpreter identity test says nothing
+   about libxml2. The CPython version is a recorded-only run input and an input to `HTMLTEXT_VERSION`'s key
+   for A. B is chosen only if its tree puts every quote container at the same node as A on the quote
+   fixtures. If neither is clean, A is used with a **named unclosed-container rule** that records
+   `body.html_quote_rule_gap` rather than silently closing the container (an unclosed `<blockquote>` otherwise
+   swallows following new text). The element tree has its own module (`htmltree.py`) and records, per
+   element, the **projected-text span** it covers and the **set of `cid:` references**. No claim about
+   `html.parser` version differences is made without the fingerprint.
+2. **`quote_level` is a derived rank, not a measurement.** Per view and per span: structural rules and the
+   `>`-family each produce boundaries with `(rule_id, kind, ordinal)` and per-line `prefix_depth`; **only
+   `kind = quote` boundaries advance the ordinal**; `forward`, `signature`, `list_footer` and `unknown`
+   boundaries are recorded with their span at level 0. `level = ordinal` where a structural `quote` rule fired
+   in the span, else `level = prefix_depth`. **`view.quote_level_disagreement` is recorded iff
+   `quote_prefix_depth >= 1` and a structural `quote` ordinal >= 1 on the same span and the two resolved
+   ranks differ**; an all-zero depth beside a fired structural rule is a normal state and never a
+   disagreement. `quote_level` carries its resolution `rule_id`; nothing may threshold its magnitude (`new` =
+   0, `quoted` >= 1, `full` = all are the only tests). Ordinal and depth stay stored, never averaged. A **new
+   contract record** holds the per-boundary and per-view facts (`PartRecord` has no quote fields).
+3. **Rule families v1** (each rule has an id and a fixture; **every vendor class and id name is "verify by the
+   owner's structure-only probe"**). *Text:* the `>`-family prefix depth (the alphabet `> >`, `>>`, bare `>`,
+   counted on decoded text, after RFC 3676 space-unstuffing when the part declares `format=flowed`); the
+   English `On ... wrote:` marker; the Outlook flat block, keyed by **a maximal run of >= 2 adjacent labels, all
+   from one language's set, in canonical order as a subsequence**, with the date slot accepting both tokens per
+   language (EN `Sent:`/`Date:`, DE `Gesendet:`/`Datum:`, FR `Envoyé:`/`Date:`), separators accepting any
+   whitespace run before `:` including U+00A0 and U+202F after NFC, **the language per block**, named tables
+   for **English, German and French**; `Begin forwarded message:` and `-----Original Message-----` shapes
+   named in a table (kind `forward` for the banner); the `-- ` signature (exactly dash dash space plus the line
+   end, RFC 3676 4.3, **candidate only**); list footers (a line of at least 30 `_`, and the "You received this
+   message because you are subscribed" sentence, kind `list_footer`, detection only). *DOM:* `gmail_quote` (on a
+   `div` **or a `blockquote`**; the attribution wrapper adds no second ordinal), `blockquote[type=cite]`,
+   Outlook `divRplyFwdMsg` and `#appendonsend` (with the **`x_` prefix** Outlook adds on rewrite),
+   Thunderbird `moz-cite-prefix` and `moz-forward-container`. `body.i18n_reply_marker` fires **only on a
+   label-shaped unknown-language block** (a header-like run of short `Label:` lines directly after a
+   boundary-looking line), never on any absence, otherwise `body.no_boundary_found`. A class or id matching a
+   known vendor prefix family (`gmail_`, `moz-`, `yahoo_`, `RplyFwdMsg`) with no table row is
+   `body.html_quote_rule_gap`, never `body.no_boundary_found`. *Not v1 (owner decision 13):* the Apple
+   attribution table row and Yahoo `yahoo_quoted`, until the owner confirms them from a structure-only probe;
+   both still raise `body.html_quote_rule_gap`. *Declined, no id:* disclaimers and confidentiality footers, client
+   taglines ("Sent from my iPhone"), quoting inside a `message/rfc822` attachment (recorded, not recursed).
+   *Bottom-posting is legal, not a gap:* only a non-contiguous alternation is `body.inline_reply_interleaved`.
+4. **Header projection engine: the package owns it.** Addresses: an own RFC 5322 3.4 address-list tokenizer
+   (addr-spec per 3.2.3, quoted-string, CFWS per 3.2.4, group per 3.4, obs-route per 4) that emits **one span
+   per address**, preserves group members, yields a group with zero members for `undisclosed-recipients:;`,
+   records IDN and SMTPUTF8 verbatim (never IDNA-normalised), and makes an unparseable address tri-state
+   `unknown(reason_id)` with the raw value beside it. Dates: an own RFC 5322 3.3 date-time parser (optional day
+   name, obs-zone table, range checks, offset limit +/-9959) in one file, one entry point, no timezone database,
+   **never raising on input content**; the zone has three recorded states, `zone_stated`,
+   `zone_stated_minus_zero` (`-0000`, never read as UTC) and `zone_absent`, and a missing or invalid date sorts
+   at one named end with a reason, never as an epoch. `email.utils` and `email.headerregistry` appear **only in
+   tests**, as an advisory comparator (its disagreement is recorded and printed, never a gate); a test asserts
+   that the own parser returns a reason id exactly where `parsedate_to_datetime` raises. Version differences
+   between interpreters or patch levels are recorded-only run inputs.
+5. **Encoded words and RFC 2231.** The package validates (the stdlib decodes invalid words silently with
+   `defects = []`): `headers.encoded_word_invalid` on a charset that does not resolve, a B-encoding that is not
+   well-formed base64 or has wrong padding, a Q-encoding with a stray `=`, bad hex or a raw `?`. Unfold first
+   (RFC 5322 2.2.3 keeps the whitespace), then RFC 2047 5(1) (no adjacency to non-whitespace; whitespace
+   between encoded words dropped); join across a split character only for the **same charset**, else
+   `headers.encoded_word_invalid`. RFC 2231 continuations reassemble by index (a missing or duplicate index is an
+   error); `name*` shadows `name` with the conflict recorded; a charset on segment 0 only is legal. Wild forms
+   producers emit (an RFC 2047 word inside a quoted parameter; `filename*=''...` with an empty charset) are
+   **decode with a recorded fallback**, not "unparsable"; `attach.filename_unparsable` is for what cannot be
+   decoded.
+6. **One "not built" idiom, one schema bump.** There is exactly one: `TriValue(state=UNKNOWN,
+   reason_id=NOT_BUILT_IN_PHASE1)`, where `NOT_BUILT_IN_PHASE1 = "not_built_in_phase1"` is a new constant in
+   `ids.py` beside `NOT_BUILT_IN_PHASE0`, registered in the design's reason-id text. `None` keeps its single
+   meaning (the record family has no such axis, or the input did not exercise the field) and an empty list keeps
+   its single meaning (genuinely empty). **Neither is ever the encoding of "not built".** A union `X | NotBuilt`
+   is forbidden: the core codec decodes a union by its first non-`None` member, so it would not round-trip.
+   *Per-record axis fields.* `AttachmentOccurrence` gains `status_axis: TriValue` and `route_axis: TriValue`;
+   `EmailDocument` gains `times_axis`, `thread_edges_axis`, `children_axis` and
+   `same_message_candidates_axis` (all `TriValue`). The closed axis-id tuple is `attachment.status`,
+   `attachment.route`, `document.times`, `document.thread_edges`, `document.children`,
+   `document.same_message_candidates`; a wildcard id is banned. The value fields keep their types. A
+   document-level `deferred` list was **rejected** (it says nothing for a nested record read from a store).
+   *Invariants, enforced in the parent record's `__post_init__`.* (I1) a record has an axis field iff it has the
+   value field. (I2) Phase 1: `status is None` iff `status_axis` is the not-built `TriValue`; symmetric for
+   `route` and the document axes. (I3) built: `status` is a `StatusOutcome` iff `status_axis == TriValue(VALUE,
+   "built")`; absent keeps meaning "no such axis". (I4) any other pair raises `CodecError`; the axis reason is a
+   member of the closed set `{not_built_in_phaseN, "built"}` plus `UNKNOWN(reason_id)` for
+   consulted-and-unknown, so **no contract invariant depends on the current phase**. A test constructs
+   `AttachmentOccurrence(status=StatusOutcome(Status.PARSED), status_axis=<not built>)` and asserts it raises; a
+   scope test asserts that a build marked Phase 2 emits no record whose reason id is `NOT_BUILT_IN_PHASE1`.
+   *Type verdicts.* `declared_mime`, `magic` and `container_introspection` all become `TriValue` (design D4:
+   "each `value | unknown`"). `magic` consulted and nothing matched is **`VALUE("unrecognized")`**; not computed
+   (zero-length part, cap hit, decode failed) is `UNKNOWN(reason_id)`; `container_introspection` is
+   `UNKNOWN(not_built_in_phase1)`. `attach.type_disagreement` iff at least two verdicts are in state `VALUE`
+   with a media-type family and the set of families has size >= 2 (`"unrecognized"` and `UNKNOWN` contribute no
+   family and never fire it); `attach.type_unknown` iff no verdict yields a family; the winner order is `magic`
+   over `declared_mime` over `container_introspection` where known, and a winner must name a known verdict.
+   *Not merged: caps.* A cap hit is a **built observation**: Phase 1 **uses** the existing reasons now
+   (`Status.SKIPPED(size_cap | total_size_cap | depth_cap)`, `Status.TRUNCATED(cap_hit_mid_stream)`,
+   `RunRecord.cap_id` and `cap_value_bytes`). Two real defects are registered as contract work in the contract
+   turn: `RunRecord` models **one** cap (a run that hits depth and total bytes records one), and the reason
+   table has **no id for a part-count cap or a header-bytes cap**. *Not merged:* `FlagSection` (a reserved
+   present-but-empty contract versioned by `FLAG_SCHEMA_VERSION`) and `selection` (built in Phase 1).
+   *Version.* `OUTPUT_SCHEMA_VERSION` **3 to 4**; the core codec envelope is untouched; the contracts ledger
+   line moves; the walk ledger line moves only in the commit that shrinks `walk.UNBUILT_SECTIONS`.
+7. **Type verdicts and the magic table.** `declared_mime=text/plain` with a `PK\x03\x04` prefix is a
+   disagreement and the winner is `magic` (bytes beat claims); "zip" is an honest family and a zip is never
+   guessed to be docx or xlsx. The closed magic table: **zip, OLE-CFB, pdf, png, jpeg, gif, RTF (`{\rtf`),
+   gzip (`1F 8B 08`), 7z (`37 7A BC AF 27 1C`), rar (`Rar!\x1a\x07`)**. Excluded deliberately: WebP and WAV/AVI
+   (`RIFF` needs bytes 8-11), TIFF, `.ics` and `.eml` (text), and any text sniffing. `.msg` is OLE-CFB and needs
+   no row.
+8. **Offset maps and `verbatim_precision`.** The coordinate space is the part's decoded text in code points,
+   **un-normalised** (no CRLF or LF folding). An offset map is built, and a span is `exact`, only for a
+   **strict** decode of the **used** charset (never the declared one), over a stateless charset (single-byte or
+   UTF-8), where the CTE is identity; every other case is `part_level` with `cte_not_identity |
+   multibyte_without_offset_map | decode_fallback`, and **no within-part byte span is emitted**. The property
+   test is independent of how the map is stored: (1) spans are strictly increasing and **partition** both
+   `[0, len(raw))` and `[0, len(text))`; (2) for every span `raw[bo:be].decode(used_charset) == text[cs:ce]` (a
+   fresh re-decode of the slice); (3) for strict decodes `text.encode(used_charset) == raw`; (4)
+   `b"".join(slices) == raw`; (5) an anti-vacuity mutant that breaks one entry's byte length must fail the gate.
+   Assertions (2)-(4) are made only for stateless charsets. Exactness is a property of the **actual decode
+   function** (a UTF-8 BOM stays exact for plain `utf-8` and breaks only under `utf-8-sig` or a U+FEFF strip).
+   **The quote splitter, the `>`-depth counter, the offset map and the quote rules consume one line model
+   (`walk._iter_lines`)**, with a test that the splitter's line starts equal `_iter_lines` over a body containing
+   CR.
+9. **Structural caps** are caller parameters (maximum nesting depth, part count, header bytes, decoded bytes per
+   part and in total). A hit is a recorded built observation using the existing status reasons (decision 6,
+   "not merged: caps"); the part-count and header-bytes reasons and the multi-cap `RunRecord` are added in the
+   contract turn.
+10. **The entry point.** `parse(data: bytes, container_kind=None, *, limits)`: `limits` has **no default** (a
+    `Limits.untrusted()` constructor is provided for callers). With `container_kind=None` it sniffs:
+    `D0CF11E0A1B11AE1` is `cfb_msg` (a named error in Phase 1: no reader, never a guess, never an exception from
+    mid-parse); otherwise **RFC 822 if the bytes begin, after an optional UTF-8 BOM, with at least one `name:
+    value` line before a blank line or EOF**; otherwise a **named error** (closed reason id). The BOM is
+    tolerated by the sniff and handled by decision 14.
+11. **`TimeEvent`s are not emitted in Phase 1**, and `times_axis` records exactly that (decision 6). The `Date`
+    projection and the raw `Received` headers are recorded as header facts; the evidence layer and the conflict
+    policies are Phase 3.
+12. **Retained labels.** The Phase 0 sidecars' `attach.manifest`, `body.selection` and `headers.decoded` stay as
+    typed. A label that contradicts a settled decision **fails the suite as a finding** (both values and the
+    bytes) and the sidecar is **never edited**.
+
+Decisions 13 to 20 (verbatim from the spec's "Owner questions, decided"):
+
+13. **The quote catalogue** is reviewed by the owner before any quote rule is written (it is the only check not
+    from the same model family). v1 contains the rows of decision 3; **the Apple attribution table row and
+    Yahoo `yahoo_quoted` are NOT v1** until the owner confirms them from a structure-only probe of their own
+    mail (class and id names, never content); they trigger `body.html_quote_rule_gap` meanwhile. Every vendor
+    class name is "verify by probe".
+14. **A leading UTF-8 BOM and an mbox `From ` envelope line are tolerated**, not left as a malformed first
+    field (which loses the first real header). Each is accounted as its own leading `prelude` region of the
+    message (so spans still tile exactly), recorded by the new gap ids `headers.leading_bom` and
+    `headers.mbox_from_line`, and the header scan starts after it. This is a **versioned walker behaviour
+    change** (`EMAIL_PARSER_VERSION` 2; the symbolic fingerprint rule means it is not a contract change) made
+    in Turn 1.1 with its ledger lines; no existing corpus input contains either, so the corpus fingerprints do
+    not move.
+15. **A forward banner reads as level 0 (`new`)**, with a `kind = forward` boundary recorded (D3: an inline
+    forward is never the sender's quoted prior words). The catalogue review confirms it row by row.
+16. **Localized label tables:** English, German, French. More only when the owner's mail needs them.
+17. **Lone CR:** the walker's line model **stays** (changing it would invalidate frozen spans, the ledger and
+    the sidecars with no design mandate). `body.lone_cr_line_terminator` is recorded as a gap, emitted in the
+    header region; decision 8's single line model is the Phase 1 consequence; the independent splitter fuzz
+    (below) cannot see a lone-CR framing bug and the document says so.
+18. **`exact` precision is built only as decision 8 states** (identity CTE, strict stateless decode). The
+    QP and base64 offset maps are **deferred to the phase that builds citations** (Phase 4): `cte_not_identity`
+    is an honest, recorded choice, not a permanent one, and real mail being mostly QP or base64 means `exact`
+    will rarely fire in v1.
+19. **`thread.duplicate_message_id_bytes_differ`** keeps the design's id (same `Message-ID`, different bytes,
+    detected at ingest); the document says why a `thread.*` id appears in a phase that defers threading: it is
+    an ingest-level fact about two files, not a thread edge.
+20. **Test ceilings per turn** (<= 40; <= 25 for quote turns) are guidelines (decision: operating rule 10).
+
+### Contradictions of revision 1, resolved here (one place each)
+
+The spec listed these as things Turn 1.0a must settle in the design rather than leave to a build agent. Each
+is resolved **once**, below:
+
+- **`body.plain_effectively_empty` is a FACT, not a gap** (decision 6, D16). It is declared in `FACTS` with
+  the phase it becomes checkable at (Turn 1.0b), and it leaves the "Known-gap ids" registry in this turn;
+  `docs/design/phase0-gaps.md` records it as a **fact entry**, in a section that says why. The D16 text below
+  is amended accordingly.
+- **Gap ids are written fully qualified** (`headers.*`, `body.*`, `view.*`, `attach.*`, `thread.*`, `msg.*`,
+  `time.*`, `sibling.*`, `security.*`). Reason ids are compared by exact string, so a bare `boundary_disagreement`
+  and a bare `decode_fallback_used` are **not** ids: the registry, `phase0-gaps.md`, a sidecar and a constant
+  spell them `body.boundary_disagreement` and `body.decode_fallback_used`. The walker's `GAP_*` constants and
+  the design's registry already obey this; this note makes it the rule everywhere.
+- **Caps are used as statuses now, not deferred** (decision 6, D6). A cap hit that bites before an extractor
+  starts is `Status.SKIPPED` with a cap reason; the run record keeps the cap id and value. The registry's
+  pruned pair (`attach.size_cap_hit`, `attach.nesting_cap_hit`) stays pruned and stays out.
+- **The registry mechanics are named**: adding a gap id costs a **registry line** in the design, a
+  **`phase0-gaps.md` entry** in the four-question format, a **fixture** that exercises it and a **mutation
+  case** in the gap gate. `tests/test_phase0_gaps.py` holds the registry and the document to each other both
+  ways, so an id added on one side and not the other is a failing test, not a silent drift.
+- **Where Phase 1 gap ids live**: the file keeps its name `docs/design/phase0-gaps.md` (its path is asserted
+  by `tests/test_phase0_gaps.py`, and renaming it would touch a test for no gain). Phase 1's ids are added to
+  the existing **families** in the registry -- `headers.*`, `body.*`, `attach.*` -- and to a new **"Phase 1"**
+  section of `phase0-gaps.md`, so a reader still finds every id in one place.
+
 ## Goal
 
 Decompose one email message (v1: a `.eml` or `.msg` file, or a directory of them) into an
@@ -77,6 +287,14 @@ opening proposal (change stated); **D** = standing disagreement.
   extensions lie. `limits` (max sectors, directory entries, stream size, nesting depth) is
   mandatory for untrusted bytes. Hearth's addition; accepted. A non-`IPM.Note` CFB (calendar
   item, contact) is recorded with a status and a gap, never raised.
+- **Amendment (Revision 3, decision 10).** Fixed as `parse(data: bytes, container_kind=None, *,
+  limits)`: `limits` has **no default** (a `Limits.untrusted()` constructor is provided for callers),
+  because the function cannot know which bytes are untrusted. Sniffing is `D0CF11E0A1B11AE1` ->
+  `cfb_msg` (a named error in Phase 1: no reader, never a guess, never an exception from mid-parse),
+  else RFC 822 if the bytes begin, **after an optional UTF-8 BOM**, with at least one `name: value`
+  line before a blank line or EOF, else a **named error** (closed reason id). The named error is kept
+  -- "any other bytes are RFC 822" would parse garbage as a defectful message and drop D1's named
+  error. The BOM is tolerated by the sniff and handled by decision 14 (below, D2/D3).
 - `.emlx` and `.mht` remain out of v1 (silent scope is what word-extract D12 was written to
   stop). mbox needs a byte-offset splitter (named gap); PST is a mail store, out.
 - HTML-to-text is lxml only, as a **named projection with its own `htmltext_version`**
@@ -85,6 +303,17 @@ opening proposal (change stated); **D** = standing disagreement.
   `<blockquote>`. Hearth also proposed stdlib `html.parser` for structural quote-container
   detection; one parser for both the text projection and the DOM rules is preferred and the
   choice is made in Phase 1 by fixture (both pinned). No `html2text`, no chardet.
+- **Amendment (Revision 3, decision 1).** The sentence above is **superseded**: "lxml only" is no
+  longer the decision. The parser is chosen in Turn 1.0d by a **recorded experiment**, not by
+  preference -- candidate A (stdlib `html.parser` plus an own stack-based element tree) versus
+  candidate B (`lxml.html`) -- and B is chosen only if its tree puts every quote container at the
+  same node as A on the quote fixtures. B is pinned by the **wheel** (the libxml2 build), not the
+  interpreter, so a two-interpreter identity test says nothing about libxml2; for A the CPython
+  version is a recorded-only run input and an input to `HTMLTEXT_VERSION`'s key. If neither is clean,
+  A ships with a **named unclosed-container rule** that records `body.html_quote_rule_gap` rather
+  than silently closing the container (an unclosed `<blockquote>` otherwise swallows following new
+  text). The element tree has its own module `htmltree.py` and records, per element, the
+  **projected-text span** it covers and the **set of `cid:` references**.
 - Rejected: an optional GPL `emailextract[msg]`; keeping `.msg` in v2.
 - Status **AC** (hearth agreed to the own reader and tightened the no-GPL rule to include tests).
 
@@ -117,6 +346,20 @@ most load-bearing correction)
   not `+0000`; never repair bad dates; missing date sorts at one *named* end with
   a reason, never as epoch. Missing `Message-ID` is `unknown`, not `None`.
   `References` is a list (parent = last id; the whole chain is a fact).
+- **Amendment (Revision 3, decision 4).** The package **owns** address and date parsing. Addresses: an
+  own RFC 5322 3.4 address-list tokenizer (addr-spec per 3.2.3, quoted-string, CFWS per 3.2.4, group
+  per 3.4, obs-route per 4) emitting **one span per address**, preserving group members, yielding a
+  group with zero members for `undisclosed-recipients:;`, recording IDN and SMTPUTF8 verbatim, and
+  making an unparseable address tri-state `unknown(reason_id)` with the raw value beside it. Dates: an
+  own RFC 5322 3.3 date-time parser (optional day name, obs-zone table, range checks, offset limit
+  +/-9959) in one file, **never raising on input content**; the zone has **three recorded states**,
+  `zone_stated`, `zone_stated_minus_zero` (`-0000`, never read as UTC) and `zone_absent`, and a missing
+  or invalid date sorts at one named end with a reason, never as an epoch. `email.utils` and
+  `email.headerregistry` appear **only in tests**, as an advisory comparator (its disagreement is
+  printed, never a gate), because none of `parseaddr`/`getaddresses`/`AddressHeader` returns offsets
+  (D2 needs a span per address), `parsedate_tz` rewrites `-0000` to `0`, and `getaddresses`/`parseaddr`
+  changed across **patch levels** with the CVE-2023-27043 backport. A test asserts the own parser
+  returns a reason id exactly where `parsedate_to_datetime` raises.
 - `Reply-To`, the `Received` chain, `Authentication-Results`, `DKIM-Signature`,
   `ARC-*` are recorded as **claimed**, never verified. `msg.defects` is recorded
   (free, deterministic, citable).
@@ -131,6 +374,20 @@ most load-bearing correction)
   disagreement always surfaced (`headers.mapi_header_property_disagree`), the loser never dropped.
 - Uniform tri-state everywhere: `value | absent | unknown(reason_id)`, with an
   `output_schema_version` (word-extract D10(A) applied).
+- **Amendment (Revision 3, decision 6): the not-built reason ids.** A section that is not built yet is
+  recorded as `unknown(not_built_in_phaseN)` -- the constants `NOT_BUILT_IN_PHASE0` (Phase 0) and
+  **`NOT_BUILT_IN_PHASE1`** = `not_built_in_phase1` (new in Turn 1.0b, beside it in
+  `emailextract/ids.py`), registered in this reason-id text. `None` keeps its single meaning (the record
+  family has no such axis, or the input did not exercise the field) and an empty list keeps its single
+  meaning (genuinely empty); **neither is ever the encoding of "not built"**. The closed set an axis
+  reason may come from is `{not_built_in_phaseN, "built"}` plus `UNKNOWN(reason_id)` for
+  consulted-and-unknown -- a contract invariant that never depends on the current phase. A union
+  `X | NotBuilt` is forbidden (the core codec decodes a union by its first non-`None` member, so it
+  would not round-trip); the not-built idiom is per-record `TriValue` **axis fields**
+  (`AttachmentOccurrence.status_axis`/`route_axis` and `EmailDocument.times_axis`/`thread_edges_axis`/
+  `children_axis`/`same_message_candidates_axis`), with the closed axis-id tuple
+  `attachment.status`, `attachment.route`, `document.times`, `document.thread_edges`,
+  `document.children`, `document.same_message_candidates` (a wildcard id is banned).
 
 ### D3. Body: views over one text, quote boundaries as typed facts (AC)
 - The opening proposal had three flat masks. Changed: quoted text is recursive
@@ -191,6 +448,39 @@ most load-bearing correction)
   charset, used CTE, used charset, `fallback_fired` (`decode_chain_version`).
   Raw bytes are canonical; decoded text is a projection. `errors='replace'` is never
   the normal path (it destroys byte round-trip).
+- **Amendment (Revision 3, decisions 2, 3).** The quote model is settled. Per view and per span the
+  structural rules and the `>`-family each produce boundaries carrying `(rule_id, kind, ordinal)` and
+  per-line `prefix_depth`, and **only `kind = quote` boundaries advance the ordinal** -- `forward`,
+  `signature`, `list_footer` and `unknown` boundaries are recorded with their span at **level 0**, so a
+  message with only a forward banner has no `quoted` span. `quote_level` is a **derived rank**:
+  `level = ordinal` where a structural `quote` rule fired in the span, else `level = prefix_depth`; it
+  carries its resolution `rule_id`, and nothing may threshold its magnitude (`new` = 0, `quoted` >= 1,
+  `full` = all are the only tests). `view.quote_level_disagreement` is recorded **iff**
+  `quote_prefix_depth >= 1` **and** a structural `quote` ordinal >= 1 on the same span **and** the two
+  resolved ranks differ; an all-zero depth beside a fired structural rule is a **normal state**, never a
+  disagreement. Ordinal and depth stay stored, never averaged. A **new contract record** holds the
+  per-boundary and per-view facts (`PartRecord` has no quote fields; it moves `OUTPUT_SCHEMA_VERSION`).
+  The `>`-family (alphabet `> >`, `>>`, bare `>`) is counted on decoded text **after RFC 3676
+  space-unstuffing when the part declares `format=flowed`**. The Outlook flat block keys on a maximal
+  run of >= 2 adjacent labels, all from **one language's set, in canonical order as a subsequence**,
+  with the date slot accepting both tokens per language (EN `Sent:`/`Date:`, DE `Gesendet:`/`Datum:`,
+  FR `Envoyé:`/`Date:`) and separators accepting any whitespace run before `:` including U+00A0/U+202F
+  after NFC; the language (English, German, French) is **per block**. `Begin forwarded message:` and
+  `-----Original Message-----` are named shapes (kind `forward` for the banner); the `-- ` signature
+  (exactly dash dash space plus the line end, RFC 3676 4.3) is a **candidate only**; a line of at least
+  30 `_` is a `list_footer` candidate (detection only). The DOM rules are `gmail_quote` (on a `div`
+  **or a `blockquote`**; the attribution wrapper adds no second ordinal), `blockquote[type=cite]`,
+  Outlook `divRplyFwdMsg` and `#appendonsend` (with the **`x_` prefix** Outlook adds on rewrite), and
+  Thunderbird `moz-cite-prefix`/`moz-forward-container`. A **forward banner reads as level 0 (`new`)**
+  with a `kind = forward` boundary recorded; a class or id matching a known vendor prefix family
+  (`gmail_`, `moz-`, `yahoo_`, `RplyFwdMsg`) with no table row is `body.html_quote_rule_gap`, never
+  `body.no_boundary_found`. `body.i18n_reply_marker` fires **only on a label-shaped unknown-language
+  block** (a header-like run of short `Label:` lines directly after a boundary-looking line), never on
+  any absence. Bottom-posting is legal; only a non-contiguous alternation is
+  `body.inline_reply_interleaved`. Declined with **no id**: disclaimers/confidentiality footers, client
+  taglines ("Sent from my iPhone"), quoting inside a `message/rfc822` attachment. The Apple attribution
+  row and Yahoo `yahoo_quoted` are **not v1** (owner decision 13) and raise `body.html_quote_rule_gap`
+  meanwhile; every vendor class and id name is "verify against a structure-only probe by the owner".
 
 ### D4. Attachments: routing, identity, statuses (AC)
 - **Type is three separate recorded verdicts**: `declared_mime`, `magic`,
@@ -200,6 +490,20 @@ most load-bearing correction)
   comes from `[Content_Types].xml` plus the main part's relationship type (the
   word-extract D1 rule), OLE needs stream/CLSID introspection. An encrypted OOXML
   is a CFB, so `password_protected` is only knowable after introspection.
+- **Amendment (Revision 3, decisions 6, 7).** Each of the three verdicts becomes a **`TriValue`**, not
+  `str | None`: `declared_mime`, `magic`, `container_introspection`. `magic` **consulted and nothing
+  matched** is `VALUE("unrecognized")` -- a closed sentinel *value*, not `UNKNOWN`; **not computed**
+  (zero-length part, cap hit, decode failed) is `UNKNOWN(reason_id)`; `container_introspection` is
+  `UNKNOWN(not_built_in_phase1)` until Phase 2. `attach.type_disagreement` fires **iff** at least two
+  verdicts are in state `VALUE` with a media-type family and the set of families has size >= 2
+  (`"unrecognized"` and `UNKNOWN` contribute no family and never fire it); `attach.type_unknown` fires
+  **iff** no verdict yields a family; the **winner order is `magic` over `declared_mime` over
+  `container_introspection` where known**, and a winner must name a known verdict (the existing
+  construction invariant). The closed **magic table**: zip, OLE-CFB, pdf, png, jpeg, gif, RTF (`{\rtf`),
+  gzip (`1F 8B 08`), 7z (`37 7A BC AF 27 1C`), rar (`Rar!\x1a\x07`). Excluded deliberately: WebP and
+  WAV/AVI (`RIFF` needs bytes 8-11), TIFF, `.ics` and `.eml` (text), and **any text sniffing**; `.msg`
+  is OLE-CFB and needs no row. `declared_mime=text/plain` with a `PK\x03\x04` prefix is a disagreement
+  whose winner is `magic` (bytes beat claims), and a zip is never guessed to be docx or xlsx.
 - Routing: PDF/XLSX -> form-extract, DOCX -> word-extract, `message/rfc822`
   recurses. Siblings are **optional extras** (PyMuPDF is AGPL-3.0 and flows through
   form-extract; email-extract itself must stay importable without either).
@@ -282,6 +586,13 @@ most load-bearing correction)
   one child parse, N occurrences; same `Message-ID` with different bytes ->
   `thread.duplicate_message_id_bytes_differ`, all occurrences kept, never merged
   (distinct from in-file `headers.duplicate_message_id`).
+- **Amendment (Revision 3, decision 10).** The `parse` entry point `ingest` calls is `parse(data: bytes,
+  container_kind=None, *, limits)`, with `limits` having **no default** (a `Limits.untrusted()`
+  constructor is provided) and the sniffing / named-error rule of decision 10 (D1, amended). The
+  `EmailDocument` shape itself gains the per-axis `TriValue` fields of decision 6 (`times_axis`,
+  `thread_edges_axis`, `children_axis`, `same_message_candidates_axis`) and moves
+  `OUTPUT_SCHEMA_VERSION` **3 to 4** in Turn 1.0b; a document-level `deferred` list is **rejected** (for
+  a nested record read out of a store it says nothing).
 
 ### D6. Status vocabulary (closed; four orthogonal axes) (A, round 3)
 Status is never derived from classification and never from size.
@@ -315,6 +626,15 @@ Status is never derived from classification and never from size.
   cap is a different run. `cap_hit_mid_stream` is reserved for streaming and v1
   ships no test pretending it fires. The raw message is archived whole either way,
   so caps never lose bytes.
+- **Amendment (Revision 3, decisions 6, 9).** A cap hit is a **built observation, used now**, not
+  deferred: `Status.SKIPPED(size_cap | total_size_cap | depth_cap)`, `Status.TRUNCATED(cap_hit_mid_stream)`,
+  `RunRecord.cap_id` and `RunRecord.cap_value_bytes` are the Phase 1 vocabulary. Two real defects are
+  **registered as contract work in Turn 1.0b**: `RunRecord` models **one** cap (a run that hits depth
+  and total bytes records only one), and the reason table has **no id for a part-count cap or a
+  header-bytes cap** -- and the multi-cap `RunRecord` plus those two reasons are added there. The
+  **structural caps** are caller parameters: maximum nesting depth, part count, header bytes, decoded
+  bytes per part, and decoded bytes in total. A `skipped` part carries the cap reason and the run
+  record keeps the cap id and value (this is why the two cap-flavoured candidate gap ids stay pruned).
 - `not_installed` and `unsupported` are **environmental** and live in the run
   record: re-running with an extra installed flips them without changing content.
 - Recorded alongside, not statuses: `route`, `decorative_hint`, `size_bytes`,
@@ -570,6 +890,11 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   `body.plain_effectively_empty` is recorded as a **fact**, not a gap: a legal state, and not
   "empty new text". Matching and `body_digest` (D14) consider **every non-empty alternative**,
   never one chosen "the body".
+- **Amendment (Revision 3, decision 6).** Resolved: `body.plain_effectively_empty` is a **FACT**, not a
+  gap. It is **declared in `FACTS`** (Turn 1.0b) with the phase it becomes checkable at, and it
+  **leaves the "Known-gap ids" registry** in this turn; `docs/design/phase0-gaps.md` records it as a
+  **fact entry** (in a section that says why), not a gap entry. Turn 1.0c ships the fixture
+  `plain_effectively_empty`, typed in `docs/design/phase1-fixtures.md`.
 - `iso-8859-1` declared charset is **no special case**: the decode chain and `encoding_source`
   record it as for UTF-8. The real samples show quoted-printable bodies only, no base64 bodies
   and no defects; base64 and truncated-base64 behavior stays covered by synthetic raw fixtures.
@@ -587,10 +912,26 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
     a recorded offset map); otherwise `part_level`;
   - the decoded char span is always exact within its named, versioned projection.
   When `part_level`, the citation carries `verbatim_precision: part_level`,
-  `verbatim_reason` (`cte_not_identity | multibyte_without_offset_map`),
+  `verbatim_reason` (`cte_not_identity | multibyte_without_offset_map | decode_fallback`),
   `part_raw_span`, `decoded_span`, `projection_id` and version, and **must not emit
-  a within-part byte span**. Tested property: a citation claiming `exact` slices to
-  the right bytes.
+  a within-part byte span**.
+- **Amendment (Revision 3, decision 8).** The three rungs above are **all kept and fixed**. A span is
+  `exact` only for a **strict** decode of the **used** charset (never the declared one), over a
+  **stateless** charset (single-byte or UTF-8), where the CTE is identity; every other case is
+  `part_level` with `cte_not_identity | multibyte_without_offset_map | decode_fallback` (the third
+  reason is **added here**) and no within-part byte span is emitted. The coordinate space is the part's
+  decoded text in **code points, un-normalised** (no CRLF or LF folding); a UTF-8 BOM stays exact for
+  plain `utf-8` and breaks only under `utf-8-sig` or a U+FEFF strip, because exactness is a property of
+  the **actual decode function**, not the charset name. The tested property is not the circular "an
+  exact span slices to the right bytes" but five independent assertions: (1) spans strictly increase and
+  **partition** both `[0, len(raw))` and `[0, len(text))`; (2) for every span
+  `raw[bo:be].decode(used_charset) == text[cs:ce]`; (3) for strict decodes
+  `text.encode(used_charset) == raw`; (4) `b"".join(slices) == raw`; (5) an anti-vacuity mutant that
+  breaks one entry's byte length fails the gate. Assertions (2)-(4) are made only for stateless
+  charsets. QP and base64 offset maps are **deferred to Phase 4** (owner decision 18): `cte_not_identity`
+  is an honest, recorded choice, not a permanent one. **The quote splitter, the `>`-depth counter, the
+  offset map and the quote rules consume one line model, `walk._iter_lines`**, with a test that the
+  splitter's line starts equal `_iter_lines` over a body containing CR.
 - **Stamped with version** (a citation is meaningless without): `textmodel_version`,
   `headertext_version`, `htmltext_version`, `decode_chain_version`,
   `output_schema_version`, plus `matcher_version` on flag hits. View id is always
@@ -610,25 +951,26 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   partially filled. Two versions of one file are two occurrences with two
   citations and a `same_content_hash` boolean; never merged.
 
-## Known-gap ids (v1 registry; resolved by `docs/design/phase0-gaps.md` in Phase 0.6)
+## Known-gap ids (v1 registry; resolved by `docs/design/phase0-gaps.md` in Phase 0.6, extended in Phase 1 Turn 1.0a)
 
 - **headers**: `malformed_line`, `unknown_field`, `no_message_id`,
   `duplicate_message_id`, `no_date`, `invalid_date`, `date_no_zone`,
   `address_unparsable`, `smtputf8_not_resolved`, `encoded_word_invalid`,
-  `received_chain_unverified`, `mapi_header_property_disagree`.
+  `received_chain_unverified`, `mapi_header_property_disagree`,
+  `duplicate_header`, `leading_bom`, `mbox_from_line`.
 - **body**: `no_boundary_found`, `boundary_disagreement`, `html_quote_rule_gap`,
   `i18n_reply_marker`, `preamble_bytes`, `epilogue_bytes`,
   `inline_reply_interleaved`, `empty_new_text`, `signature_undelimited`,
   `decode_fallback_used`, `decode_destroyed_bytes`, `part_truncated`,
-  `no_text_part`, `headers_only`, `inline_data_uri`,
-  `plain_effectively_empty`, `mixed_origin_quoting`.
+  `no_text_part`, `headers_only`, `inline_data_uri`, `mixed_origin_quoting`,
+  `digest_default_not_applied`, `flowed_reflow_unresolved`, `lone_cr_line_terminator`.
 - **view**: `quote_level_disagreement`, `gap_closing_contiguous`.
 - **attach**: `type_unknown`, `type_disagreement`, `ole_container_unknown`,
   `zip_unexpanded`, `tnef_present`, `encrypted_ooxml`, `legacy_office_password`
   (Word/Excel 97-2003 FilePass/RC4; distinct from `encrypted_ooxml`, ECMA-376
   EncryptionInfo/EncryptedPackage), `filename_absent`, `filename_unparsable`,
   `disposition_absent`, `cid_unreferenced`, `cid_dangling`, `occurrence_repeated`,
-  `macro_present_inert`.
+  `macro_present_inert`, `duplicate_content_id`.
 - **thread**: `no_references`, `parent_not_in_corpus`,
   `references_vs_in_reply_to_disagree`, `duplicate_message_id_ambiguous_parent`,
   `duplicate_message_id_bytes_differ`, `cyclic`, `date_only_ordering`,
@@ -651,6 +993,15 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   status reason did not -- a second place to disagree with the first. No committed
   fixture or sidecar named either id, so nothing on disk changed. Resolved by
   `docs/design/phase0-gaps.md`.
+- Phase 1 additions (Turn 1.0a, Revision 3): the **seven** ids `headers.duplicate_header`,
+  `headers.leading_bom`, `headers.mbox_from_line`, `body.digest_default_not_applied`,
+  `attach.duplicate_content_id`, `body.flowed_reflow_unresolved` and
+  `body.lone_cr_line_terminator` join the families above, and `body.plain_effectively_empty`
+  **leaves** this registry because decision 6/D16 resolve it as a **fact**, not a gap -- so the
+  registry goes from 79 to **85** ids. Each of the seven costs a registry line here, a
+  `phase0-gaps.md` entry, a fixture and a mutation case (Revision 3, "the registry mechanics are
+  named"). **None is emitted by any code in Turn 1.0a**: this turn only registers them, and the turn
+  named beside each entry in `phase0-gaps.md` first emits it.
 
 ## Triage of items surfaced beyond the opening list
 
