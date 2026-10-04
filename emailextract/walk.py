@@ -437,9 +437,16 @@ def _walk_part(
         regions.append(Region("headers", path, headers))
         payload = raw[body.offset : body.end]
         used_cte, decoded, cte_fired, cte_gap = _decode_cte(payload, declared_cte)
-        used_charset, encoding_source, charset_fired, charset_gap = _charset_ladder(
-            decoded, declared_charset
-        )
+        # A charset belongs to TEXT: a part with no Content-Type is text/plain by default (RFC 2045),
+        # and anything else (a pdf, a png, an office zip) is bytes with no charset. Running the text
+        # ladder over a binary part reported a windows-1252 reading and a false
+        # body.decode_destroyed_bytes for content that was never text.
+        if content_type is None or content_type.lower().startswith("text/"):
+            used_charset, encoding_source, charset_fired, charset_gap = _charset_ladder(
+                decoded, declared_charset
+            )
+        else:
+            used_charset, encoding_source, charset_fired, charset_gap = None, None, False, None
         if cte_gap:
             gaps.append(cte_gap)
         if charset_gap:

@@ -412,3 +412,41 @@ def _absent():
     from emailextract.model import TriValue
 
     return TriValue(state=TriState.ABSENT, reason_id=NOT_BUILT_IN_PHASE0)
+
+
+def _single_part(content_type_line: bytes, body: bytes) -> bytes:
+    head = b"From: a@example.test\r\nSubject: s\r\nMIME-Version: 1.0\r\n"
+    return head + content_type_line + b"Content-Transfer-Encoding: base64\r\n\r\n" + body
+
+
+@pytest.mark.parametrize(
+    "content_type_line",
+    [
+        b"Content-Type: application/pdf\r\n",
+        b"Content-Type: image/png\r\n",
+        b"Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n",
+    ],
+)
+def test_a_binary_part_has_no_charset_reading_and_no_false_destroyed_bytes(
+    content_type_line: bytes,
+) -> None:
+    """A charset belongs to text. Bytes that are not valid text in any rung (the PNG signature, a zip
+    header) used to be run through the text ladder: a windows-1252 reading, fallback_fired, and a
+    false body.decode_destroyed_bytes for content that was never text."""
+    payload = base64.b64encode(b"\x89PNG\r\n\x1a\n\x00\x00\x81\x8d\x8f\x90\x9d\xff\xfe").decode() + "\r\n"
+    result = walk(EmlContainer(_single_part(content_type_line, payload.encode())))
+    part = result.parts[0]
+    assert part.decode_chain.used_cte == "base64"
+    assert part.decode_chain.used_charset is None
+    assert part.decode_chain.fallback_fired is False
+    assert part.encoding_source is None
+    assert GAP_BODY_DECODE_DESTROYED_BYTES not in part.gaps
+
+
+def test_a_text_part_and_a_part_with_no_content_type_still_get_the_ladder() -> None:
+    """The fix is scoped to non-text: text/* and the RFC default (no Content-Type = text/plain) keep it."""
+    lossy = base64.b64encode(b"caf\x81\x8d").decode() + "\r\n"
+    for line in (b"Content-Type: text/plain\r\n", b""):
+        part = walk(EmlContainer(_single_part(line, lossy.encode()))).parts[0]
+        assert part.decode_chain.used_charset is not None, line
+        assert part.encoding_source is not None, line

@@ -39,10 +39,14 @@ HTMLTEXT_VERSION: Final[str] = "1"
 Moves when HTML-to-text extraction changes.
 """
 
-DECODE_CHAIN_VERSION: Final[str] = "1"
+DECODE_CHAIN_VERSION: Final[str] = "2"
 """Version of the decode chain (declared/used CTE and charset, fallback rules).
 
 Moves when the decode rules or their recorded fields change.
+
+2: the charset ladder runs only over text parts (no Content-Type, or ``text/*``). Before, a binary
+part (pdf, png, an office zip) was given a ``used_charset``, an encoding source, a possible
+``fallback_fired`` and a false ``body.decode_destroyed_bytes`` for content that was never text.
 """
 
 FLAG_SCHEMA_VERSION: Final[str] = "1"
@@ -62,4 +66,9 @@ EMAIL_PARSER_VERSION: Final[str] = "1"
 """Version of the email parser behavior.
 
 Moves when the walker's output changes for unchanged input bytes.
+
+(The binary-part charset fix moved ``DECODE_CHAIN_VERSION`` to 2 and not this one: ``EmailDocument``
+and ``RunRecord`` default ``email_parser_version`` to this constant, and the contracts fingerprint
+hashes field defaults, so bumping it reads as a contract change. Decoupling that is a recorded
+follow-up, not part of this fix.)
 """
