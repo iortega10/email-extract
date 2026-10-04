@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: iso 2022 jp stateful
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <iso-2022-jp-3019@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-2022-jp
+
+あいうえお

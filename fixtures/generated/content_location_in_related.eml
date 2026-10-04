@@ -1,0 +1,25 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: content location in related
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <content-location-3004@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="b0-cl-20250304"
+
+--b0-cl-20250304
+Content-Type: text/html; charset=utf-8
+Content-ID: <page@example.test>
+
+<p>Photo below.</p>
+<img src="cid:photo@example.test">
+<img src="http://example.test/banner.png">
+
+--b0-cl-20250304
+Content-Type: application/octet-stream
+Content-ID: <photo@example.test>
+Content-Location: http://example.test/photo.png
+Content-Transfer-Encoding: base64
+
+cGhvdG8gYnl0ZXMK
+
+--b0-cl-20250304--

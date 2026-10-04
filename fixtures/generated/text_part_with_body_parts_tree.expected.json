@@ -1,0 +1,324 @@
+{
+  "fixture": "text_part_with_body_parts_tree.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/mixed (boundary b0-rfc822-20250304) whose single child is a `message/rfc822` body part -- the nested message is recorded in part.tree and never recursed",
+    "generator": "tools/make_fixtures.py, from _fixture_text_part_with_body_parts_tree (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <body-parts-tree-3016@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree (the message/rfc822 child is a leaf; its inner headers are NOT parts), part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "document.axes (decisions 6/11: the children axis is not built in Phase 1, so the axis row stays unknown(not_built_in_phase1) even though the body carries a message/rfc822 part) and part.tree",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules (a message/rfc822 body part is recorded, not recursed), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; the message/rfc822 child's body span is its whole inner message; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "none: the multipart splits, the child declares its Content-Type, and there is no quoting of a nested message to reconcile",
+    "not_yet_labelled": "body.text (the message/rfc822 child is not a text view), headers.projection, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "cfd4375b0e9e8c9f07801e42375f8f2ea4f35319f98bbf02bdd5dca41dfae705"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 457
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " text part with body parts tree",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            31
+          ],
+          [
+            74,
+            41
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            115,
+            4
+          ],
+          [
+            120,
+            31
+          ],
+          [
+            115,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <body-parts-tree-3016@example.test>",
+          "ok",
+          [
+            153,
+            10
+          ],
+          [
+            164,
+            36
+          ],
+          [
+            153,
+            49
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            202,
+            12
+          ],
+          [
+            215,
+            4
+          ],
+          [
+            202,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/mixed; boundary=\"b0-rfc822-20250304\"",
+          "ok",
+          [
+            221,
+            12
+          ],
+          [
+            234,
+            47
+          ],
+          [
+            221,
+            62
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/mixed",
+          [
+            0,
+            457
+          ],
+          [
+            0,
+            285
+          ],
+          [
+            285,
+            172
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "message/rfc822",
+          [
+            307,
+            124
+          ],
+          [
+            307,
+            32
+          ],
+          [
+            339,
+            92
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            285
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            285,
+            22
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            307,
+            32
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            339,
+            92
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            431,
+            26
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          null,
+          "7bit",
+          null,
+          false,
+          null
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "d1914c021bfeed58b18cddc137a9d004365f71fd1a33a0148e0e0826ea477875"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    }
+  }
+}

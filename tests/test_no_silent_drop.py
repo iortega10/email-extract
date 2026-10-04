@@ -37,8 +37,8 @@ NAMED = ["preamble_epilogue", "truncated_base64", "malformed_mime"]
 def test_every_committed_fixture_accounts_for_every_byte() -> None:
     gate = no_silent_drop_gate()
     assert gate.passed is True, gate.lines()
-    assert gate.data["fixtures"] == 46
-    assert gate.data["bytes"] == 25729
+    assert gate.data["fixtures"] == 68
+    assert gate.data["bytes"] == 35066
     # The gate proves its own sensitivity: a dropped region and an overlap are both detected.
     assert gate.data["mutations"] == {"dropped_region": True, "overlap": True}
 

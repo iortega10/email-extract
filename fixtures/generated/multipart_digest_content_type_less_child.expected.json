@@ -1,0 +1,335 @@
+{
+  "fixture": "multipart_digest_content_type_less_child.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/digest (boundary b0-digest-20250304) whose single child has NO Content-Type header at all -- by RFC 2046 5.1.5 that child is message/rfc822",
+    "generator": "tools/make_fixtures.py, from _fixture_multipart_digest_content_type_less_child (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <digest-no-ctype-3012@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree (the child's content_type is null: the walker never invents a default), part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "document.axes; the digest default is recorded as a gap, not typed as a content type",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules (RFC 2046 5.1.5: a Content-Type-less digest child is message/rfc822; the Phase 1 reader supplies it as a projection over the raw field), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a Content-Type-less child's headers_span is its leading empty line and its body begins right after it; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "body.digest_default_not_applied in gaps.later (Phase 1, Turn 1.5): the walker records content_type null and a later projection must supply message/rfc822 without rewriting the raw field",
+    "not_yet_labelled": "headers.projection, body.text, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a95db7473daa84f1c7f13917506512f25d533203e15af7ed202317579af578b1"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 366
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " multipart digest content type less child",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            41
+          ],
+          [
+            74,
+            51
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            125,
+            4
+          ],
+          [
+            130,
+            31
+          ],
+          [
+            125,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <digest-no-ctype-3012@example.test>",
+          "ok",
+          [
+            163,
+            10
+          ],
+          [
+            174,
+            36
+          ],
+          [
+            163,
+            49
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            212,
+            12
+          ],
+          [
+            225,
+            4
+          ],
+          [
+            212,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/digest; boundary=\"b0-digest-20250304\"",
+          "ok",
+          [
+            231,
+            12
+          ],
+          [
+            244,
+            48
+          ],
+          [
+            231,
+            63
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/digest",
+          [
+            0,
+            366
+          ],
+          [
+            0,
+            296
+          ],
+          [
+            296,
+            70
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          null,
+          [
+            318,
+            22
+          ],
+          [
+            318,
+            2
+          ],
+          [
+            320,
+            20
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            296
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            296,
+            22
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            318,
+            2
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            320,
+            20
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            340,
+            26
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          null,
+          "7bit",
+          "us-ascii",
+          false,
+          "ascii"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "e34d9cf5b0a80ea6374ebc7bdf30cc510a63d17389afd9df56255eadf5cce133"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.digest_default_not_applied",
+          "1.1",
+          1,
+          "the child has no Content-Type and is message/rfc822 by RFC 2046 5.1.5, but the walker records content_type null; the default must be supplied as a projection over the raw field, never as a rewrite of it (design D3)"
+        ]
+      ]
+    }
+  }
+}

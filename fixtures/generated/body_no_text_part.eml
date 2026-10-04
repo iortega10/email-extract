@@ -1,0 +1,16 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: body no text part
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <body-no-text-3014@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-notext-20250304"
+
+--b0-notext-20250304
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="doc.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKZml4dHVyZQolJUVPRgo=
+
+--b0-notext-20250304--

@@ -1,0 +1,387 @@
+{
+  "fixture": "multipart_signed.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/signed (boundary b0-signed-20250304) with a text/plain child and an application/pkcs7-signature child whose payload is a short base64 run",
+    "generator": "tools/make_fixtures.py, from _fixture_multipart_signed (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <multipart-signed-3011@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "part.tree (both children, the signature part recorded exactly as it is) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules (D-noted: the signature part is never repaired, its bytes are kept verbatim), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "none: the multipart splits cleanly; the signature part's base64 payload is transferred as-is (it declares no CTE, so it is 7bit identity, never decoded here)",
+    "not_yet_labelled": "signature verification (out of scope), headers.projection, body.text, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a15bfce4b8322ac988c6f12720701caca57367aa496a4800373649c474be3d82"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 477
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " multipart signed",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            17
+          ],
+          [
+            74,
+            27
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            101,
+            4
+          ],
+          [
+            106,
+            31
+          ],
+          [
+            101,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <multipart-signed-3011@example.test>",
+          "ok",
+          [
+            139,
+            10
+          ],
+          [
+            150,
+            37
+          ],
+          [
+            139,
+            50
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            189,
+            12
+          ],
+          [
+            202,
+            4
+          ],
+          [
+            189,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/signed; boundary=\"b0-signed-20250304\"",
+          "ok",
+          [
+            208,
+            12
+          ],
+          [
+            221,
+            48
+          ],
+          [
+            208,
+            63
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/signed",
+          [
+            0,
+            477
+          ],
+          [
+            0,
+            273
+          ],
+          [
+            273,
+            204
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            295,
+            57
+          ],
+          [
+            295,
+            43
+          ],
+          [
+            338,
+            14
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "application/pkcs7-signature",
+          [
+            376,
+            75
+          ],
+          [
+            376,
+            45
+          ],
+          [
+            421,
+            30
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            273
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            273,
+            22
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            295,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            338,
+            14
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            352,
+            24
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            376,
+            45
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            421,
+            30
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            451,
+            26
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          null,
+          "7bit",
+          null,
+          false,
+          null
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "0e48e10d740d97d7a741cbd8c1affd05d32da38b262bfc034505961d954038e1"
+        ],
+        [
+          "1.2",
+          "7eb9dc17d66091ed985faf10c785268a4a5251c27bfed5179b7083893b4ea8ea"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    }
+  }
+}

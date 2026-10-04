@@ -1,0 +1,29 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: nested alternative in related in mixed
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <nested-alt-3003@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-outer-20250304"
+
+--b0-outer-20250304
+Content-Type: multipart/related; boundary="b0-related-20250304"
+
+--b0-related-20250304
+Content-Type: multipart/alternative; boundary="b0-inner-20250304"
+
+--b0-inner-20250304
+Content-Type: text/plain; charset=utf-8
+
+Plain view.
+
+--b0-inner-20250304
+Content-Type: text/html; charset=utf-8
+
+<p>HTML view.</p>
+
+--b0-inner-20250304--
+
+--b0-related-20250304--
+
+--b0-outer-20250304--

@@ -1,0 +1,425 @@
+{
+  "fixture": "content_location_in_related.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/related (boundary b0-cl-20250304) with an html root that references a cid: image and a remote image, and a base64 octet-stream child carrying a Content-ID and a Content-Location",
+    "generator": "tools/make_fixtures.py, from _fixture_content_location_in_related (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <content-location-3004@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today; the Content-Location header is recorded verbatim in the child's raw span, never fetched",
+    "phase_1_facts": "body.html_spans for the html root and document.axes",
+    "html_projection_rule": "the projection is the concatenation of the HTML text nodes in document order (design decision 1/9); an element's projected span covers its subtree text, so a void element with no text keeps a zero-length span at the position of its start tag",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules (D10: a Content-Location is recorded, never fetched), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046); html spans are code-point offsets into the projection",
+    "expected_gaps": "security.remote_content_present in gaps.later (Phase 1, Turn 1.5): the html references remote content at http://example.test/banner.png; recorded and never fetched (design D10)",
+    "not_yet_labelled": "body.cid_refs and the attachment manifest for the cid: image (the Family C `attach_inline_referenced` case), headers.projection, body.text, quote boundaries, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "0eb1f8e425e92111cf9d511ea0ee6211b5421cae9664b3e2d906a26ba5a33850"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 695
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " content location in related",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            28
+          ],
+          [
+            74,
+            38
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            112,
+            4
+          ],
+          [
+            117,
+            31
+          ],
+          [
+            112,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <content-location-3004@example.test>",
+          "ok",
+          [
+            150,
+            10
+          ],
+          [
+            161,
+            37
+          ],
+          [
+            150,
+            50
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            200,
+            12
+          ],
+          [
+            213,
+            4
+          ],
+          [
+            200,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/related; boundary=\"b0-cl-20250304\"",
+          "ok",
+          [
+            219,
+            12
+          ],
+          [
+            232,
+            45
+          ],
+          [
+            219,
+            60
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/related",
+          [
+            0,
+            695
+          ],
+          [
+            0,
+            281
+          ],
+          [
+            281,
+            414
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/html",
+          [
+            299,
+            176
+          ],
+          [
+            299,
+            75
+          ],
+          [
+            374,
+            101
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "application/octet-stream",
+          [
+            495,
+            178
+          ],
+          [
+            495,
+            160
+          ],
+          [
+            655,
+            18
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            281
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            281,
+            18
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            299,
+            75
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            374,
+            101
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            475,
+            20
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            495,
+            160
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            655,
+            18
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            673,
+            22
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          "base64",
+          null,
+          "base64",
+          null,
+          false,
+          null
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "f372f918434374db9b065ed346e03fe1289b9d931800a938e960ac7ad1ff211d"
+        ],
+        [
+          "1.2",
+          "35ab1c7e0f7ce109996af4c120d11305eb27e73732e8050822440708df79f4fa"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          0,
+          "p",
+          0,
+          12
+        ],
+        [
+          "1.1",
+          1,
+          "img",
+          14,
+          0
+        ],
+        [
+          "1.1",
+          2,
+          "img",
+          16,
+          0
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "security.remote_content_present",
+          "1.1",
+          1,
+          "the html body references remote content at http://example.test/banner.png; the reference is recorded and nothing is ever fetched (design D10)"
+        ]
+      ]
+    }
+  }
+}

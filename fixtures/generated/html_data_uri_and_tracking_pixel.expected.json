@@ -1,0 +1,302 @@
+{
+  "fixture": "html_data_uri_and_tracking_pixel.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/html utf-8 message with a data: URI image and a 1x1 remote tracking pixel",
+    "generator": "tools/make_fixtures.py, from _fixture_html_data_uri_and_tracking_pixel (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <html-data-uri-3008@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.html_spans and document.axes",
+    "html_projection_rule": "the projection is the concatenation of the HTML text nodes in document order (design decision 1/9); both elements are void images with no text, so each keeps a zero-length span at the position of its start tag",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; the regions tile the message exactly (D9); html spans are code-point offsets into the projection",
+    "expected_gaps": "body.inline_data_uri and security.remote_content_present in gaps.later (Phase 1, Turn 1.5): the data: URI is recorded and never expanded (design D4), and the tracking pixel is a remote reference like any other -- recorded, never fetched, with no special-casing (design D10)",
+    "not_yet_labelled": "headers.projection, body.text, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "cba7696bb842ea5fc80c5301601e4bdf34212bb89217d82908a94f0e91d83e9d"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 432
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " html data uri and tracking pixel",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            33
+          ],
+          [
+            74,
+            43
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            117,
+            4
+          ],
+          [
+            122,
+            31
+          ],
+          [
+            117,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <html-data-uri-3008@example.test>",
+          "ok",
+          [
+            155,
+            10
+          ],
+          [
+            166,
+            34
+          ],
+          [
+            155,
+            47
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            202,
+            12
+          ],
+          [
+            215,
+            4
+          ],
+          [
+            202,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/html; charset=utf-8",
+          "ok",
+          [
+            221,
+            12
+          ],
+          [
+            234,
+            25
+          ],
+          [
+            221,
+            40
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/html",
+          [
+            0,
+            432
+          ],
+          [
+            0,
+            263
+          ],
+          [
+            263,
+            169
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            263
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            263,
+            169
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "f99a2891f8e0072e9f30af854216578afd420c0a0302f367f9d88c56249c96eb"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          0,
+          "img",
+          0,
+          0
+        ],
+        [
+          "1",
+          1,
+          "img",
+          2,
+          0
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.inline_data_uri",
+          "1",
+          1,
+          "the HTML body carries a data: URI image; it is detected and recorded and is never expanded into bytes or a part (design D4)"
+        ],
+        [
+          "security.remote_content_present",
+          "1",
+          1,
+          "the HTML body references a remote 1x1 tracking pixel; it is recorded and nothing is fetched, with no special-casing for a tracking pixel (design D10)"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,342 @@
+{
+  "fixture": "multipart_with_cte.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/mixed that declares `Content-Transfer-Encoding: base64` on the multipart itself -- an illegal CTE for a multipart (RFC 2045 6.4 only allows 7bit/8bit/binary on a multipart), recorded as a claim and never decoded",
+    "generator": "tools/make_fixtures.py, from _fixture_multipart_with_cte (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <multipart-cte-3010@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "document.axes only: the row's point is the decode chain, not a new phase-1 fact",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "none in part.gaps: a multipart is never transfer-decoded, so no decode gap fires; the claim is kept in decode.chain.declared_cte. NOTE: nothing here records that the CTE claim on a multipart is illegal -- a finding reported in the turn report, not reconciled",
+    "not_yet_labelled": "headers.projection, body.text, body.alternative_group, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "03104b23335e9409d79165107242d64fb930e34fc5d8d5e9ed9843eb614e9735"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 425
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " multipart with cte",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            19
+          ],
+          [
+            74,
+            29
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            103,
+            4
+          ],
+          [
+            108,
+            31
+          ],
+          [
+            103,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <multipart-cte-3010@example.test>",
+          "ok",
+          [
+            141,
+            10
+          ],
+          [
+            152,
+            34
+          ],
+          [
+            141,
+            47
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            188,
+            12
+          ],
+          [
+            201,
+            4
+          ],
+          [
+            188,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/mixed; boundary=\"b0-cte-20250304\"",
+          "ok",
+          [
+            207,
+            12
+          ],
+          [
+            220,
+            44
+          ],
+          [
+            207,
+            59
+          ]
+        ],
+        [
+          7,
+          "Content-Transfer-Encoding",
+          " base64",
+          "ok",
+          [
+            266,
+            25
+          ],
+          [
+            292,
+            7
+          ],
+          [
+            266,
+            35
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/mixed",
+          [
+            0,
+            425
+          ],
+          [
+            0,
+            303
+          ],
+          [
+            303,
+            122
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            322,
+            80
+          ],
+          [
+            322,
+            43
+          ],
+          [
+            365,
+            37
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            303
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            303,
+            19
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            322,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            365,
+            37
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            402,
+            23
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "base64",
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "057462b1bd3001596ce2d103b359b3a3b70103470ab469ae8b34ef597ecd111a"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    }
+  }
+}

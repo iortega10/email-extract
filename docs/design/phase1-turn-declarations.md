@@ -103,13 +103,19 @@ The `fixtures/**` and `*.expected.json` paths are **only** allowed in the three 
 turn.
 
 ```declaration turn=1.0c-B
-pending: the body/HTML family (commit 2 of 3) has not landed yet
 module: tools/make_fixtures.py
 module: tools/write_raw_fixtures.py
 module: fixtures/generated/
 module: fixtures/raw/
 module: tests/ledger/label_ledger.json
 test: tests/test_phase1_family_b.py::test_the_body_family_labels_load_and_are_ledgered
+test: tests/test_phase1_family_b.py::test_every_family_b_fact_id_is_declared
+test: tests/test_phase1_family_b.py::test_every_typed_span_slices_the_fixture_bytes
+test: tests/test_phase1_family_b.py::test_every_family_b_gap_id_is_a_known_id
+test: tests/test_phase1_family_b.py::test_the_family_meets_the_facts_the_catalogue_names
+test: tests/test_phase1_family_b.py::test_the_new_fact_shapes_are_well_formed
+test: tests/test_phase1_family_b.py::test_the_span_check_fails_on_a_planted_wrong_span
+test: tests/test_phase1_family_b.py::test_the_coverage_check_fails_on_a_missing_fact
 stop: after the body and HTML family (commit 2 of 3)
 ```
 

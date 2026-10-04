@@ -1,0 +1,409 @@
+{
+  "fixture": "plain_effectively_empty.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative (boundary b0-empty-20250304) whose text/plain child is three spaces and a line ending (effectively empty) beside a real text/html child",
+    "generator": "tools/make_fixtures.py, from _fixture_plain_effectively_empty (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <plain-empty-3002@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.plain_effectively_empty (the plain alternative is present but whitespace only) and body.selection (the real HTML body is shown instead); document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules (design D16: the fact records a legal state, matching still considers every non-empty alternative), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "none in part.gaps: body.plain_effectively_empty is a FACT, not a gap (it left the registry in Turn 1.0a)",
+    "not_yet_labelled": "body.text and body.alternative_group for this row (the family carries them elsewhere), headers.projection, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "67023981e331974826e98b443829302dbcd0a2091823030892e65922d80711e4"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 454
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " plain effectively empty",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            24
+          ],
+          [
+            74,
+            34
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            108,
+            4
+          ],
+          [
+            113,
+            31
+          ],
+          [
+            108,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <plain-empty-3002@example.test>",
+          "ok",
+          [
+            146,
+            10
+          ],
+          [
+            157,
+            32
+          ],
+          [
+            146,
+            45
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            191,
+            12
+          ],
+          [
+            204,
+            4
+          ],
+          [
+            191,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-empty-20250304\"",
+          "ok",
+          [
+            210,
+            12
+          ],
+          [
+            223,
+            52
+          ],
+          [
+            210,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            454
+          ],
+          [
+            0,
+            279
+          ],
+          [
+            279,
+            175
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            300,
+            48
+          ],
+          [
+            300,
+            43
+          ],
+          [
+            343,
+            5
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            371,
+            58
+          ],
+          [
+            371,
+            42
+          ],
+          [
+            413,
+            16
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            279
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            279,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            300,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            343,
+            5
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            348,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            371,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            413,
+            16
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            429,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "7574df7474b5d2cc87cd9de04682da18206e7ba3abf926c2f423a9e904c92487"
+        ],
+        [
+          "1.2",
+          "d3e0b04e4486fa9079d2fdb0013754318f60071adc69e5034560efd34dab5ada"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.plain_effectively_empty": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "whitespace_only"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "alternative_not_selected"
+        ],
+        [
+          "1.2",
+          "selected"
+        ]
+      ]
+    }
+  }
+}

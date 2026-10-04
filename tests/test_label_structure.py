@@ -28,6 +28,7 @@ from pathlib import Path
 
 import pytest
 
+from emailextract.evals.l1 import FACT_PHASES
 from emailextract.evals.labels import load_sidecars
 from emailextract.model import EncodingSource
 from emailextract.timeevent import TimeEvent
@@ -210,9 +211,12 @@ def test_every_undetermined_entry_names_a_fact_or_gap_a_locator_and_a_reason(ste
     entries = facts.get("labels.undetermined", [])
     for fact_id, locator, reason in entries:
         assert re.match(r"^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$", fact_id), fact_id
-        assert fact_id in registry or fact_id in facts or fact_id in WALKER_GAPS, (
-            f"{stem}: undetermined names {fact_id!r}, which is neither a labelled fact nor a gap"
-        )
+        # A declared fact id is allowed even when this sidecar types no value for it: that is
+        # exactly what "undetermined" says (Turn 1.0c family B: the quote facts of the
+        # interleaved-reply fixture wait for the owner-reviewed quote catalogue).
+        assert (
+            fact_id in registry or fact_id in facts or fact_id in WALKER_GAPS or fact_id in FACT_PHASES
+        ), f"{stem}: undetermined names {fact_id!r}, which is neither a declared fact nor a gap"
         assert isinstance(locator, str) and locator, f"{stem}: {fact_id} has no locator"
         assert isinstance(reason, str) and len(reason) > 20, (
             f"{stem}: {fact_id} is undetermined without saying why"

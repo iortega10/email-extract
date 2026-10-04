@@ -1,0 +1,276 @@
+{
+  "fixture": "windows_1252_declared_iso_8859_1.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain message declaring iso-8859-1 whose payload is a windows-1252 byte sequence: 0x93 and 0x94 are the cp1252 curly quotes, and they decode as the two C1 controls U+0093/U+0094 under the declared charset",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- the generator's payloads are ASCII",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.text (the iso-8859-1 reading, exact: stateless declared charset, identity CTE) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the standard's tables (ISO/IEC 8859-1 maps 0x93/0x94 to U+0093/U+0094; cp1252 maps them to U+201C/U+201D, which the declared charset never applies), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; the regions tile the message exactly (D9)",
+    "expected_gaps": "none: iso-8859-1 decodes every byte strictly, so no charset rung fires and nothing is destroyed",
+    "not_yet_labelled": "headers.projection, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "2f959710001841426d0da4069f2e25b3db49bddb804bf29ad20b1c8ae04ce794"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 274
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " windows 1252 declared iso 8859 1",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            33
+          ],
+          [
+            74,
+            43
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            117,
+            4
+          ],
+          [
+            122,
+            31
+          ],
+          [
+            117,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <windows-1252-3021@example.test>",
+          "ok",
+          [
+            155,
+            10
+          ],
+          [
+            166,
+            33
+          ],
+          [
+            155,
+            46
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            201,
+            12
+          ],
+          [
+            214,
+            4
+          ],
+          [
+            201,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=iso-8859-1",
+          "ok",
+          [
+            220,
+            12
+          ],
+          [
+            233,
+            31
+          ],
+          [
+            220,
+            46
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            274
+          ],
+          [
+            0,
+            268
+          ],
+          [
+            268,
+            6
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            268
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            268,
+            6
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "iso-8859-1",
+          "7bit",
+          "iso-8859-1",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "937b4e94ff495956b47679ea79272279fae5dfd8f00c1ae2136a89413e4cc35e"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "\u0093Hi\u0094\r\n",
+          "exact",
+          null
+        ]
+      ]
+    }
+  }
+}

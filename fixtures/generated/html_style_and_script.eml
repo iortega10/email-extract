@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: html style and script
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <html-style-script-3006@example.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html><head><style>p { color: red; }</style><script>var x = 1;</script></head><body><p>Hello Ben.</p></body></html>

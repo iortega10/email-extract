@@ -1,0 +1,23 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: body plain multipart baseline
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <body-plain-baseline-3001@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b0-body-20250304"
+
+--b0-body-20250304
+Content-Type: text/plain; charset=utf-8
+
+Hello Ben.
+
+This is the plain baseline.
+
+--b0-body-20250304
+Content-Type: text/plain; charset=utf-8
+
+Hello Ben.
+
+This is the plain baseline, second view.
+
+--b0-body-20250304--

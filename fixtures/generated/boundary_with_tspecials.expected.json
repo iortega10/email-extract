@@ -1,0 +1,337 @@
+{
+  "fixture": "boundary_with_tspecials.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/mixed whose boundary parameter contains tspecials (`+` and `/`) and is therefore quoted: boundary=\"b0-tspec+ial/20250304\"",
+    "generator": "tools/make_fixtures.py, from _fixture_boundary_with_tspecials (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <boundary-tspecials-3009@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "headers.parameters (the boundary parameter decoded from the quoted value) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules (RFC 2045 5.1: tspecials force the quoted-string form; the quoted value is used verbatim), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046)",
+    "expected_gaps": "none: the quoted boundary is found in the body, so the multipart splits and there is no boundary disagreement",
+    "not_yet_labelled": "further headers.parameters rows (the child's charset), headers.projection, body.text, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "50a86edc3f99001daae54afb6c580416722e73bbb34faecf489e1b9e869ccd83"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 411
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " boundary with tspecials",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            24
+          ],
+          [
+            74,
+            34
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            108,
+            4
+          ],
+          [
+            113,
+            31
+          ],
+          [
+            108,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <boundary-tspecials-3009@example.test>",
+          "ok",
+          [
+            146,
+            10
+          ],
+          [
+            157,
+            39
+          ],
+          [
+            146,
+            52
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            198,
+            12
+          ],
+          [
+            211,
+            4
+          ],
+          [
+            198,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/mixed; boundary=\"b0-tspec+ial/20250304\"",
+          "ok",
+          [
+            217,
+            12
+          ],
+          [
+            230,
+            50
+          ],
+          [
+            217,
+            65
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/mixed",
+          [
+            0,
+            411
+          ],
+          [
+            0,
+            284
+          ],
+          [
+            284,
+            127
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            309,
+            73
+          ],
+          [
+            309,
+            43
+          ],
+          [
+            352,
+            30
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            284
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            284,
+            25
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            309,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            352,
+            30
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            382,
+            29
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "f89cca6861cb350813bad70e589ab13173916da58c8db38d938bf41320ec0b47"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [
+          6,
+          "Content-Type",
+          "boundary",
+          "b0-tspec+ial/20250304",
+          "decoded",
+          null
+        ]
+      ]
+    }
+  }
+}

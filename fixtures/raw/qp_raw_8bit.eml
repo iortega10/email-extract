@@ -1,0 +1,10 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: qp raw 8bit
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <qp-raw-8bit-3018@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=iso-8859-1
+Content-Transfer-Encoding: quoted-printable
+
+Café =3D ok

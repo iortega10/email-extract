@@ -923,6 +923,388 @@ def _fixture_address_smtputf8_local_part() -> bytes:
     )
 
 
+# ---------------------------------------------- Family B : body and HTML fixtures
+
+
+def _fixture_body_plain_multipart_baseline() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "body plain multipart baseline"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<body-plain-baseline-3001@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/alternative; boundary="b0-body-20250304"'),
+            ],
+            "b0-body-20250304",
+            [
+                _plain_leaf("text/plain; charset=utf-8", b"Hello Ben.\r\n\r\nThis is the plain baseline.\r\n"),
+                _plain_leaf(
+                    "text/plain; charset=utf-8",
+                    b"Hello Ben.\r\n\r\nThis is the plain baseline, second view.\r\n",
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_plain_effectively_empty() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "plain effectively empty"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<plain-empty-3002@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/alternative; boundary="b0-empty-20250304"'),
+            ],
+            "b0-empty-20250304",
+            [
+                _plain_leaf("text/plain; charset=utf-8", b"   \r\n"),
+                _plain_leaf("text/html; charset=utf-8", b"<p>Hi Ben.</p>\r\n"),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_nested_alternative_in_related_in_mixed() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "nested alternative in related in mixed"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<nested-alt-3003@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/mixed; boundary="b0-outer-20250304"'),
+            ],
+            "b0-outer-20250304",
+            [
+                Multi(
+                    [("Content-Type", 'multipart/related; boundary="b0-related-20250304"')],
+                    "b0-related-20250304",
+                    [
+                        Multi(
+                            [("Content-Type", 'multipart/alternative; boundary="b0-inner-20250304"')],
+                            "b0-inner-20250304",
+                            [
+                                _plain_leaf("text/plain; charset=utf-8", b"Plain view.\r\n"),
+                                _plain_leaf("text/html; charset=utf-8", b"<p>HTML view.</p>\r\n"),
+                            ],
+                            epilogue=b"",
+                        )
+                    ],
+                    epilogue=b"",
+                )
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_content_location_in_related() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "content location in related"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<content-location-3004@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/related; boundary="b0-cl-20250304"'),
+            ],
+            "b0-cl-20250304",
+            [
+                Leaf(
+                    [
+                        ("Content-Type", "text/html; charset=utf-8"),
+                        ("Content-ID", "<page@example.test>"),
+                    ],
+                    b'<p>Photo below.</p>\r\n<img src="cid:photo@example.test">\r\n'
+                    b'<img src="http://example.test/banner.png">\r\n',
+                ),
+                Leaf(
+                    [
+                        ("Content-Type", "application/octet-stream"),
+                        ("Content-ID", "<photo@example.test>"),
+                        ("Content-Location", "http://example.test/photo.png"),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(b"photo bytes\n"),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_text_calendar_alternative() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "text calendar alternative"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<text-calendar-3005@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/alternative; boundary="b0-cal-20250304"'),
+            ],
+            "b0-cal-20250304",
+            [
+                _plain_leaf("text/plain; charset=utf-8", b"Plain view.\r\n"),
+                _plain_leaf("text/html; charset=utf-8", b"<p>HTML view.</p>\r\n"),
+                _plain_leaf(
+                    "text/calendar; charset=utf-8",
+                    b"BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n",
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_html_style_and_script() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "html style and script"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<html-style-script-3006@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/html; charset=utf-8"),
+            ],
+            b"<html><head><style>p { color: red; }</style><script>var x = 1;</script></head>"
+            b"<body><p>Hello Ben.</p></body></html>\r\n",
+        )
+    )
+
+
+def _fixture_html_href_img_remote_and_cid() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "html href img remote and cid"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<html-href-img-3007@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/html; charset=utf-8"),
+            ],
+            b'<p>Hi <a href="mailto:ben@example.test">Ben</a></p>\r\n'
+            b'<img src="http://example.test/pic.png" alt="pic">\r\n'
+            b'<img src="cid:logo@example.test" alt="logo">\r\n',
+        )
+    )
+
+
+def _fixture_html_data_uri_and_tracking_pixel() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "html data uri and tracking pixel"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<html-data-uri-3008@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/html; charset=utf-8"),
+            ],
+            b'<img src="data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=" '
+            b'width="1" height="1">\r\n'
+            b'<img src="http://example.test/pixel.gif" width="1" height="1">\r\n',
+        )
+    )
+
+
+def _fixture_boundary_with_tspecials() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "boundary with tspecials"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<boundary-tspecials-3009@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/mixed; boundary="b0-tspec+ial/20250304"'),
+            ],
+            "b0-tspec+ial/20250304",
+            [_plain_leaf("text/plain; charset=utf-8", b"A part in a quoted boundary.\r\n")],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_multipart_with_cte() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "multipart with cte"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<multipart-cte-3010@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/mixed; boundary="b0-cte-20250304"'),
+                ("Content-Transfer-Encoding", "base64"),
+            ],
+            "b0-cte-20250304",
+            [_plain_leaf("text/plain; charset=utf-8", b"A part under a multipart CTE claim.\r\n")],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_multipart_signed() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "multipart signed"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<multipart-signed-3011@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/signed; boundary="b0-signed-20250304"'),
+            ],
+            "b0-signed-20250304",
+            [
+                _plain_leaf("text/plain; charset=utf-8", b"Signed body.\r\n"),
+                Leaf(
+                    [("Content-Type", "application/pkcs7-signature")],
+                    _b64(b"not a real signature\n"),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_multipart_digest_content_type_less_child() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "multipart digest content type less child"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<digest-no-ctype-3012@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/digest; boundary="b0-digest-20250304"'),
+            ],
+            "b0-digest-20250304",
+            [Leaf([], b"Plain digest body.\r\n")],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_flowed_unstuffed_soft_break() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "flowed unstuffed soft break"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<flowed-unstuffed-3013@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=utf-8; format=flowed"),
+            ],
+            b"A soft break ends here \r\n and this line was space-stuffed.\r\n",
+        )
+    )
+
+
+def _fixture_body_no_text_part() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "body no text part"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<body-no-text-3014@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/mixed; boundary="b0-notext-20250304"'),
+            ],
+            "b0-notext-20250304",
+            [
+                Leaf(
+                    [
+                        ("Content-Type", "application/pdf"),
+                        ("Content-Disposition", 'attachment; filename="doc.pdf"'),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(b"%PDF-1.4\nfixture\n%%EOF\n"),
+                )
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_inline_interleaved_reply_body() -> bytes:
+    return render_message(
+        Leaf(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "inline interleaved reply body"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<inline-interleaved-3015@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", "text/plain; charset=utf-8"),
+            ],
+            b"Thanks, answers below.\r\n\r\n"
+            b"On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:\r\n"
+            b"> first point\r\n\r\n"
+            b"My answer to the first point.\r\n\r\n"
+            b"> second point\r\n\r\n"
+            b"My answer to the second point.\r\n",
+        )
+    )
+
+
+def _fixture_text_part_with_body_parts_tree() -> bytes:
+    return render_message(
+        Multi(
+            [
+                ("From", "Ada Sender <ada@example.test>"),
+                ("To", "Ben Receiver <ben@example.test>"),
+                ("Subject", "text part with body parts tree"),
+                ("Date", PINNED_DATE_0805),
+                ("Message-ID", "<body-parts-tree-3016@example.test>"),
+                ("MIME-Version", "1.0"),
+                ("Content-Type", 'multipart/mixed; boundary="b0-rfc822-20250304"'),
+            ],
+            "b0-rfc822-20250304",
+            [
+                Leaf(
+                    [("Content-Type", "message/rfc822")],
+                    b"From: Ada Sender <ada@example.test>\r\n"
+                    b"Subject: inner message\r\n"
+                    b"\r\n"
+                    b"Inner body, never recursed.\r\n",
+                )
+            ],
+            epilogue=b"",
+        )
+    )
+
+
 # ------------------------------------------- the five TimeEvent conflict fixtures
 
 
@@ -1054,6 +1436,23 @@ FIXTURES = {
     "address_quoted_comma_display_name": _fixture_address_quoted_comma_display_name,
     "address_idn_domain": _fixture_address_idn_domain,
     "address_smtputf8_local_part": _fixture_address_smtputf8_local_part,
+    # Family B: body and HTML (Turn 1.0c, commit 2)
+    "body_plain_multipart_baseline": _fixture_body_plain_multipart_baseline,
+    "plain_effectively_empty": _fixture_plain_effectively_empty,
+    "nested_alternative_in_related_in_mixed": _fixture_nested_alternative_in_related_in_mixed,
+    "content_location_in_related": _fixture_content_location_in_related,
+    "text_calendar_alternative": _fixture_text_calendar_alternative,
+    "html_style_and_script": _fixture_html_style_and_script,
+    "html_href_img_remote_and_cid": _fixture_html_href_img_remote_and_cid,
+    "html_data_uri_and_tracking_pixel": _fixture_html_data_uri_and_tracking_pixel,
+    "boundary_with_tspecials": _fixture_boundary_with_tspecials,
+    "multipart_with_cte": _fixture_multipart_with_cte,
+    "multipart_signed": _fixture_multipart_signed,
+    "multipart_digest_content_type_less_child": _fixture_multipart_digest_content_type_less_child,
+    "flowed_unstuffed_soft_break": _fixture_flowed_unstuffed_soft_break,
+    "body_no_text_part": _fixture_body_no_text_part,
+    "inline_interleaved_reply_body": _fixture_inline_interleaved_reply_body,
+    "text_part_with_body_parts_tree": _fixture_text_part_with_body_parts_tree,
 }
 
 FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)

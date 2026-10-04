@@ -58,29 +58,6 @@ PHASE0_STEMS = frozenset(
 #: the quote catalogue by its own increment, and each commit removes its names from here.
 PENDING = frozenset(
     {
-        # Family B: body and HTML (commit 1.0c-B)
-        "body_plain_multipart_baseline",
-        "plain_effectively_empty",
-        "nested_alternative_in_related_in_mixed",
-        "content_location_in_related",
-        "text_calendar_alternative",
-        "html_style_and_script",
-        "html_href_img_remote_and_cid",
-        "html_data_uri_and_tracking_pixel",
-        "base64_with_whitespace_and_bad_padding",
-        "qp_raw_8bit",
-        "iso_2022_jp_stateful",
-        "gb2312_declared_gbk_bytes",
-        "windows_1252_declared_iso_8859_1",
-        "boundary_with_tspecials",
-        "multipart_with_cte",
-        "multipart_signed",
-        "multipart_digest_content_type_less_child",
-        "flowed_unstuffed_soft_break",
-        "preamble_only_message",
-        "body_no_text_part",
-        "inline_interleaved_reply_body",
-        "text_part_with_body_parts_tree",
         # Family C: attachments and caps (commit 1.0c-C)
         "attach_manifest_baseline",
         "attach_inline_referenced",
@@ -241,15 +218,23 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert not (set(catalogued) & PHASE0_STEMS), "a Phase 0 fixture is a catalogue row"
     assert set(catalogued) == set(pending) | (set(catalogued) - set(pending))
     assert census_problems(catalogued, pending, committed, sidecars, design_names) == []
-    # A landed family's rows are committed; a later family's are not. Family A is the
-    # family this commit lands, so none of its rows is pending and all of them exist.
+    # A landed family's rows are committed; a later family's are still pending. Families A
+    # and B are the families this corpus has landed, so none of their rows is pending and
+    # all of them exist.
     family_a = {name for name, family in catalogued.items() if family == "A"}
     assert len(family_a) == 30, sorted(family_a)
     assert not (family_a & pending), sorted(family_a & pending)
     assert family_a <= committed and family_a <= sidecars
+    family_b = {name for name, family in catalogued.items() if family == "B"}
+    assert len(family_b) == 22, sorted(family_b)
+    assert not (family_b & pending), sorted(family_b & pending)
+    assert family_b <= committed and family_b <= sidecars
     # The same check must fail when a committed fixture is missing, by name.
     problems = census_problems(catalogued, pending, committed - {sorted(family_a)[0]}, sidecars, design_names)
     assert any(sorted(family_a)[0] in problem for problem in problems), problems
+    # ... and for the later family too.
+    problems = census_problems(catalogued, pending, committed - {sorted(family_b)[0]}, sidecars, design_names)
+    assert any(sorted(family_b)[0] in problem for problem in problems), problems
     # ... and when a pending row's fixture file has landed early.
     early = sorted(pending)[0]
     problems = census_problems(catalogued, pending, committed | {early}, sidecars, design_names)

@@ -1,0 +1,15 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: multipart with cte
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <multipart-cte-3010@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-cte-20250304"
+Content-Transfer-Encoding: base64
+
+--b0-cte-20250304
+Content-Type: text/plain; charset=utf-8
+
+A part under a multipart CTE claim.
+
+--b0-cte-20250304--

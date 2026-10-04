@@ -1,0 +1,294 @@
+{
+  "fixture": "qp_raw_8bit.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain iso-8859-1 message declared quoted-printable whose payload `Caf\\xe9 =3D ok` carries a raw 8-bit byte (0xE9) beside a `=3D` escape",
+    "raw_fixture": "hand-written bytes in tools/write_raw_fixtures.py, frozen in fixtures/raw/SHA256SUMS -- the generator's quopri.encodestring never emits a raw 8-bit byte",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.text (the quoted-printable decode of the payload, part_level because the CTE is not identity) and document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules (RFC 2045 6.7, design D3/D8), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; the regions tile the message exactly (D9)",
+    "expected_gaps": "none: the declared quoted-printable decoding runs, the payload is passed through with the raw 0xE9 byte kept, and iso-8859-1 decodes any byte strictly so no charset rung fires",
+    "not_yet_labelled": "headers.projection, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "6f8f30d7d55e61db97295383724595490b7ee9ff43182f989389603fd4f98838"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 304
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " qp raw 8bit",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            12
+          ],
+          [
+            74,
+            22
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            96,
+            4
+          ],
+          [
+            101,
+            31
+          ],
+          [
+            96,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <qp-raw-8bit-3018@example.test>",
+          "ok",
+          [
+            134,
+            10
+          ],
+          [
+            145,
+            32
+          ],
+          [
+            134,
+            45
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            179,
+            12
+          ],
+          [
+            192,
+            4
+          ],
+          [
+            179,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=iso-8859-1",
+          "ok",
+          [
+            198,
+            12
+          ],
+          [
+            211,
+            31
+          ],
+          [
+            198,
+            46
+          ]
+        ],
+        [
+          7,
+          "Content-Transfer-Encoding",
+          " quoted-printable",
+          "ok",
+          [
+            244,
+            25
+          ],
+          [
+            270,
+            17
+          ],
+          [
+            244,
+            45
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            304
+          ],
+          [
+            0,
+            291
+          ],
+          [
+            291,
+            13
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            291
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            291,
+            13
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "quoted-printable",
+          "iso-8859-1",
+          "quoted-printable",
+          "iso-8859-1",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "57c70c61aea42738a403ecd4c51bcd09fb140a6707b8d76605c5455d2facadf3"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Caf\u00e9 = ok\r\n",
+          "part_level",
+          "cte_not_identity"
+        ]
+      ]
+    }
+  }
+}

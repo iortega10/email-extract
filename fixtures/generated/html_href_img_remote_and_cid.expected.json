@@ -1,0 +1,321 @@
+{
+  "fixture": "html_href_img_remote_and_cid.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/html utf-8 message with an <a href> mailto link, an <img src> pointing at a remote host and an <img src> pointing at a cid:",
+    "generator": "tools/make_fixtures.py, from _fixture_html_href_img_remote_and_cid (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <html-href-img-3007@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.html_spans, body.cid_refs (the de-duplicated referenced-cid set) and document.axes",
+    "html_projection_rule": "the projection is the concatenation of the HTML text nodes in document order (design decision 1/9); an element's projected span covers its subtree text, so a void element with no text keeps a zero-length span at the position of its start tag",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; the regions tile the message exactly (D9); html spans are code-point offsets into the projection, and a cid is a byte substring of the part body",
+    "expected_gaps": "security.remote_content_present in gaps.later (Phase 1, Turn 1.5): the http img src is a remote reference, recorded and never fetched; the cid: img is an internal reference, not remote content",
+    "not_yet_labelled": "headers.projection, body.text, quote boundaries, attachments (the cid: reference has no matching part here -- that is the Family C `attach_cid_dangling` case), statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "46d36d52ed29c615f96d63ab605cb56de4aabc60abc47500a184aeccae553e07"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 409
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " html href img remote and cid",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            29
+          ],
+          [
+            74,
+            39
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            113,
+            4
+          ],
+          [
+            118,
+            31
+          ],
+          [
+            113,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <html-href-img-3007@example.test>",
+          "ok",
+          [
+            151,
+            10
+          ],
+          [
+            162,
+            34
+          ],
+          [
+            151,
+            47
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            198,
+            12
+          ],
+          [
+            211,
+            4
+          ],
+          [
+            198,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/html; charset=utf-8",
+          "ok",
+          [
+            217,
+            12
+          ],
+          [
+            230,
+            25
+          ],
+          [
+            217,
+            40
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/html",
+          [
+            0,
+            409
+          ],
+          [
+            0,
+            259
+          ],
+          [
+            259,
+            150
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            259
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            259,
+            150
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "776b9bc890c6ffd2a7ed1aa5c50833618172d4286f0efd1597e0391a7ac82fde"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          0,
+          "p",
+          0,
+          6
+        ],
+        [
+          "1",
+          1,
+          "a",
+          3,
+          6
+        ],
+        [
+          "1",
+          2,
+          "img",
+          6,
+          0
+        ],
+        [
+          "1",
+          3,
+          "img",
+          8,
+          0
+        ]
+      ]
+    },
+    "body.cid_refs": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          [
+            "logo@example.test"
+          ]
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "security.remote_content_present",
+          "1",
+          1,
+          "the HTML body references remote content at http://example.test/pic.png; the reference is recorded and nothing is ever fetched (design D10)"
+        ]
+      ]
+    }
+  }
+}

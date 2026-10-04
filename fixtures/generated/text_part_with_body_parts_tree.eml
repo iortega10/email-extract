@@ -1,0 +1,17 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: text part with body parts tree
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <body-parts-tree-3016@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-rfc822-20250304"
+
+--b0-rfc822-20250304
+Content-Type: message/rfc822
+
+From: Ada Sender <ada@example.test>
+Subject: inner message
+
+Inner body, never recursed.
+
+--b0-rfc822-20250304--

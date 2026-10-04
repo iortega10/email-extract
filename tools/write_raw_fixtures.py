@@ -237,6 +237,81 @@ ADDRESS_UNPARSABLE = (
     b"An unparseable address, with the raw value kept beside it.\r\n"
 )
 
+BASE64_WHITESPACE_BAD_PADDING = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: base64 with whitespace and bad padding\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <base64-bad-padding-3017@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"Content-Transfer-Encoding: base64\r\n"
+    b"\r\n"
+    b"SGVs bG8\r\n"
+)
+
+QP_RAW_8BIT = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: qp raw 8bit\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <qp-raw-8bit-3018@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=iso-8859-1\r\n"
+    b"Content-Transfer-Encoding: quoted-printable\r\n"
+    b"\r\n"
+    b"Caf\xe9 =3D ok\r\n"
+)
+
+ISO_2022_JP_STATEFUL = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: iso 2022 jp stateful\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <iso-2022-jp-3019@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=iso-2022-jp\r\n"
+    b"\r\n"
+    b"\x1b$B$\"\x24$\x24&\x24(\x24*\x1b(B\r\n"
+)
+
+GB2312_DECLARED_GBK_BYTES = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: gb2312 declared gbk bytes\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <gb2312-gbk-3020@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=gb2312\r\n"
+    b"\r\n"
+    b"\xa1\x40\r\n"
+)
+
+WINDOWS_1252_DECLARED_ISO_8859_1 = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: windows 1252 declared iso 8859 1\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <windows-1252-3021@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=iso-8859-1\r\n"
+    b"\r\n"
+    b"\x93Hi\x94\r\n"
+)
+
+PREAMBLE_ONLY_MESSAGE = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: preamble only message\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <preamble-only-3022@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/mixed; boundary="b1-pre-only"\r\n'
+    b"\r\n"
+    b"The whole body is preamble, and no part follows.\r\n"
+    b"--b1-pre-only--\r\n"
+)
+
 FIXTURES = {
     "bad_charset": BAD_CHARSET,
     "truncated_base64": TRUNCATED_BASE64,
@@ -253,6 +328,13 @@ FIXTURES = {
     "date_invalid": DATE_INVALID,
     "date_offset_out_of_range": DATE_OFFSET_OUT_OF_RANGE,
     "address_unparsable": ADDRESS_UNPARSABLE,
+    # Family B: body and HTML (Turn 1.0c, commit 2)
+    "base64_with_whitespace_and_bad_padding": BASE64_WHITESPACE_BAD_PADDING,
+    "qp_raw_8bit": QP_RAW_8BIT,
+    "iso_2022_jp_stateful": ISO_2022_JP_STATEFUL,
+    "gb2312_declared_gbk_bytes": GB2312_DECLARED_GBK_BYTES,
+    "windows_1252_declared_iso_8859_1": WINDOWS_1252_DECLARED_ISO_8859_1,
+    "preamble_only_message": PREAMBLE_ONLY_MESSAGE,
 }
 
 

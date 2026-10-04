@@ -1,0 +1,11 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: html href img remote and cid
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <html-href-img-3007@example.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<p>Hi <a href="mailto:ben@example.test">Ben</a></p>
+<img src="http://example.test/pic.png" alt="pic">
+<img src="cid:logo@example.test" alt="logo">

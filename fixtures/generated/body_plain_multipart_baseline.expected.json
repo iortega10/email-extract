@@ -1,0 +1,417 @@
+{
+  "fixture": "body_plain_multipart_baseline.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative (boundary b0-body-20250304) with two text/plain children -- the plain-body baseline whose projection is text, not HTML",
+    "generator": "tools/make_fixtures.py, from _fixture_body_plain_multipart_baseline (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <body-plain-baseline-3001@example.test>)",
+    "phase_0_facts": "container.*, headers.fields (the top-level part), part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
+    "phase_1_facts": "body.text (both alternatives) and body.alternative_group; document.axes",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the RFC and design rules (RFC 2046, design D3/D16), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "expected_gaps": "none: both children declare utf-8 and their bytes decode strictly; the multipart is properly closed; there is no preamble or epilogue",
+    "not_yet_labelled": "body.selection (the display choice between two equally plain views), headers.projection, quote boundaries, attachments, statuses, thread edges and TimeEvents"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "bb258bdb97803a2c3a565f888b4cc4ccbe3a31aeeca746a745dedbfef4c752a0"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 543
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " body plain multipart baseline",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            30
+          ],
+          [
+            74,
+            40
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            114,
+            4
+          ],
+          [
+            119,
+            31
+          ],
+          [
+            114,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <body-plain-baseline-3001@example.test>",
+          "ok",
+          [
+            152,
+            10
+          ],
+          [
+            163,
+            40
+          ],
+          [
+            152,
+            53
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            205,
+            12
+          ],
+          [
+            218,
+            4
+          ],
+          [
+            205,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-body-20250304\"",
+          "ok",
+          [
+            224,
+            12
+          ],
+          [
+            237,
+            51
+          ],
+          [
+            224,
+            66
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            543
+          ],
+          [
+            0,
+            292
+          ],
+          [
+            292,
+            251
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            312,
+            86
+          ],
+          [
+            312,
+            43
+          ],
+          [
+            355,
+            43
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/plain",
+          [
+            420,
+            99
+          ],
+          [
+            420,
+            43
+          ],
+          [
+            463,
+            56
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            292
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            292,
+            20
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            312,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            355,
+            43
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            398,
+            22
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            420,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            463,
+            56
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            519,
+            24
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "aa35c6c47dfcbcf45d02047683eddf75b48b15d9105921e270ba0ab361393fe8"
+        ],
+        [
+          "1.2",
+          "93ef6f057f8046d0bdf193eb24f513a6451c9ded836a8c7a06db5ad53cd99ab5"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hello Ben.\r\n\r\nThis is the plain baseline.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "Hello Ben.\r\n\r\nThis is the plain baseline, second view.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    }
+  }
+}
