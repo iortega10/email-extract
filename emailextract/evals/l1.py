@@ -217,9 +217,10 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
 )
 
 #: The turn each deferred ``parsed_value`` column goes live in -- reported by name, never
-#: computed here (no stdlib ``parseaddr``/``parsedate`` to make the gate pass).
+#: computed here (no stdlib ``parseaddr``/``parsedate`` to make the gate pass). Turn 1.2
+#: made the ``address_list`` scalar live, so only ``date_time`` (Turn 1.3) remains.
 DEFERRED_PARSED_VALUE_TURNS: Final[Mapping[str, str]] = MappingProxyType(
-    {"address_list": "1.2", "date_time": "1.3"}
+    {"date_time": "1.3"}
 )
 
 
@@ -233,6 +234,11 @@ def _region(measured: Measured) -> header_stage.HeaderRegion:
 def _headers_projection(measured: Measured) -> list[list[Any]]:
     """``headers.projection`` rows: raw beside parsed, one row per field (folds kept)."""
     return header_stage.projection_rows(_region(measured))
+
+
+def _headers_addresses(measured: Measured) -> list[list[Any]]:
+    """``headers.addresses`` rows: one entry per address-list field, the tokenizer's rows in it."""
+    return header_stage.address_rows(_region(measured))
 
 
 def _headers_decoded(measured: Measured) -> list[list[Any]]:
@@ -257,10 +263,10 @@ def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
     """Compare ``headers.projection`` row by row, deferring the parsed scalar by name.
 
     Columns 0-3 (ordinal, name, raw_value, parsed_kind) are compared for every row; the
-    parsed scalar (column 4) is compared only where a parser exists this turn (``text``,
-    ``message_id``, ``message_id_list``). For ``address_list`` (Turn 1.2) and ``date_time``
-    (Turn 1.3) the column is **not** compared and the count is reported by name -- never
-    silently skipped, never computed with a stdlib parser to make it pass.
+    parsed scalar (column 4) is compared for every kind whose parser exists this turn
+    (``text``, ``message_id``, ``message_id_list``, ``address_list`` from Turn 1.2). For
+    ``date_time`` (Turn 1.3) the column is **not** compared and the count is reported by
+    name -- never silently skipped, never computed with a stdlib parser to make it pass.
     """
     if not isinstance(expected, list) or not isinstance(actual, list):
         return expected == actual, None
@@ -286,6 +292,41 @@ def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
         f"{count} {kind} row(s) (live in Turn {DEFERRED_PARSED_VALUE_TURNS[kind]})"
         for kind, count in sorted(deferred.items())
     )
+
+
+def _address_rows_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
+    """Compare ``headers.addresses``: every field entry the label names, exactly.
+
+    The measured value is one entry per **address-list field** (``[ordinal, field_name,
+    [address rows]]``). The six Family-A ``address_*`` sidecars label only their ``To``
+    field while the fixture also carries an identical ``From`` mailbox (and
+    ``headers_plain_baseline`` labels ``From, To, Cc``), so no uniform measurer can include
+    the ``From`` row in one and not the other: the comparison is therefore the
+    ``body.preamble_epilogue`` sparse-row rule -- **every entry the label names must equal
+    its measured entry**, and a measured entry the label does not name is reported, not
+    failed. This is a reported finding (the facts doc says a new fact's sidecar names its
+    rows in full); the labels stay untouched.
+
+    A wrong span, addr-spec, membership or state inside a labelled field still fails here,
+    so the comparison is not vacuous.
+    """
+    if not isinstance(expected, list) or not isinstance(actual, list):
+        return expected == actual, None
+    measured: dict[tuple[Any, Any], Any] = {}
+    for row in actual:
+        if isinstance(row, list) and len(row) >= 3:
+            measured[(row[0], row[1])] = row[2]
+    for row in expected:
+        if not isinstance(row, list) or len(row) < 3:
+            return False, f"labelled row is not [ordinal, field_name, [addresses]]: {row!r}"
+        key = (row[0], row[1])
+        if key not in measured:
+            return False, f"{row[1]!r} (ordinal {row[0]}) is not measured"
+        if measured[key] != row[2]:
+            return False, f"{row[1]!r}: labelled {row[2]}, measured {measured[key]}"
+    extra = len(measured) - len({(row[0], row[1]) for row in expected if isinstance(row, list)})
+    detail = f"{extra} measured address field(s) the label does not name" if extra > 0 else None
+    return True, detail
 
 
 def _gaps_later_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
@@ -451,17 +492,22 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             note="[[ordinal, name, raw_value, parsed_kind, parsed_value], ...] raw beside parsed, "
             "one row per field; the raw value keeps its folds (latin-1 view); parsed_kind is "
             "text|address_list|date_time|message_id|message_id_list|unparsed; parsed_value is null "
-            "where parsed_kind=unparsed; live from Turn 1.1, but the parsed_value column is compared "
-            "by name only where a parser exists (text/message_id/message_id_list -- address_list is "
-            "Turn 1.2, date_time Turn 1.3)",
+            "where parsed_kind=unparsed; live from Turn 1.1, and the parsed_value column is compared "
+            "for every kind whose parser exists (text/message_id/message_id_list, and address_list "
+            "from Turn 1.2 -- date_time is Turn 1.3)",
         ),
         "headers.addresses": Measure(
             1,
+            _headers_addresses,
+            compare=_address_rows_compare,
+            live=True,
             note="[[ordinal, field_name, [[raw_offset, raw_length, display_name, addr_spec, state, "
             "reason_id], ...]], ...]; raw spans are BYTES into the raw message; state is "
-            "parsed|group|unparsed; a group's members are the nested rows and a zero-member group "
-            "is []; reason_id is null unless state=unparsed (headers.address_unparsable); IDN and "
-            "SMTPUTF8 stay verbatim",
+            "parsed|group|unparsed; a group's members are the flat rows beside the group row (the "
+            "sidecars type them flat) and a zero-member group is one group row; reason_id is null "
+            "unless state=unparsed (headers.address_unparsable); IDN and SMTPUTF8 stay verbatim. "
+            "Live from Turn 1.2; compared as a sparse-row fact (every field entry the label names "
+            "must match -- the Family-A address_* sidecars label only To, a reported finding)",
         ),
         "headers.date": Measure(
             1,

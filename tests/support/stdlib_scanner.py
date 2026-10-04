@@ -25,16 +25,23 @@ import codecs
 import email
 import email.header
 import email.policy
+import email.utils
 from dataclasses import dataclass
 from typing import Final
 
 __all__ = [
+    "ADDRESS_FIELD_NAMES",
+    "SHARED_ADDRESS_MISREADING",
     "SHARED_MISREADING",
     "ScanResult",
+    "addr_is_locatable",
+    "address_fields",
     "decoded_header_value",
     "own_raw_fields",
     "scan",
     "split_header_block",
+    "stdlib_address_pairs",
+    "stdlib_parseaddr",
 ]
 
 #: The cases where the stdlib shares the package's misreading, so a comparison proves
@@ -46,6 +53,39 @@ SHARED_MISREADING: Final[dict[str, str]] = {
     "lone_cr_line_break": "the stdlib feedparser splits on a lone CR exactly as the walker does",
     "leading_bom": "the stdlib reads the BOM and the first header line as one defect",
     "mbox_from_line": "the stdlib reads the mbox `From ` line as a malformed header",
+}
+
+#: The RFC 5322 3.4 address-list field names (Turn 1.2): the fields an address diff covers.
+ADDRESS_FIELD_NAMES: Final[frozenset[str]] = frozenset(
+    {
+        "from",
+        "to",
+        "cc",
+        "bcc",
+        "reply-to",
+        "sender",
+        "resent-from",
+        "resent-to",
+        "resent-cc",
+        "resent-bcc",
+        "resent-sender",
+        "resent-reply-to",
+    }
+)
+
+#: The **closed** reasons the stdlib is known to read an address differently (Turn 1.2).
+#: Each is a misreading a gate would prove nothing about, so the address diff is advisory:
+#: printed, never asserted on. ``no_span`` is the one property the turn does assert around
+#: (:func:`stdlib_parseaddr` returns no offsets at all, so the own tokenizer must never drop
+#: an address the stdlib cannot locate).
+SHARED_ADDRESS_MISREADING: Final[dict[str, str]] = {
+    "group_flattened": "getaddresses flattens a group and drops its ':' ';' structure",
+    "empty_group_lost": "'undisclosed-recipients:;' gives [('', '')]",
+    "trailing_comma": "a trailing comma yields a spurious empty address",
+    "garbage_passthrough": "garbage is returned as a bogus address rather than declined",
+    "smtputf8_mangled": "the stdlib may not keep a non-ASCII local part or IDN domain verbatim",
+    "route_kept": "an obs-route is not separated from the addr-spec",
+    "no_span": "neither parseaddr nor getaddresses returns byte offsets (D2 needs a span per address)",
 }
 
 
@@ -124,3 +164,42 @@ def scan(data: bytes) -> ScanResult:
         if b"=?" in value
     )
     return ScanResult(field_names=names, content_types=content_types, decoded=decoded)
+
+
+def address_fields(data: bytes) -> list[tuple[str, bytes]]:
+    """This scanner's own reading of the address fields: ``(lowercased name, value bytes)``.
+
+    Uses its own :func:`split_header_block` / :func:`own_raw_fields` (no shared regex) and its
+    own field-name list (:data:`ADDRESS_FIELD_NAMES`); the value is the raw bytes, so the
+    advisory diff is over the same bytes the package's tokenizer reads.
+    """
+    fields: list[tuple[str, bytes]] = []
+    for name, value in own_raw_fields(split_header_block(data)):
+        lowered = name.decode("latin-1").lower()
+        if lowered in ADDRESS_FIELD_NAMES:
+            fields.append((lowered, value))
+    return fields
+
+
+def stdlib_address_pairs(value: bytes) -> list[tuple[str, str]]:
+    """``email.utils.getaddresses`` on one field value (the stdlib's advisory reading)."""
+    return [(name, addr) for name, addr in email.utils.getaddresses([value.decode("latin-1")])]
+
+
+def stdlib_parseaddr(value: bytes) -> tuple[str, str]:
+    """``email.utils.parseaddr`` on one field value -- the entry point D2 cannot use."""
+    return email.utils.parseaddr(value.decode("latin-1"))
+
+
+def addr_is_locatable(value: bytes, addr: str) -> bool:
+    """Whether ``addr``'s bytes can be located in the raw value (the span-loss test).
+
+    A stdlib result that cannot be located is exactly what D2 forbids: the package must then
+    carry a byte span of its own (or decline the address with a reason), never drop it.
+    """
+    if not addr:
+        return False
+    for encoded in (addr.encode("utf-8", "ignore"), addr.encode("latin-1", "ignore")):
+        if encoded and encoded in value:
+            return True
+    return False

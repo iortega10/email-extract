@@ -32,6 +32,7 @@ EVALS = PACKAGE / "evals"
 #: The Phase 0 library modules, and the eval harness modules, as file names.
 EXPECTED_LIBRARY = {
     "__init__.py",
+    "addresses.py",
     "container.py",
     "headers.py",
     "ids.py",

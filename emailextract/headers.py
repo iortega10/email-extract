@@ -30,6 +30,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Final
 
+from .addresses import AddressRow, parse_address_list
 from .rfc2047 import DecodedValue, decode_encoded_words
 from .rfc2231 import STRUCTURED_PARAMETERS, parse_parameters
 from .walk import RawHeaderField, WalkResult, _iter_lines, header_fields_at, leading_prelude
@@ -42,6 +43,7 @@ __all__ = [
     "GAP_HEADERS_LEADING_BOM",
     "GAP_HEADERS_MBOX_FROM_LINE",
     "HeaderRegion",
+    "address_rows",
     "classify",
     "decoded_rows",
     "fields_named",
@@ -138,13 +140,16 @@ class HeaderRegion:
     ``fields`` are the walker's field paragraphs, in order. ``gaps`` are this stage's own
     gap ids (duplicate / lone-CR / invalid encoded word), in first-seen order; ``prelude``
     are the tolerated-prelude gap ids. ``text_decodes`` maps a text-kind field's ordinal to
-    its RFC 2047 decode. None of these are the walker's ``part.gaps``.
+    its RFC 2047 decode; ``addresses`` maps an address-list field's ordinal to its parsed
+    rows (Turn 1.2, :mod:`emailextract.addresses`). None of these are the walker's
+    ``part.gaps``.
     """
 
     fields: list[RawHeaderField] = field(default_factory=list)
     gaps: list[str] = field(default_factory=list)
     prelude: list[str] = field(default_factory=list)
     text_decodes: dict[int, DecodedValue] = field(default_factory=dict)
+    addresses: dict[int, list[AddressRow]] = field(default_factory=dict)
 
     def value_bytes(self, raw: bytes, item: RawHeaderField) -> bytes:
         """The verbatim value bytes of one field (between the colon and the content end)."""
@@ -236,8 +241,21 @@ def header_region(raw: bytes, result: WalkResult, *, max_work_units: int) -> Hea
         prelude.append(GAP_HEADERS_MBOX_FROM_LINE)
 
     _ = malformed  # the walker already carries headers.malformed_line in part.gaps
+    address_lists: dict[int, list[AddressRow]] = {}
+    for item in fields:
+        if item.parse_status != "ok" or classify(item.name) != "address_list":
+            continue
+        address_lists[item.ordinal] = parse_address_list(
+            raw[item.value_span.offset : item.value_span.end],
+            base_offset=item.value_span.offset,
+            max_work_units=max_work_units,
+        )
     return HeaderRegion(
-        fields=fields, gaps=_dedup(gaps), prelude=prelude, text_decodes=text_decodes
+        fields=fields,
+        gaps=_dedup(gaps),
+        prelude=prelude,
+        text_decodes=text_decodes,
+        addresses=address_lists,
     )
 
 
@@ -254,9 +272,10 @@ def _dedup(values: list[str]) -> list[str]:
 def _parsed_value(item: RawHeaderField, region: HeaderRegion) -> str | None:
     """The scalar a field's kind yields this turn, or ``None`` where it is deferred.
 
-    ``text`` yields the RFC 2047-decoded value, ``message_id`` the trimmed id token; the
-    ``address_list`` and ``date_time`` scalars need Turn 1.2 / 1.3 parsers and are **not**
-    computed here (never with the stdlib) -- the caller reports them deferred by name.
+    ``text`` yields the RFC 2047-decoded value, ``message_id`` the trimmed id token,
+    ``address_list`` the first addr-spec the tokenizer read (Turn 1.2); the ``date_time``
+    scalar needs the Turn 1.3 parser and is **not** computed here (never with the stdlib)
+    -- the caller reports it deferred by name.
     """
     kind = classify(item.name)
     if kind == "text":
@@ -269,14 +288,34 @@ def _parsed_value(item: RawHeaderField, region: HeaderRegion) -> str | None:
     if kind == "message_id_list":
         found = _MESSAGE_ID.findall(item.raw_value)
         return found[-1] if found else item.raw_value.strip()
+    if kind == "address_list":
+        for row in region.addresses.get(item.ordinal, []):
+            if row.addr_spec is not None:
+                return row.addr_spec
+        return None
     return None
+
+
+def address_rows(region: HeaderRegion) -> list[list[object]]:
+    """``headers.addresses`` rows: ``[ordinal, field_name, [[row, ...], ...]], ...``.
+
+    One entry per **address-list field** the header region carries, in ordinal order, each
+    holding the tokenizer's rows (Turn 1.2). A group's members are the flat rows beside the
+    group row (the sidecars type them flat); each row is
+    ``[raw_offset, raw_length, display_name, addr_spec, state, reason_id]``.
+    """
+    return [
+        [item.ordinal, item.name, [row.as_fact_row() for row in region.addresses[item.ordinal]]]
+        for item in region.fields
+        if item.ordinal in region.addresses
+    ]
 
 
 def projection_rows(region: HeaderRegion) -> list[list[object]]:
     """``headers.projection`` rows: ``[ordinal, name, raw_value, parsed_kind, parsed_value]``.
 
     ``raw_value`` keeps its folds (latin-1 view); ``parsed_value`` is ``None`` where the kind
-    is ``unparsed`` or needs a later parser (``address_list`` / ``date_time``).
+    is ``unparsed`` or needs a later parser (``date_time``).
     """
     return [
         [item.ordinal, item.name, item.raw_value, classify(item.name), _parsed_value(item, region)]

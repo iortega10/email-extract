@@ -250,11 +250,25 @@ test: tests/test_addresses.py::test_cfws_does_not_split_an_address
 test: tests/test_addresses.py::test_a_trailing_comma_is_tolerated
 test: tests/test_addresses.py::test_the_own_tokenizer_returns_a_reason_where_parseaddr_loses_the_span
 test: tests/test_addresses.py::test_the_advisory_stdlib_diff_is_printed_never_gated
+test: tests/test_addresses.py::test_the_address_row_maps_onto_the_facts_row_shape
+test: tests/test_addresses.py::test_an_unbalanced_quote_or_angle_bracket_is_unparsed
+test: tests/test_addresses.py::test_a_mutation_flips_the_gate_for_every_address_state
+test: tests/test_addresses.py::test_the_group_with_a_mutation_dropping_a_member_fails_the_gate
+test: tests/test_addresses.py::test_every_emitted_gap_id_has_a_mutation_case
+test: tests/test_addresses.py::test_a_seeded_fuzz_of_the_tokenizer_never_raises
+test: tests/test_addresses.py::test_the_tokenizer_is_linear_in_the_input
+test: tests/test_addresses.py::test_the_address_facts_are_live_over_the_corpus
 stop: after the address tokenizer and its advisory comparator (the disagreements are recorded, not gated)
 ```
 
-Allow-list (`turn=1.2`): `emailextract/addresses.py`, `tests/test_addresses.py`,
-`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+Allow-list (`turn=1.2`): `emailextract/addresses.py` (new), `emailextract/headers.py` (only the
+narrow wiring that calls `addresses.py` for the `address_list` kinds), `emailextract/evals/l1.py`
+(the two measurers), `tests/test_addresses.py`, `tests/support/stdlib_scanner.py` (the advisory
+address diff, never imported by the package), `tests/ledger/label_ledger.json` (only the hashes of
+the oracle files changed), `tests/ledger/behavior_ledger.json` (appended lines only),
+`tests/test_turn_declarations.py` and `tests/test_l1_gate.py` and `tests/test_phase0_scope.py`
+(narrow edits the turn's changes force), `docs/design/phase1-empirical.md`,
+`docs/design/phase1-turn-declarations.md`. Not `fixtures/**` or `*.expected.json`.
 
 ## Turn 1.3 -- `dates.py`
 

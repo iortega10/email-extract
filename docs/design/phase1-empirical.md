@@ -107,3 +107,50 @@ command and its output are the record.
 * **The fuzz loops are seeded and bounded.** `Random(11_1001)` / `Random(11_2047)` /
   `Random(11_2231)`; 600 header-region mutations and 1200 + 1200 decoder/parameter inputs.
   No defect found: the three functions never raised on mutated bytes.
+
+## Turn 1.2 — the address tokenizer, its two live comparisons and the advisory diff
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.2; the
+command and its output are the record. Both interpreters run the suite; the values below are
+identical on CPython **3.14.3** and **3.11.15** (the code imports the stdlib `email` nowhere,
+so the address rules cannot drift between them).
+
+* **The L1 oracle now compares 7 more facts, all green.** Command:
+  `python -m emailextract.evals`. Output (both interpreters identical):
+  `L1 matched=784 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=148, phase 3=26`.
+  Before this turn the gate was `matched=777`, `not_yet: phase 1=155`; the 7 newly-live
+  sidecar facts are `headers.addresses` (the 6 Family-A `address_*` fixtures and
+  `headers_plain_baseline`). The turn also **turned on** the `headers.projection`
+  `address_list` `parsed_value` comparison that Turn 1.1 deferred.
+* **The `parsed_value` column is now complete except `date_time`.** From
+  `emailextract.evals.l1.deferral_counts()`: `headers.projection.address_list:1.2` is **empty**
+  (it was 25) and `headers.projection.date_time:1.3 = 12` remains (Turn 1.3).
+* **`headers.addresses`' comparison is the sparse-row rule, and that is a FINDING.** The six
+  Family-A `address_*` sidecars label **only their `To` field**, while `headers_plain_baseline`
+  labels `From, To, Cc`. Every fixture carries the identical `From: Ada Sender
+  <ada@example.test>` mailbox (`value_span [5, 30]`), so no uniform measurer can include the
+  `From` entry for the one fixture and omit it for the others. The facts document says a new
+  fact's sidecar names its rows **in full**, so the sidecars and the document disagree; the
+  bytes are the judge and the labels stay untouched, so the oracle compares every field entry
+  the label **names** (`body.preamble_epilogue`'s sparse convention) and reports the measured
+  entries the label omits. See the turn report; the label ledger proves the sidecars are
+  byte-identical.
+* **The advisory stdlib address diff (printed, never gated).** Command:
+  `python -m pytest tests/test_addresses.py::test_the_advisory_stdlib_diff_is_printed_never_gated -q -s`.
+  Over **179** address fields (every fixture, every `From`/`To`/`Cc`…), the own tokenizer and
+  `email.utils.getaddresses` disagree on **5** fields, each a catalogued shared misreading:
+  `address_group` (`group_flattened`: the stdlib hoists the members and drops the group row),
+  `address_undisclosed_recipients` (`empty_group_lost`: `''`), `address_unparsable`
+  (`garbage_passthrough`: `not-an-address`), `address_idn_domain` and
+  `address_smtputf8_local_part` (`smtputf8_mangled`: the stdlib is fed latin-1 and does not
+  keep a non-ASCII local part or IDN domain verbatim). Every other field agrees. `parseaddr`
+  loses the byte span on **2 of 179** fields (D2 needs one), and the one asserted property --
+  the own tokenizer never drops an address the stdlib cannot locate -- holds.
+* **The fuzz loop is seeded and bounded.** `Random(12_1002)`; **7520** seeds (179 mutated
+  address-field values + 9 adversarial inputs, 40 mutations each). No defect found: the
+  tokenizer never raised, every span lay inside the value, sliced to non-empty bytes, and the
+  top-level spans stayed ordered and disjoint. Runtime ~0.4 s.
+* **The tokenizer is linear.** `tests/test_addresses.py::test_the_tokenizer_is_linear_in_the_input`
+  doubles a 30 000-byte run of `(`, `\`, `<`, `"` and a 30 000-byte address list and measures
+  the best of five; every ratio is ~2.0 (a quadratic scanner would show ~4.0), so no run of a
+  repeated delimiter blows up. Runtime ~2.7 s.
