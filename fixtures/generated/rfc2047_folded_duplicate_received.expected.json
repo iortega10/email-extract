@@ -1,0 +1,90 @@
+{
+  "fixture": "rfc2047_folded_duplicate_received.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain message whose header block carries two folded fields (a Subject of two RFC 2047 encoded words across an obs-fold, and a plain X-Folded-Note folded with a tab continuation) and three Received fields, the second and third byte-identical duplicates; identity of a field is by ordinal, never by name (D2)",
+    "generator": "tools/make_fixtures.py, from _fixture_rfc2047_folded_duplicate_received (pinned Date Tue, 4 Mar 2025 09:00:00 +0000, Message-ID <rfc2047-folded-0004@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "headers.decoded: the Subject's two encoded words decode to one field value; per D2 and the measured spike (a01) the fold is one field and the raw value keeps the fold text verbatim, so the decoded value is the concatenation of the decoded words with the fold's whitespace dropped between them",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a folded field's raw_span covers every line of its fold chain including their line endings; name_span is the name bytes of the first line; value_span starts immediately after the colon and runs to the last content byte of the chain, keeping the fold's CRLF and continuation whitespace (D2: the verbatim layer)",
+    "expected_gaps": "none at phase 0: the fold chains parse as one field each and no line is malformed; see gaps.later for the claims-side gap the design expects once the Received chain becomes a recorded claim",
+    "not_yet_labelled": "body views and quoting (none here), attachment manifest (none), statuses (phase 2), TimeEvents for the Date and the three hops (phase 3; the conflict fixtures under fixtures/time/ carry the time evidence facts)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "e7db9971380868fb30d1bf6ca2b728637d6e94e23b779040c5816f0a797e3df7"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 632
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Received", " from a.example by b.example; Tue, 4 Mar 2025 07:58:00 +0000", "ok", [74, 8], [83, 60], [74, 71]],
+        [3, "Received", " from a.example by b.example; Tue, 4 Mar 2025 07:59:00 +0000", "ok", [145, 8], [154, 60], [145, 71]],
+        [4, "Received", " from a.example by b.example; Tue, 4 Mar 2025 07:59:00 +0000", "ok", [216, 8], [225, 60], [216, 71]],
+        [5, "Subject", " =?utf-8?b?SGVsbG8g4piF?=\r\n =?utf-8?b?IGZvbGRlZCBzdWJqZWN0?=", "ok", [287, 7], [295, 60], [287, 70]],
+        [6, "X-Folded-Note", " a plain value that\r\n\tcontinues on a folded line", "ok", [357, 13], [371, 48], [357, 64]],
+        [7, "Date", " Tue, 4 Mar 2025 09:00:00 +0000", "ok", [421, 4], [426, 31], [421, 38]],
+        [8, "Message-ID", " <rfc2047-folded-0004@example.test>", "ok", [459, 10], [470, 35], [459, 48]],
+        [9, "MIME-Version", " 1.0", "ok", [507, 12], [520, 4], [507, 19]],
+        [10, "Content-Type", " text/plain; charset=utf-8", "ok", [526, 12], [539, 26], [526, 41]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 632], [0, 569], [569, 63]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 569]],
+        ["body", "1", [569, 63]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "5dde2ae561e532c8003d83da3662da486b926e567b463fc5920fed68afb2a6d9"]
+      ]
+    },
+    "headers.decoded": {
+      "phase": 1,
+      "value": [
+        [5, "Hello \u2605 folded subject"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["headers.received_chain_unverified", "1", 3, "the three Received fields are claims and never verified (D2), and the known-gap registry names that standing gap; no phase-0 constant emits it -- the walker's GAP constants cover eight ids and the registry's headers family names this one, so it is labelled here at the phase where the claims become records (thread edges, phase 3)"]
+      ]
+    }
+  }
+}

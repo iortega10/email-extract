@@ -1,0 +1,10 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: truncated base64
+Date: Tue, 4 Mar 2025 10:05:00 +0000
+Message-ID: <truncated-base64-1002@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+Content-Transfer-Encoding: base64
+
+SGVsbG8gQmVuLg0KDQpBIHRydW5jYXRlZCBiYXNlNjQgYm9keS4NC

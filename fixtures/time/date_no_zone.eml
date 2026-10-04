@@ -1,0 +1,10 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Received: from a.example by b.example; Tue, 4 Mar 2025 15:00:00 +0000
+Subject: date with no local time
+Date: Tue, 4 Mar 2025 14:30:00 -0000
+Message-ID: <time-date-no-zone@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+The Date says -0000: no local time is known, and it is not +0000.

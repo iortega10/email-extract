@@ -1,0 +1,91 @@
+{
+  "fixture": "thread_three_refs_chain.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain reply: two Received fields, Message-ID <thread-child-0007@example.test>, In-Reply-To <thread-parent-0002@example.test> and a three-id References chain (root, mid, parent); the fixture whose later-phase facts are the thread claims",
+    "generator": "tools/make_fixtures.py, from _fixture_thread_three_refs_chain (pinned Date Tue, 4 Mar 2025 09:03:00 +0000, Message-ID <thread-child-0007@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_3_facts": "thread.claims: References is kept as a list and the parent is its last id (D2), In-Reply-To agrees with it, and the whole chain is a claim -- edges are built in Phase 3 and the raw header stays the source of truth",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D7), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "field raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the regions tile the message exactly",
+    "expected_gaps": "none at phase 0; see gaps.later for the two thread-family gaps the design expects in Phase 3",
+    "not_yet_labelled": "body views and quoting (none here), statuses (phase 2), TimeEvents for the Date and the two hops (phase 3; fixtures/time/ carries the time evidence facts)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "0f363c15006920aa2729c9a7f1508901536ad972ab20aacbe48f0fa90fdea5c1"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 602
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Received", " from a.example by b.example; Tue, 4 Mar 2025 09:00:00 +0000", "ok", [74, 8], [83, 60], [74, 71]],
+        [3, "Received", " from c.example by a.example; Tue, 4 Mar 2025 09:01:00 +0000", "ok", [145, 8], [154, 60], [145, 71]],
+        [4, "Subject", " thread three refs chain", "ok", [216, 7], [224, 24], [216, 34]],
+        [5, "Date", " Tue, 4 Mar 2025 09:03:00 +0000", "ok", [250, 4], [255, 31], [250, 38]],
+        [6, "Message-ID", " <thread-child-0007@example.test>", "ok", [288, 10], [299, 33], [288, 46]],
+        [7, "In-Reply-To", " <thread-parent-0002@example.test>", "ok", [334, 11], [346, 34], [334, 48]],
+        [8, "References", " <thread-root-0000@example.test> <thread-mid-0001@example.test> <thread-parent-0002@example.test>", "ok", [382, 10], [393, 97], [382, 110]],
+        [9, "MIME-Version", " 1.0", "ok", [492, 12], [505, 4], [492, 19]],
+        [10, "Content-Type", " text/plain; charset=us-ascii", "ok", [511, 12], [524, 29], [511, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 602], [0, 557], [557, 45]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 557]],
+        ["body", "1", [557, 45]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "ad37292719e9b239392612b3e8f96e8c852ef18e1b3e8d792a5480dd2bafed75"]
+      ]
+    },
+    "thread.claims": {
+      "phase": 3,
+      "value": [
+        ["<thread-child-0007@example.test>", ["<thread-root-0000@example.test>", "<thread-mid-0001@example.test>", "<thread-parent-0002@example.test>"], "<thread-parent-0002@example.test>"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["thread.parent_not_in_corpus", "1", 3, "the parent <thread-parent-0002@example.test> and the two earlier ids are claims pointing outside the fixture corpus, and the design's thread registry names this gap for exactly that state"],
+        ["headers.received_chain_unverified", "1", 3, "the two Received fields are claims and never verified (D2), and the known-gap registry names that standing gap; no phase-0 constant emits it, so it is labelled at the phase where the claims become records (thread edges, phase 3)"]
+      ]
+    }
+  }
+}

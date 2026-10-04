@@ -1,0 +1,15 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Received: from a.example by b.example; Tue, 4 Mar 2025 09:00:00 +0000
+Received: from c.example by a.example; Tue, 4 Mar 2025 09:01:00 +0000
+Subject: thread three refs chain
+Date: Tue, 4 Mar 2025 09:03:00 +0000
+Message-ID: <thread-child-0007@example.test>
+In-Reply-To: <thread-parent-0002@example.test>
+References: <thread-root-0000@example.test> <thread-mid-0001@example.test> <thread-parent-0002@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+Hello Ben.
+
+The third message in a chain.

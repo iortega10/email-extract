@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: a future date mentioned in the text
+Date: Tue, 4 Mar 2025 17:00:00 +0000
+Message-ID: <time-future-date-in-text@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+Our records show 15 Jun 2030 as the renewal date.

@@ -52,9 +52,18 @@ def test_the_ledger_header_names_the_corpus_and_the_cross_interpreter_fact() -> 
     assert "_comment" in json.loads(text)
 
 
-def test_the_corpus_manifest_lists_the_inline_corpus_names() -> None:
+def test_the_corpus_manifest_lists_each_version_oldest_first() -> None:
     corpora = behavior_ledger.load_corpora()
-    assert corpora == [{"version": 1, "files": sorted(behavior_ledger.INLINE_CORPUS)}]
+    assert [entry["version"] for entry in corpora] == list(range(1, len(corpora) + 1))
+    # Corpus version 1 is the Turn 0.2 inline corpus and never moves. The Turn
+    # 0.3 switch made the committed fixtures the corpus source, so the newest
+    # version lists exactly today's fixture paths -- 8 generated, the raw 3 and
+    # the 5 conflict fixtures (16), which is the Turn 0.3 exit criterion.
+    assert corpora[0] == {"version": 1, "files": sorted(behavior_ledger.INLINE_CORPUS)}
+    names = behavior_ledger.discovered()
+    assert corpora[-1]["files"] == names
+    assert {name.split("/", 1)[0] for name in names} == {"generated", "raw", "time"}
+    assert len(names) == 16
 
 
 def test_the_fingerprints_are_stable_and_look_like_hashes() -> None:
@@ -183,11 +192,12 @@ def test_check_and_record_accept_the_payload_with_its_comment_key() -> None:
 
 def test_growing_the_corpus_adds_a_corpus_version_and_bumps_nothing(tmp_path) -> None:
     before = behavior_ledger.version_strings()
+    next_version = behavior_ledger.latest_corpus(behavior_ledger.load_corpora()) + 1
     (tmp_path / "a.eml").write_bytes(EXTRA_MESSAGE)
     (tmp_path / "b.eml").write_bytes(EXTRA_MESSAGE + b"second\r\n")
     corpora, changed = behavior_ledger.add_corpus_version(fixtures_dir=tmp_path)
     assert changed is True
-    assert corpora[-1] == {"version": 2, "files": ["a.eml", "b.eml"]}
+    assert corpora[-1] == {"version": next_version, "files": ["a.eml", "b.eml"]}
     # Fixtures are corpus, not behavior: no component version moves.
     assert behavior_ledger.version_strings() == before
     problems = behavior_ledger.check(behavior_ledger.load_ledger(), fixtures_dir=tmp_path)

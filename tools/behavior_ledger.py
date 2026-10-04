@@ -74,6 +74,9 @@ CORPUS_DEPENDENT = ("walk", "decode_chain")
 
 LEDGER_PATH = _ROOT / "tests" / "ledger" / "behavior_ledger.json"
 CORPUS_PATH = _ROOT / "tests" / "ledger" / "corpus.json"
+#: The corpus source since the Turn 0.3 switch: the committed fixtures. The
+#: inline corpus below is history -- corpus version 1 -- and stays resolvable
+#: so every recorded fingerprint can still be recomputed.
 FIXTURES = _ROOT / "fixtures"
 _LOCAL_ONLY = "real"
 
@@ -157,17 +160,19 @@ INLINE_CORPUS: dict[str, bytes] = {
 _HEADER = (
     "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: "
     "sha256}}. A key is '<version string>|corpus:<N>': the code version and the "
-    "corpus version it was fingerprinted on. The corpus is the TINY INLINE corpus "
-    "(INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings) until "
-    "the Turn 0.3 "
-    "fixtures exist; tests/ledger/corpus.json lists each corpus version's message "
-    "names, and adding a message (or a fixture, once --fixtures is the corpus "
-    "source) adds a corpus version and NEW LINES under the SAME component versions "
+    "corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE "
+    "corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); "
+    "since the Turn 0.3 switch the corpus source is the committed fixtures "
+    "(the .eml files under fixtures/, excluding local-only real/; --fixtures DIR "
+    "points elsewhere), and tests/ledger/corpus.json lists each corpus version's "
+    "message names. Adding a message or a fixture adds a corpus version and NEW "
+    "LINES under the SAME component versions "
     "-- it is not a behavior change and bumps nothing; the tool refuses to record a "
     "new corpus if any older corpus's fingerprint moved (that is a behavior change "
     "that needs a bump). 'contracts' does not depend on the corpus and is keyed by "
     "the schema version alone. Fingerprints are identical on CPython 3.14.3 and "
-    "3.11.15 (measured, this turn); a cross-interpreter difference is recorded "
+    "3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 "
+    "fixtures in Turn 0.3); a cross-interpreter difference is recorded "
     "here, never hidden. The history before this file is not reconstructed. Record "
     "lines with tools/update_behavior_ledger.py in the same commit as the change "
     "that caused them."
@@ -175,10 +180,11 @@ _HEADER = (
 
 _CORPUS_HEADER = (
     "The ledger's corpora, oldest first: each version lists the message names its "
-    "fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names until "
-    "the Turn 0.3 fixtures exist; relative fixture paths under --fixtures after "
-    "that). Growing the corpus adds a version here -- the tool detects a changed "
-    "file list and appends it automatically; it never bumps a component version."
+    "fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names for "
+    "corpus version 1; relative paths under the fixtures corpus source since the "
+    "Turn 0.3 switch, --fixtures DIR for another source). Growing the corpus adds "
+    "a version here -- the tool detects a changed file list and appends it "
+    "automatically; it never bumps a component version."
 )
 
 
@@ -186,10 +192,13 @@ _CORPUS_HEADER = (
 
 
 def corpus(fixtures_dir: str | Path | None = None) -> dict[str, bytes]:
-    """Every corpus message, by name: the inline corpus, or the ``.eml`` files."""
-    if fixtures_dir is None:
-        return dict(INLINE_CORPUS)
-    root = Path(fixtures_dir)
+    """Every corpus message, by name: the ``.eml`` files under the corpus source.
+
+    The source is the committed fixtures since the Turn 0.3 switch (``--fixtures``
+    points elsewhere); ``INLINE_CORPUS`` is history and is reachable through
+    :func:`_resolve`, never listed here.
+    """
+    root = Path(fixtures_dir) if fixtures_dir is not None else FIXTURES
     return {
         path.relative_to(root).as_posix(): path.read_bytes()
         for path in sorted(root.rglob("*.eml"))
@@ -203,14 +212,26 @@ def discovered(fixtures_dir: str | Path | None = None) -> list[str]:
 
 
 def _resolve(name: str, fixtures_dir: str | Path | None) -> bytes:
-    """One corpus message's bytes, for any corpus version's recorded name."""
-    if fixtures_dir is not None:
-        path = Path(fixtures_dir) / name
+    """One corpus message's bytes, for any corpus version's recorded name.
+
+    Older corpus versions must stay recomputable, so a name resolves against the
+    source the caller pointed at (``--fixtures``), then the committed fixtures
+    (the source since the Turn 0.3 switch), then the inline corpus that corpus
+    version 1 was fingerprinted over -- in that order, first hit wins.
+    """
+    roots = [Path(fixtures_dir)] if fixtures_dir is not None else []
+    if FIXTURES not in roots:
+        roots.append(FIXTURES)
+    for root in roots:
+        path = root / name
         if path.is_file():
             return path.read_bytes()
     if name in INLINE_CORPUS:
         return INLINE_CORPUS[name]
-    raise ValueError(f"corpus message {name!r} is not in the inline corpus or {fixtures_dir!r}")
+    raise ValueError(
+        f"corpus message {name!r} is in neither corpus source ({', '.join(map(str, roots))}) "
+        "nor the inline corpus"
+    )
 
 
 def load_corpora(path: str | Path | None = None) -> list[dict]:

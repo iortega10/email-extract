@@ -1,0 +1,17 @@
+From: Ada Sender <ada@example.test>
+Subject: malformed mime
+not a header line
+X-After: still recorded
+Date: Tue, 4 Mar 2025 10:10:00 +0000
+Message-ID: <malformed-mime-1003@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b1-malformed"
+
+--b1-malformed
+Content-Type: text/plain
+
+first part
+--b1-malformed
+Content-Type: text/plain
+
+second part, and the close delimiter is missing

@@ -1,12 +1,14 @@
 {
-  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. The corpus is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings) until the Turn 0.3 fixtures exist; tests/ledger/corpus.json lists each corpus version's message names, and adding a message (or a fixture, once --fixtures is the corpus source) adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by the schema version alone. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured, this turn); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
+  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); since the Turn 0.3 switch the corpus source is the committed fixtures (the .eml files under fixtures/, excluding local-only real/; --fixtures DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's message names. Adding a message or a fixture adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by the schema version alone. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 fixtures in Turn 0.3); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
   "contracts": {
     "7": "1f1d4fb4d198e494e83a7478920d3522a495723be008237387060cf0fe8f7a82"
   },
   "decode_chain": {
-    "1|corpus:1": "8d753a0eadad02bd2011871dadf201866f0a377ae0422f5631baa17d637af1ba"
+    "1|corpus:1": "8d753a0eadad02bd2011871dadf201866f0a377ae0422f5631baa17d637af1ba",
+    "1|corpus:2": "6b008c4caa793787ace88cd79bd527ac00c125a5a3b2cfb3ad16545f3041d9d9"
   },
   "walk": {
-    "1|1|corpus:1": "b18fd393fe2700e780afde9ef0b183b9ee8cbf6dc06074cf62b9f162cb37ba4b"
+    "1|1|corpus:1": "b18fd393fe2700e780afde9ef0b183b9ee8cbf6dc06074cf62b9f162cb37ba4b",
+    "1|1|corpus:2": "ce564bb10220f805941f97fbee7736fd992bea03a68c4a81c5e49357fd80ce78"
   }
 }

@@ -1,0 +1,17 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: bad charset
+Date: Tue, 4 Mar 2025 10:00:00 +0000
+Message-ID: <bad-charset-1001@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1-bad-charset"
+
+--b1-bad-charset
+Content-Type: text/plain; charset=x-no-such-charset
+
+Café in a page that does not exist.
+--b1-bad-charset
+Content-Type: text/plain; charset=x-no-such-charset
+
+byte  broke the round trip.
+--b1-bad-charset--

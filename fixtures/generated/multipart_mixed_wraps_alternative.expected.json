@@ -1,0 +1,121 @@
+{
+  "fixture": "multipart_mixed_wraps_alternative.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-mixed-20250304) whose first child is a nested multipart/alternative (boundary b0-inner-alt-20250304: text/plain then text/html) and whose second child is a base64 application/pdf attachment (report.pdf); no preamble, no epilogue",
+    "generator": "tools/make_fixtures.py, from _fixture_multipart_mixed_wraps_alternative (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <mixed-wraps-alt-0003@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "attach.manifest (the pdf occurrence with its name, type and content hash) and body.selection over the nested alternative (the named rule text/plain preferred)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9/D4), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), and a child part's raw span ends at the last content byte before that CRLF; the nested close delimiter's own line ending is the outer delimiter's leading CRLF, so the regions tile the message exactly (D9) with no byte counted twice",
+    "expected_gaps": "none: every boundary is declared and found, the charsets decode strictly and the pdf payload is plain ASCII after transfer decoding; see labels.undetermined for the one reading the design leaves open",
+    "not_yet_labelled": "quote boundaries and rendered views (no quoting here), statuses for the attachment (phase 2), thread edges and TimeEvents (phase 3)",
+    "attachment_bytes": "report.pdf is 583 bytes of hand-assembled one-page PDF with an uncompressed content stream; its sha256 is identical to attachments_mixed's tiny.pdf because the bytes are the same"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "f9aa4bd1a8e1aefd769f2dc2c3c9111677712e57d3462d747b86805223cce3cc"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 1579
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " mixed wraps alternative", "ok", [74, 7], [82, 24], [74, 34]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [108, 4], [113, 31], [108, 38]],
+        [4, "Message-ID", " <mixed-wraps-alt-0003@example.test>", "ok", [146, 10], [157, 36], [146, 49]],
+        [5, "MIME-Version", " 1.0", "ok", [195, 12], [208, 4], [195, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-mixed-20250304\"", "ok", [214, 12], [227, 46], [214, 61]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 1579], [0, 277], [277, 1302]],
+        ["1.1", "1", "multipart/alternative", [298, 307], [298, 73], [371, 234]],
+        ["1.1.1", "1.1", "text/plain", [396, 72], [396, 43], [439, 29]],
+        ["1.1.2", "1.1", "text/html", [495, 83], [495, 42], [537, 41]],
+        ["1.2", "1", "application/pdf", [628, 926], [628, 124], [752, 802]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 277]],
+        ["delimiter", "1", [277, 21]],
+        ["headers", "1.1", [298, 73]],
+        ["delimiter", "1.1", [371, 25]],
+        ["headers", "1.1.1", [396, 43]],
+        ["body", "1.1.1", [439, 29]],
+        ["delimiter", "1.1", [468, 27]],
+        ["headers", "1.1.2", [495, 42]],
+        ["body", "1.1.2", [537, 41]],
+        ["delimiter", "1.1", [578, 27]],
+        ["delimiter", "1", [605, 23]],
+        ["headers", "1.2", [628, 124]],
+        ["body", "1.2", [752, 802]],
+        ["delimiter", "1", [1554, 25]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.1.1", []],
+        ["1.1.2", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, null, null, null, false, null],
+        ["1.1.1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.1.2", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1.1", "6a40ad6c5bff38f10e47c50fc77f9f709db301663c425d94ac5f25e9658a3d0e"],
+        ["1.1.2", "377938b0fba546c6a52aadc53e681f9d2537cc897e5497c6ed984f1a37df891f"],
+        ["1.2", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "report.pdf", "application/pdf", null, "attachment", "base64", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d", 583]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1.1.1", "selected"],
+        ["1.1.2", "alternative_not_selected"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["decode.chain", "part 1.2", "the design records a decode chain per part (D3) and gives a deterministic charset ladder (D9, D13) but never says whether the ladder runs over a non-text payload at all -- part 1.2's decoded bytes are a PDF, not text, so this label leaves used_charset and encoding_source null rather than guessing what a charset verdict for binary bytes would mean, and asks the design to settle whether binary parts carry a charset verdict or only a transfer-decoding verdict"]
+      ]
+    }
+  }
+}

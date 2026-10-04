@@ -1,0 +1,88 @@
+{
+  "fixture": "future_date_in_text.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a message whose Date claims 2025-03-04T17:00:00Z and whose body text mentions 15 Jun 2030 -- TimeEvent conflict case 5 of 5: a future date in the text must never become an arrival time (D15)",
+    "generator": "tools/make_fixtures.py, from _fixture_future_date_in_text (every timestamp pinned)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker, 1 = the Phase 1 parser, 2 = routing and statuses, 3 = threading and time evidence -- every time.* fact here is phase 3; in-text date extraction is not in email v1 at all (D15), which is also the standing gap labelled in gaps.later",
+    "the_evidence": "e_mentioned is kind=mentioned_in_text with trust=derived and usable_for_arrival_ordering=false: the claim is recorded (it exists in the text) and is excluded from every arrival order; its precision is day and its offset carries no zone, which is what an in-text bare date can honestly give",
+    "the_policies": "header_date_claimed places only e_date; the in-text claim is reported not placed with its reason -- it must NOT become an arrival time under any evidence policy; owner_manifest here deliberately covers only the arrival claim too, because the D15 exclusion is not something an override is allowed to overturn for an in-text date (unlike the fs_mtime case, where the owner may hold a real arrival manifest)",
+    "the_conflicts": "the pair is recorded because the text's claim and the Date name different moments and nothing reconciles them -- and the artifact says in the same breath that the in-text claim never enters an order: a future date in the text must not mis-sort the corpus",
+    "labels_are_typed": "typed by a model from D15 and the fixture's declared shape, never copied out of tests/support/timeline_ref.py or the library; labels_provenance is spec"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "b4ad259c900817bd68acc2a2f269a3a0d09d9802a9554e0360cf747b5298a23a"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 327
+    },
+    "time.evidence": {
+      "phase": 3,
+      "value": [
+        {
+          "event_id": "e_date",
+          "doc_id": "b4ad259c900817bd68acc2a2f269a3a0d09d9802a9554e0360cf747b5298a23a",
+          "parent_event_id": null,
+          "kind": "sent",
+          "when_raw": "Tue, 4 Mar 2025 17:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T17:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Date", "ordinal": 3, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_mentioned",
+          "doc_id": "b4ad259c900817bd68acc2a2f269a3a0d09d9802a9554e0360cf747b5298a23a",
+          "parent_event_id": null,
+          "kind": "mentioned_in_text",
+          "when_raw": "15 Jun 2030",
+          "when_utc": {"value": "2030-06-15"},
+          "offset": {"unknown_reason": "no_zone_in_text"},
+          "offset_origin": "absent",
+          "precision": "day",
+          "ambiguity": "none",
+          "source": {"part": "1", "ordinal": 0, "span": null},
+          "trust": "derived",
+          "usable_for_arrival_ordering": false
+        }
+      ]
+    },
+    "time.owner_manifest": {
+      "phase": 3,
+      "value": [
+        ["e_date"]
+      ]
+    },
+    "time.orders": {
+      "phase": 3,
+      "value": [
+        ["header_date_claimed", ["e_date"], ["e_mentioned"]],
+        ["received_chain_header_order", [], ["e_date", "e_mentioned"]],
+        ["owner_manifest", ["e_date"], ["e_mentioned"]]
+      ]
+    },
+    "time.unresolved_pairs": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_mentioned", "the text mentions 15 Jun 2030 while the Date claims 2025-03-04T17:00:00Z: an in-text date is not arrival evidence (D15, kind=mentioned_in_text with usable_for_arrival_ordering=false) and yet the two claims name different moments that nothing reconciles -- the pair is recorded and the in-text claim still never enters an order"]
+      ]
+    },
+    "time.evidence_conflicts": {
+      "phase": 3,
+      "value": true
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["time.in_text_dates_not_extracted_v1", "1", 3, "in-text dates are a separate labeled rule-based extractor and are not in email v1 (D15), so this fixture's mentioned date is labelled as evidence but never extracted by the shipped package"]
+      ]
+    }
+  }
+}

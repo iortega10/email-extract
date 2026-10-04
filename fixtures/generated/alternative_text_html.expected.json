@@ -1,0 +1,94 @@
+{
+  "fixture": "alternative_text_html.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/alternative (boundary b0-alt-20250304) with two children: text/plain then text/html; no preamble, no epilogue, no attachment",
+    "generator": "tools/make_fixtures.py, from _fixture_alternative_text_html (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <alt-text-html-0002@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "body.selection: the two alternatives are separate addressable parts and the display preference is the named rule (text/plain preferred, D3); the plain view is selected and the html view is alternative_not_selected",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "field raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "expected_gaps": "none: both children declare utf-8 and their bytes decode strictly; the multipart is properly closed; there are no preamble or epilogue bytes",
+    "not_yet_labelled": "the two bodies' rendered text and quote boundaries (there is no quoting in either view), statuses (phase 2), thread edges and TimeEvents (phase 3)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "ff31fcc1b780341e7b9d58d2874fc992cedaa98f1a1f146baf0b8baacc541614"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 495
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " alternative text html", "ok", [74, 7], [82, 22], [74, 32]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [106, 4], [111, 31], [106, 38]],
+        [4, "Message-ID", " <alt-text-html-0002@example.test>", "ok", [144, 10], [155, 34], [144, 47]],
+        [5, "MIME-Version", " 1.0", "ok", [191, 12], [204, 4], [191, 19]],
+        [6, "Content-Type", " multipart/alternative; boundary=\"b0-alt-20250304\"", "ok", [210, 12], [223, 50], [210, 65]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/alternative", [0, 495], [0, 277], [277, 218]],
+        ["1.1", "1", "text/plain", [298, 70], [298, 41], [339, 29]],
+        ["1.2", "1", "text/html", [389, 83], [389, 42], [431, 41]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 277]],
+        ["delimiter", "1", [277, 21]],
+        ["headers", "1.1", [298, 41]],
+        ["body", "1.1", [339, 29]],
+        ["delimiter", "1", [368, 21]],
+        ["headers", "1.2", [389, 42]],
+        ["body", "1.2", [431, 41]],
+        ["delimiter", "1", [472, 23]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.2", null, "utf-8", "7bit", "utf-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "6a40ad6c5bff38f10e47c50fc77f9f709db301663c425d94ac5f25e9658a3d0e"],
+        ["1.2", "377938b0fba546c6a52aadc53e681f9d2537cc897e5497c6ed984f1a37df891f"]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1.1", "selected"],
+        ["1.2", "alternative_not_selected"]
+      ]
+    }
+  }
+}

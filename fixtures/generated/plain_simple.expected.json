@@ -1,0 +1,74 @@
+{
+  "fixture": "plain_simple.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain message: seven header fields, one blank line, one body; no multipart, no attachment, no gaps",
+    "generator": "tools/make_fixtures.py, from _fixture_plain_simple (pinned Date Tue, 4 Mar 2025 08:00:00 +0000 and Message-ID <plain-simple-0001@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today; the L1 oracle (Turn 0.4) gates these at 100 percent",
+    "phase_1_facts": "none here: this fixture has no attachment and no alternative to select",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump (offsets and lengths) and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line or fold chain including the line ending; name_span is the name bytes; value_span starts immediately after the colon and keeps the leading space and any fold text (D2: name and value as separate sub-spans, raw bytes are the verbatim layer); a part's headers_span includes its closing empty line; the regions tile the message exactly (D9)",
+    "expected_gaps": "none: the message is well formed, its declared charset decodes strictly and its body is plain ASCII",
+    "not_yet_labelled": "body views and quote boundaries (this fixture has no quoting), statuses (phase 2), thread edges (it has no References) and TimeEvents (phase 3) are not exercised here"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "cd99b3538bffb8a55e329b1422151b71e63feb11507981873d0490276b9b22e0"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 295
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " plain simple", "ok", [74, 7], [82, 13], [74, 23]],
+        [3, "Date", " Tue, 4 Mar 2025 08:00:00 +0000", "ok", [97, 4], [102, 31], [97, 38]],
+        [4, "Message-ID", " <plain-simple-0001@example.test>", "ok", [135, 10], [146, 33], [135, 46]],
+        [5, "MIME-Version", " 1.0", "ok", [181, 12], [194, 4], [181, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [200, 12], [213, 29], [200, 44]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 295], [0, 246], [246, 49]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 246]],
+        ["body", "1", [246, 49]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "abc9c6687c29186c3277faca691b92ba7355dc2097ee0e81c5a7973d16199e47"]
+      ]
+    }
+  }
+}

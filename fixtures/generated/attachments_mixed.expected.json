@@ -1,0 +1,125 @@
+{
+  "fixture": "attachments_mixed.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-attach-20250304) with five children: a text/plain note and four base64 attachments (tiny.pdf, tiny.xlsx, tiny.docx, tiny.png); no preamble, no epilogue",
+    "generator": "tools/make_fixtures.py, from _fixture_attachments_mixed (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <attachments-mixed-0005@example.test>); the attachments are built by this file's own zip_stored / tiny_pdf / tiny_png so their bytes never depend on the zlib build",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "attach.manifest: the four attachment occurrences with name, declared type, disposition, transfer encoding and content hash (D4's occurrence manifest; routing and statuses stay phase 2)",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D4/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "field raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "expected_gaps": "none decided: every base64 payload decodes and every boundary closes; see labels.undetermined -- the xlsx and png bytes contain octets no strict text rung decodes, so IF the charset ladder is meant to run over binary payloads those two parts would record body.decode_destroyed_bytes, which this label refuses to assert without the design settling the question",
+    "not_yet_labelled": "the type verdict triples (declared_mime vs magic vs container_introspection) and routing/statuses for the four attachments (phase 2), quote boundaries (none here), thread edges and TimeEvents (phase 3)",
+    "attachment_bytes": "tiny.pdf is 583 bytes with an uncompressed content stream; tiny.xlsx (2268 bytes) and tiny.docx (1284 bytes) are ZIP_STORED zips with pinned timestamps, create_system 0, external_attr 0 and a fixed member order; tiny.png is 82 bytes whose IDAT is stored (uncompressed) deflate blocks -- tests/test_fixtures.py asserts no attachment contains a compressed zip member"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "14c276bf7ed975dccd92749acc919e979e970578cea09cf35ea79f37914239fc"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 6872
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attachments mixed", "ok", [74, 7], [82, 18], [74, 28]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [102, 4], [107, 31], [102, 38]],
+        [4, "Message-ID", " <attachments-mixed-0005@example.test>", "ok", [140, 10], [151, 38], [140, 51]],
+        [5, "MIME-Version", " 1.0", "ok", [191, 12], [204, 4], [191, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-attach-20250304\"", "ok", [210, 12], [223, 47], [210, 62]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 6872], [0, 274], [274, 6598]],
+        ["1.1", "1", "text/plain", [296, 84], [296, 46], [342, 38]],
+        ["1.2", "1", "application/pdf", [404, 924], [404, 122], [526, 802]],
+        ["1.3", "1", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", [1352, 3277], [1352, 173], [1525, 3104]],
+        ["1.4", "1", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", [4653, 1937], [4653, 179], [4832, 1758]],
+        ["1.5", "1", "image/png", [6614, 232], [6614, 116], [6730, 116]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 274]],
+        ["delimiter", "1", [274, 22]],
+        ["headers", "1.1", [296, 46]],
+        ["body", "1.1", [342, 38]],
+        ["delimiter", "1", [380, 24]],
+        ["headers", "1.2", [404, 122]],
+        ["body", "1.2", [526, 802]],
+        ["delimiter", "1", [1328, 24]],
+        ["headers", "1.3", [1352, 173]],
+        ["body", "1.3", [1525, 3104]],
+        ["delimiter", "1", [4629, 24]],
+        ["headers", "1.4", [4653, 179]],
+        ["body", "1.4", [4832, 1758]],
+        ["delimiter", "1", [6590, 24]],
+        ["headers", "1.5", [6614, 116]],
+        ["body", "1.5", [6730, 116]],
+        ["delimiter", "1", [6846, 26]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []],
+        ["1.3", []],
+        ["1.4", []],
+        ["1.5", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null],
+        ["1.3", "base64", null, "base64", null, false, null],
+        ["1.4", "base64", null, "base64", null, false, null],
+        ["1.5", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "a990bfc9036250d406343c0f04d855b38d0d8a8277bf6c5b72e4d962eb22724e"],
+        ["1.2", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d"],
+        ["1.3", "0aa50dd2f276d52031291d5dbbf035bf5a1a0db96653b361b9729041cfbc4ae5"],
+        ["1.4", "a848785a60498ca0c8972c6b9ef698ac389cd0eea5840d0e9b87a878b8c75474"],
+        ["1.5", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "tiny.pdf", "application/pdf", null, "attachment", "base64", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d", 583],
+        ["1.3", "tiny.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", null, "attachment", "base64", "0aa50dd2f276d52031291d5dbbf035bf5a1a0db96653b361b9729041cfbc4ae5", 2268],
+        ["1.4", "tiny.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", null, "attachment", "base64", "a848785a60498ca0c8972c6b9ef698ac389cd0eea5840d0e9b87a878b8c75474", 1284],
+        ["1.5", "tiny.png", "image/png", null, "attachment", "base64", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f", 82]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["decode.chain", "parts 1.2 to 1.5", "the design records a decode chain per part (D3) and a deterministic charset ladder (D9, D13) but never says whether the ladder runs over a non-text payload: these four bodies are a PDF, a zip, a zip and a PNG after transfer decoding, so this label gives the transfer verdict (base64) and leaves used_charset and encoding_source null rather than inventing a charset verdict for binary bytes"],
+        ["body.decode_destroyed_bytes", "parts 1.3 and 1.5", "if the design later says the ladder does run over binary payloads, the xlsx and png bytes contain octets that no strict rung decodes (windows-1252 strict rejects them), so those two parts would record body.decode_destroyed_bytes while the pdf and docx would not -- this label leaves the gap unasserted until that reading is settled, and the question is open in docs/design/label-questions.md"]
+      ]
+    }
+  }
+}

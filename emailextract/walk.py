@@ -584,7 +584,9 @@ def _charset_ladder(
         try:
             body.decode(declared_charset, "strict")
             return declared_charset, EncodingSource.DECLARED_CHARSET, False, None
-        except (LookupError, UnicodeDecodeError):
+        except (LookupError, UnicodeDecodeError, ValueError):
+            # ValueError: a name the codec registry refuses outright (a NUL in it)
+            # is the same state as an unknown name -- the rung is not usable.
             fallback_fired = True
     if all(byte < 128 for byte in body):
         return "us-ascii", EncodingSource.ASCII, fallback_fired, (

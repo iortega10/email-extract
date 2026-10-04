@@ -1,0 +1,82 @@
+{
+  "fixture": "date_vs_mtime.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a Date claiming 2025-03-04T16:00:00Z beside a simulated file mtime of 2025-03-06T09:12:00Z -- TimeEvent conflict case 4 of 5 (D15: filesystem time is not evidence of arrival)",
+    "generator": "tools/make_fixtures.py, from _fixture_date_vs_mtime; the mtime is simulated and lives in the hand-typed artifact (kind fs_mtime, source property st_mtime), because a fixture file cannot carry its own filesystem times",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker, 1 = the Phase 1 parser, 2 = routing and statuses, 3 = threading and time evidence -- every time.* fact here is phase 3",
+    "the_evidence": "e_mtime carries trust=filesystem and usable_for_arrival_ordering=false exactly as D15 prescribes: the event is recorded (it happened) but no evidence policy may place it; e_date is a normal claimed Date",
+    "the_policies": "header_date_claimed places only e_date and reports the mtime not placed (it is not arrival-usable); received_chain_header_order covers no hops and places nothing; owner_manifest is the labelled total-order override and IS allowed to place the mtime -- an owner may know when a non-email file arrived (the arrival manifest only the owner can supply, trust=user_supplied)",
+    "the_conflicts": "the pair is unresolved because the Date and the filesystem clock name two different moments and nothing merges them (D15: evidence is never merged into one true time); the pair is recorded even though the mtime cannot enter an order -- a disagreement the rules resolve by exclusion is still a disagreement between the claims",
+    "labels_are_typed": "typed by a model from D15 and the fixture's declared shape, never copied out of tests/support/timeline_ref.py or the library; labels_provenance is spec"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "e5137a204db45ebe264a7635cb6866023a7b0ec0107d57a0519f5b4b93239c1d"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 329
+    },
+    "time.evidence": {
+      "phase": 3,
+      "value": [
+        {
+          "event_id": "e_date",
+          "doc_id": "e5137a204db45ebe264a7635cb6866023a7b0ec0107d57a0519f5b4b93239c1d",
+          "parent_event_id": null,
+          "kind": "sent",
+          "when_raw": "Tue, 4 Mar 2025 16:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T16:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Date", "ordinal": 3, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_mtime",
+          "doc_id": "e5137a204db45ebe264a7635cb6866023a7b0ec0107d57a0519f5b4b93239c1d",
+          "parent_event_id": null,
+          "kind": "fs_mtime",
+          "when_raw": "2025-03-06T09:12:00Z",
+          "when_utc": {"value": "2025-03-06T09:12:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "derived_by_named_rule",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"property": "st_mtime", "ordinal": 0, "span": null},
+          "trust": "filesystem",
+          "usable_for_arrival_ordering": false
+        }
+      ]
+    },
+    "time.owner_manifest": {
+      "phase": 3,
+      "value": [
+        ["e_mtime", "e_date"]
+      ]
+    },
+    "time.orders": {
+      "phase": 3,
+      "value": [
+        ["header_date_claimed", ["e_date"], ["e_mtime"]],
+        ["received_chain_header_order", [], ["e_date", "e_mtime"]],
+        ["owner_manifest", ["e_mtime", "e_date"], []]
+      ]
+    },
+    "time.unresolved_pairs": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_mtime", "the Date claims 2025-03-04T16:00:00Z while the simulated file mtime is 2025-03-06T09:12:00Z: filesystem time is not evidence of arrival (usable_for_arrival_ordering=false) and nothing merges it with the claimed Date -- the two claims name two moments and stay side by side"]
+      ]
+    },
+    "time.evidence_conflicts": {
+      "phase": 3,
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "fixture": "malformed_mime.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written bytes (tools/write_raw_fixtures.py holds them as typed literals): a header block containing a line that is neither name: value nor a fold (the region must fail open past it, D2), and a multipart/mixed (boundary b1-malformed) whose close delimiter is missing entirely",
+    "provenance": "the bytes are frozen in fixtures/raw/SHA256SUMS and checked by tests/test_fixtures.py; a generator would be encoding the assumption under test (D11's raw hand-written set); the measured spike (a03, b01) covers both defects and their stdlib behaviour",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "the malformed line is its own paragraph: name empty, name_span of length zero, value_span the line's content, parse_status unknown -- and the header region does not end there (D2 fail-open), so X-After and the fields after it are still fields; the child body spans end before the delimiter's leading CRLF (these hand-written bytes carry no spare empty line)",
+    "expected_gaps": "headers.malformed_line on part 1 (the non-header line) and body.boundary_disagreement on part 1 (the declared boundary is not closed: the bytes disagree with the declared grammar and nothing is guessed)",
+    "not_yet_labelled": "the status the Phase 2 parser will give this message (the closed nine-member vocabulary), views (phase 1), thread edges and TimeEvents (phase 3)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "62b336697e5c1c7d18450039a1b044266ca00d2215e6ab2f3e1f35d01e2de455"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 418
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "Subject", " malformed mime", "ok", [37, 7], [45, 15], [37, 25]],
+        [2, "", "not a header line", "unknown", [62, 0], [62, 17], [62, 19]],
+        [3, "X-After", " still recorded", "ok", [81, 7], [89, 15], [81, 25]],
+        [4, "Date", " Tue, 4 Mar 2025 10:10:00 +0000", "ok", [106, 4], [111, 31], [106, 38]],
+        [5, "Message-ID", " <malformed-mime-1003@example.test>", "ok", [144, 10], [155, 35], [144, 48]],
+        [6, "MIME-Version", " 1.0", "ok", [192, 12], [205, 4], [192, 19]],
+        [7, "Content-Type", " multipart/mixed; boundary=\"b1-malformed\"", "ok", [211, 12], [224, 41], [211, 56]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 418], [0, 269], [269, 149]],
+        ["1.1", "1", "text/plain", [285, 38], [285, 28], [313, 10]],
+        ["1.2", "1", "text/plain", [341, 77], [341, 28], [369, 49]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 269]],
+        ["delimiter", "1", [269, 16]],
+        ["headers", "1.1", [285, 28]],
+        ["body", "1.1", [313, 10]],
+        ["delimiter", "1", [323, 18]],
+        ["headers", "1.2", [341, 28]],
+        ["body", "1.2", [369, 49]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", ["headers.malformed_line", "body.boundary_disagreement"]],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, null, "7bit", "us-ascii", false, "ascii"],
+        ["1.2", null, null, "7bit", "us-ascii", false, "ascii"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "686976f5a00b4a60a14abf9a2249c3484fb22d770b2ad8065156e4a996b12862"],
+        ["1.2", "88e0dd92ee78b31393a02b4a11f3143997e4a8e0e0fb8b8f7038e061a97280d1"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["body.boundary_disagreement", "part 1", "the design records the gap when the declared grammar and the bytes disagree (D3, the registry's boundary_disagreement) but does not say whether a missing close delimiter is that gap or the sibling no_boundary_found: this label reads missing-close as boundary_disagreement (the boundary IS found, its close is not) and asks the design to confirm the split, because the two ids lead a reader to different conclusions about what the message contains"]
+      ]
+    }
+  }
+}

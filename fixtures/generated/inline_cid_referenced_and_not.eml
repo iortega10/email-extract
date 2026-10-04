@@ -1,0 +1,33 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: inline cid referenced and not
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <inline-cid-0006@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="b0-cid-20250304"
+
+--b0-cid-20250304
+Content-Type: text/html; charset=utf-8
+
+<p>Hello Ben.</p>
+<img src="cid:logo@example.test" alt="logo">
+
+--b0-cid-20250304
+Content-Type: image/png
+Content-ID: <logo@example.test>
+Content-Disposition: inline; filename="logo.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4AQEOAPH/ABAgMBAgMAAQ
+IDAQIDAKDgGBlyAvegAAAABJRU5ErkJggg==
+
+--b0-cid-20250304
+Content-Type: image/png
+Content-ID: <spare@example.test>
+Content-Disposition: inline; filename="spare.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4AQEOAPH/AEBQYEBQYABA
+UGBAUGAZzgPBttC5CAAAAABJRU5ErkJggg==
+
+--b0-cid-20250304--

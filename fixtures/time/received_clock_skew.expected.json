@@ -1,0 +1,99 @@
+{
+  "fixture": "received_clock_skew.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a two-hop Received chain whose timestamps run opposite to its header order (the last-listed hop claims 10:05, the first-listed claims 10:10) plus a Date claiming 10:00 -- TimeEvent conflict case 2 of 5, clock skew (D15)",
+    "generator": "tools/make_fixtures.py, from _fixture_received_clock_skew (every timestamp pinned)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker, 1 = the Phase 1 parser, 2 = routing and statuses, 3 = threading and time evidence -- every time.* fact here is phase 3",
+    "the_evidence": "time.evidence rows are written in emailextract/timeevent.py's shape (see date_before_hops for the column meanings); the hop ordinals are the Received fields' header positions, and the chain sequence is fixed by those positions alone",
+    "the_policies": "received_chain_header_order places the hops bottom-up (the last-listed Received is the first hop) and never re-sorts by timestamp -- which is exactly where this fixture's clocks disagree with the chain; header_date_claimed sorts the usable claims by their UTC; owner_manifest is the labelled override and is not evidence-ranked",
+    "the_conflicts": "the hop pair is in conflict because the timestamps order the two hops opposite to their header positions (the definition of clock skew in D15); the Date pairs are cross-family claims naming different moments; time.evidence_conflicts is true and the pair list is non-empty",
+    "labels_are_typed": "typed by a model from D2/D15 and the fixture's declared shape, never copied out of tests/support/timeline_ref.py or the library; labels_provenance is spec"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "8eecc4cd1bb067c4585d49dbf8925687b71657e55dd458ef58c92b4517d4ad30"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 481
+    },
+    "time.evidence": {
+      "phase": 3,
+      "value": [
+        {
+          "event_id": "e_date",
+          "doc_id": "8eecc4cd1bb067c4585d49dbf8925687b71657e55dd458ef58c92b4517d4ad30",
+          "parent_event_id": null,
+          "kind": "sent",
+          "when_raw": "Tue, 4 Mar 2025 10:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T10:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Date", "ordinal": 5, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_hop_first",
+          "doc_id": "8eecc4cd1bb067c4585d49dbf8925687b71657e55dd458ef58c92b4517d4ad30",
+          "parent_event_id": null,
+          "kind": "received_hop",
+          "when_raw": "Tue, 4 Mar 2025 10:10:00 +0000",
+          "when_utc": {"value": "2025-03-04T10:10:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Received", "ordinal": 3, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_hop_last",
+          "doc_id": "8eecc4cd1bb067c4585d49dbf8925687b71657e55dd458ef58c92b4517d4ad30",
+          "parent_event_id": null,
+          "kind": "received_hop",
+          "when_raw": "Tue, 4 Mar 2025 10:05:00 +0000",
+          "when_utc": {"value": "2025-03-04T10:05:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Received", "ordinal": 2, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        }
+      ]
+    },
+    "time.owner_manifest": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_hop_last", "e_hop_first"]
+      ]
+    },
+    "time.orders": {
+      "phase": 3,
+      "value": [
+        ["header_date_claimed", ["e_date", "e_hop_last", "e_hop_first"], []],
+        ["received_chain_header_order", ["e_hop_first", "e_hop_last"], ["e_date"]],
+        ["owner_manifest", ["e_date", "e_hop_last", "e_hop_first"], []]
+      ]
+    },
+    "time.unresolved_pairs": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_hop_first", "the Date claims 2025-03-04T10:00:00Z while the first-listed hop claims 10:10:00Z: a claimed send time and a hop timestamp name different moments for the same message and no policy merges them"],
+        ["e_date", "e_hop_last", "the Date claims 2025-03-04T10:00:00Z while the last-listed hop claims 10:05:00Z: two source families, two moments, nothing reconciles them"],
+        ["e_hop_first", "e_hop_last", "the two hops' timestamps run opposite to their header order: header position puts e_hop_first (ordinal 3, the bottom-most Received) before e_hop_last (ordinal 2), while their claimed times put 10:05 before 10:10 -- the chain order comes from the headers (D15: never from timestamps) and the clocks disagree with it"]
+      ]
+    },
+    "time.evidence_conflicts": {
+      "phase": 3,
+      "value": true
+    }
+  }
+}

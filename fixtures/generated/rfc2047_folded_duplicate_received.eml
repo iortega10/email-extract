@@ -1,0 +1,17 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Received: from a.example by b.example; Tue, 4 Mar 2025 07:58:00 +0000
+Received: from a.example by b.example; Tue, 4 Mar 2025 07:59:00 +0000
+Received: from a.example by b.example; Tue, 4 Mar 2025 07:59:00 +0000
+Subject: =?utf-8?b?SGVsbG8g4piF?=
+ =?utf-8?b?IGZvbGRlZCBzdWJqZWN0?=
+X-Folded-Note: a plain value that
+	continues on a folded line
+Date: Tue, 4 Mar 2025 09:00:00 +0000
+Message-ID: <rfc2047-folded-0004@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hello Ben.
+
+One folded encoded word, three Received fields.

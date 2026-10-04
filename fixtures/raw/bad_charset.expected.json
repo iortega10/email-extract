@@ -1,0 +1,93 @@
+{
+  "fixture": "bad_charset.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written bytes (tools/write_raw_fixtures.py holds them as typed literals): multipart/alternative (boundary b1-bad-charset) with two text/plain children that both declare charset=x-no-such-charset -- the first body carries an 0xe9 octet (decodable as windows-1252 after the declared rung fails), the second an 0x81 octet (no strict rung decodes it at all)",
+    "provenance": "the bytes are frozen in fixtures/raw/SHA256SUMS and checked by tests/test_fixtures.py; they are not generator output because a declarative renderer would be encoding the very assumption under test (D11's raw hand-written set)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "these hand-written bytes carry no spare empty line before a boundary, so the CRLF that terminates a child's last body line is the delimiter's leading CRLF (RFC 2046): each child body span ends before it and the regions tile the message exactly",
+    "expected_gaps": "body.decode_fallback_used on part 1.1 (the declared charset is unknown and the ladder falls through to windows-1252) and body.decode_destroyed_bytes on part 1.2 (not even windows-1252 decodes 0x81 strictly, so the last-resort replacement decode is the recorded lossy path, never the normal one)",
+    "not_yet_labelled": "views and quoting (none here), statuses (phase 2), thread edges and TimeEvents (phase 3); see labels.undetermined for the one design reading this fixture turns on"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "5bf780ffa3a86ce1c3553e48fff5c6012291e0dd88f7ea18abe53be2b58437ee"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 497
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " bad charset", "ok", [74, 7], [82, 12], [74, 22]],
+        [3, "Date", " Tue, 4 Mar 2025 10:00:00 +0000", "ok", [96, 4], [101, 31], [96, 38]],
+        [4, "Message-ID", " <bad-charset-1001@example.test>", "ok", [134, 10], [145, 32], [134, 45]],
+        [5, "MIME-Version", " 1.0", "ok", [179, 12], [192, 4], [179, 19]],
+        [6, "Content-Type", " multipart/alternative; boundary=\"b1-bad-charset\"", "ok", [198, 12], [211, 49], [198, 64]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/alternative", [0, 497], [0, 264], [264, 233]],
+        ["1.1", "1", "text/plain", [282, 90], [282, 55], [337, 35]],
+        ["1.2", "1", "text/plain", [392, 83], [392, 55], [447, 28]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 264]],
+        ["delimiter", "1", [264, 18]],
+        ["headers", "1.1", [282, 55]],
+        ["body", "1.1", [337, 35]],
+        ["delimiter", "1", [372, 20]],
+        ["headers", "1.2", [392, 55]],
+        ["body", "1.2", [447, 28]],
+        ["delimiter", "1", [475, 22]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", ["body.decode_fallback_used"]],
+        ["1.2", ["body.decode_destroyed_bytes"]]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "x-no-such-charset", "7bit", "windows-1252", true, "windows_1252"],
+        ["1.2", null, "x-no-such-charset", "7bit", "windows-1252", true, "fallback"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "ccc957ebaee2687fbe3f9ef56a3fe326c617f37f741a3b2f6573b4b4e4c74fe3"],
+        ["1.2", "49fb4a5933fa98063ab5ea1777e5e2033a812e908a2097a3ecff15e0cd6fb287"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["decode.chain", "parts 1.1 and 1.2", "the design requires a deterministic charset ladder (ground rules, D9/D13) but never names the rungs for an RFC 822 body: this label follows the reading named in Turn 0.2 (declared charset, then strict us-ascii, utf-8, windows-1252, then the recorded replacement decode) and asks the design to name those rungs explicitly, because part 1.2's verdict (windows-1252 as the used charset of a *replacement* decode) is exactly the kind of value a different ladder would render differently"]
+      ]
+    }
+  }
+}

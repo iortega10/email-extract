@@ -1,0 +1,80 @@
+{
+  "fixture": "truncated_base64.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written bytes (tools/write_raw_fixtures.py holds them as typed literals): a single text/plain part declared base64 whose payload is a base64 run cut mid-quantum with no padding -- a transfer encoding that cannot decode",
+    "provenance": "the bytes are frozen in fixtures/raw/SHA256SUMS and checked by tests/test_fixtures.py; a generator would be encoding the assumption under test (D11's raw hand-written set), and the measured spike (b02) shows stdlib's decode and its defect list disagreeing on exactly these inputs",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "the part is the whole message; headers_span includes the closing empty line; the body span is the base64 run with its final line ending (the message ends at EOF)",
+    "expected_gaps": "body.decode_fallback_used (D9): the declared transfer encoding cannot be applied to these bytes and the payload is kept verbatim, never partially decoded",
+    "not_yet_labelled": "the status the Phase 2 parser will give this body (the closed nine-member vocabulary), views (phase 1), thread edges and TimeEvents (phase 3)",
+    "the_declarative_layer": "the expected decode chain here is the raw chain, not a readable message: used_cte is null because the declared base64 run never produced bytes -- see labels.undetermined for what the design does not say about that state"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a03df3b647d47101fe6ee1438647f6468a1b6e325f60b5b6a2ed172eabbb2efa"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 344
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " truncated base64", "ok", [74, 7], [82, 17], [74, 27]],
+        [3, "Date", " Tue, 4 Mar 2025 10:05:00 +0000", "ok", [101, 4], [106, 31], [101, 38]],
+        [4, "Message-ID", " <truncated-base64-1002@example.test>", "ok", [139, 10], [150, 37], [139, 50]],
+        [5, "MIME-Version", " 1.0", "ok", [189, 12], [202, 4], [189, 19]],
+        [6, "Content-Type", " text/plain; charset=us-ascii", "ok", [208, 12], [221, 29], [208, 44]],
+        [7, "Content-Transfer-Encoding", " base64", "ok", [252, 25], [278, 7], [252, 35]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/plain", [0, 344], [0, 289], [289, 55]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 289]],
+        ["body", "1", [289, 55]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", ["body.decode_fallback_used"]]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", "base64", "us-ascii", null, "us-ascii", true, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "acb7db0a36579d07580299ee40e8c55e8e6fc9bd94d10cb35418882018c54cc2"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["decode.chain", "part 1", "the design records used_cte beside declared_cte but never says what used_cte is when the declared transfer decoding cannot run: this label writes null (no transfer decoding was used) where Turn 0.2's walker also records null, and asks the design to settle null versus an explicit identity verdict, because a reader that saw used_cte null could equally conclude the part was never transfer-decoded at all"]
+      ]
+    }
+  }
+}

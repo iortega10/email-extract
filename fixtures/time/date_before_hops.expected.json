@@ -1,0 +1,98 @@
+{
+  "fixture": "date_before_hops.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a Date claiming 2025-03-04T08:00:00Z with a two-hop Received chain entering at 12:00 and leaving at 12:05: the claimed send time is earlier than every hop -- TimeEvent conflict case 1 of 5 (D15)",
+    "generator": "tools/make_fixtures.py, from _fixture_date_before_hops (every timestamp pinned; the fixture exists for its evidence, not its bytes)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker, 1 = the Phase 1 parser, 2 = routing and statuses, 3 = threading and time evidence -- every time.* fact here is phase 3 (D15's TimeEvent evidence and the named ordering policies)",
+    "the_evidence": "time.evidence rows are written in emailextract/timeevent.py's shape: event_id, doc_id (this message's container hash), parent_event_id, kind, when_raw, when_utc and offset as value-or-unknown_reason, offset_origin, precision, ambiguity, source (exactly one of field|property|part, with ordinal and span), trust, usable_for_arrival_ordering",
+    "the_policies": "time.orders gives the order under each named policy over the fixture's own evidence: header_date_claimed sorts the arrival-usable events with known times by their claimed UTC (the claims, never merged); received_chain_header_order places the hops by header position alone -- the last-listed Received is the first hop, so the chain runs bottom-up and timestamps never reorder it; owner_manifest is the hand-labelled total-order override in time.owner_manifest and is not evidence-ranked (D15: no privileged ordering, the caller names policies, no default)",
+    "the_conflicts": "time.unresolved_pairs lists every pair of claims that disagree or cannot be compared, returned beside whichever order ran (D15: evidence is never merged into one true time); time.evidence_conflicts states whether the fixture's evidence conflicts at all, and the pair list must be non-empty exactly when it does",
+    "labels_are_typed": "the evidence, the orders and the pairs were typed by a model from D2/D15 and the fixture's declared shape, never copied out of a run of tests/support/timeline_ref.py (which exists to check these rows) or of the library; labels_provenance is spec"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "f62cf3b0817130d454b11ef9b1a76fcdd8af800b38ef63041b36b72f58f57ba3"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 457
+    },
+    "time.evidence": {
+      "phase": 3,
+      "value": [
+        {
+          "event_id": "e_date",
+          "doc_id": "f62cf3b0817130d454b11ef9b1a76fcdd8af800b38ef63041b36b72f58f57ba3",
+          "parent_event_id": null,
+          "kind": "sent",
+          "when_raw": "Tue, 4 Mar 2025 08:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T08:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Date", "ordinal": 5, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_hop_first",
+          "doc_id": "f62cf3b0817130d454b11ef9b1a76fcdd8af800b38ef63041b36b72f58f57ba3",
+          "parent_event_id": null,
+          "kind": "received_hop",
+          "when_raw": "Tue, 4 Mar 2025 12:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T12:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Received", "ordinal": 3, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_hop_last",
+          "doc_id": "f62cf3b0817130d454b11ef9b1a76fcdd8af800b38ef63041b36b72f58f57ba3",
+          "parent_event_id": null,
+          "kind": "received_hop",
+          "when_raw": "Tue, 4 Mar 2025 12:05:00 +0000",
+          "when_utc": {"value": "2025-03-04T12:05:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Received", "ordinal": 2, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        }
+      ]
+    },
+    "time.owner_manifest": {
+      "phase": 3,
+      "value": [
+        ["e_hop_first", "e_hop_last", "e_date"]
+      ]
+    },
+    "time.orders": {
+      "phase": 3,
+      "value": [
+        ["header_date_claimed", ["e_date", "e_hop_first", "e_hop_last"], []],
+        ["received_chain_header_order", ["e_hop_first", "e_hop_last"], ["e_date"]],
+        ["owner_manifest", ["e_hop_first", "e_hop_last", "e_date"], []]
+      ]
+    },
+    "time.unresolved_pairs": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_hop_first", "the Date claims 2025-03-04T08:00:00Z while the chain's first hop enters at 2025-03-04T12:00:00Z: two source families name two different moments for the same message and no policy merges them (D15, evidence is never merged into one true time)"],
+        ["e_date", "e_hop_last", "the Date claims 2025-03-04T08:00:00Z while the chain's last hop stamps 2025-03-04T12:05:00Z: the claimed send time and the hop disagree about the message's moment and nothing reconciles them"]
+      ]
+    },
+    "time.evidence_conflicts": {
+      "phase": 3,
+      "value": true
+    }
+  }
+}

@@ -1,0 +1,82 @@
+{
+  "fixture": "date_no_zone.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a Date stamped -0000 (no local time known) beside one zoned Received hop -- TimeEvent conflict case 3 of 5 (D2: -0000 is not +0000; the measured spike a05 shows parsedate_to_datetime returning a naive value for -0000)",
+    "generator": "tools/make_fixtures.py, from _fixture_date_no_zone (every timestamp pinned)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker, 1 = the Phase 1 parser, 2 = routing and statuses, 3 = threading and time evidence -- every time.* fact here is phase 3",
+    "the_evidence": "e_date carries when_utc unknown(no_utc_offset) and offset unknown(no_local_offset) with offset_origin absent -- the shape's rule that offset_origin=absent requires an unknown offset; ambiguity is timezone because that is what the fixture exercises; e_hop carries its stated zone",
+    "the_policies": "header_date_claimed cannot place e_date at all (its UTC is unknown), so it orders what it can and reports e_date unplaced with a reason -- never as epoch and never repaired to +0000 (D2); received_chain_header_order places the single hop; owner_manifest is the labelled total-order override and is exactly where an owner's word can place what the evidence cannot",
+    "the_conflicts": "the pair is unresolved because the two claims cannot be compared: one names a UTC instant and the other carries no UTC at all; time.evidence_conflicts is true and the pair list is non-empty",
+    "labels_are_typed": "typed by a model from D2/D15 and the fixture's declared shape, never copied out of tests/support/timeline_ref.py or the library; labels_provenance is spec"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a9928e00215143cc12dbf6704697764681671d7aac19877a89b30eb998d5047c"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 395
+    },
+    "time.evidence": {
+      "phase": 3,
+      "value": [
+        {
+          "event_id": "e_date",
+          "doc_id": "a9928e00215143cc12dbf6704697764681671d7aac19877a89b30eb998d5047c",
+          "parent_event_id": null,
+          "kind": "sent",
+          "when_raw": "Tue, 4 Mar 2025 14:30:00 -0000",
+          "when_utc": {"unknown_reason": "no_utc_offset"},
+          "offset": {"unknown_reason": "no_local_offset"},
+          "offset_origin": "absent",
+          "precision": "second",
+          "ambiguity": "timezone",
+          "source": {"field": "Date", "ordinal": 4, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        },
+        {
+          "event_id": "e_hop",
+          "doc_id": "a9928e00215143cc12dbf6704697764681671d7aac19877a89b30eb998d5047c",
+          "parent_event_id": null,
+          "kind": "received_hop",
+          "when_raw": "Tue, 4 Mar 2025 15:00:00 +0000",
+          "when_utc": {"value": "2025-03-04T15:00:00Z"},
+          "offset": {"value": "+0000"},
+          "offset_origin": "stated_in_text",
+          "precision": "second",
+          "ambiguity": "none",
+          "source": {"field": "Received", "ordinal": 2, "span": null},
+          "trust": "claimed",
+          "usable_for_arrival_ordering": true
+        }
+      ]
+    },
+    "time.owner_manifest": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_hop"]
+      ]
+    },
+    "time.orders": {
+      "phase": 3,
+      "value": [
+        ["header_date_claimed", ["e_hop"], ["e_date"]],
+        ["received_chain_header_order", ["e_hop"], ["e_date"]],
+        ["owner_manifest", ["e_date", "e_hop"], []]
+      ]
+    },
+    "time.unresolved_pairs": {
+      "phase": 3,
+      "value": [
+        ["e_date", "e_hop", "the Date is stamped -0000, which states that no local time is known, so no UTC can be derived for it and it cannot be placed against the Received hop's zoned instant (D2: -0000 is not +0000, and a missing date is never repaired to one)"]
+      ]
+    },
+    "time.evidence_conflicts": {
+      "phase": 3,
+      "value": true
+    }
+  }
+}

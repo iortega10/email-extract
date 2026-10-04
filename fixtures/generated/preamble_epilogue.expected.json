@@ -1,0 +1,83 @@
+{
+  "fixture": "preamble_epilogue.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-pre-20250304) with one text/plain child, a 26-byte preamble line and a 32-byte epilogue line -- the fixture whose preamble and epilogue bytes are the point",
+    "generator": "tools/make_fixtures.py, from _fixture_preamble_epilogue (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <preamble-epilogue-0008@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "none here: no attachment, no alternative, no quoting",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D2/D3/D9), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "the preamble region runs from the body start to just before the CRLF that introduces the first delimiter (that CRLF belongs to the delimiter region, RFC 2046); the epilogue region starts after the close delimiter's own line ending; the regions tile the message exactly",
+    "expected_gaps": "body.preamble_bytes and body.epilogue_bytes on part 1 (D3 records them and the known-gap registry names them); nothing else",
+    "not_yet_labelled": "views, statuses (phase 2), thread edges and TimeEvents (phase 3)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "0afde721c110d6029a0d4eab652b176c8872e83c9ac41304f83862bc721eea3d"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 444
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " preamble epilogue", "ok", [74, 7], [82, 18], [74, 28]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [102, 4], [107, 31], [102, 38]],
+        [4, "Message-ID", " <preamble-epilogue-0008@example.test>", "ok", [140, 10], [151, 38], [140, 51]],
+        [5, "MIME-Version", " 1.0", "ok", [191, 12], [204, 4], [191, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-pre-20250304\"", "ok", [210, 12], [223, 44], [210, 59]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 444], [0, 271], [271, 173]],
+        ["1.1", "1", "text/plain", [318, 71], [318, 46], [364, 25]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 271]],
+        ["preamble", "1", [271, 26]],
+        ["delimiter", "1", [297, 21]],
+        ["headers", "1.1", [318, 46]],
+        ["body", "1.1", [364, 25]],
+        ["delimiter", "1", [389, 23]],
+        ["epilogue", "1", [412, 32]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", ["body.preamble_bytes", "body.epilogue_bytes"]],
+        ["1.1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 26, 32],
+        ["1.1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "53eb0e208ad69defb82c09fbea2cd5e0d070aeb4cf2bd21e19a994a7d55232ee"]
+      ]
+    }
+  }
+}

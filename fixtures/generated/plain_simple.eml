@@ -1,0 +1,11 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: plain simple
+Date: Tue, 4 Mar 2025 08:00:00 +0000
+Message-ID: <plain-simple-0001@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+Hello Ben.
+
+This is the plain simple fixture.

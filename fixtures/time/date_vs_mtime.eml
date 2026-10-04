@@ -1,0 +1,9 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: date versus file mtime
+Date: Tue, 4 Mar 2025 16:00:00 +0000
+Message-ID: <time-date-vs-mtime@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=us-ascii
+
+The file mtime beside this message is simulated: 2025-03-06T09:12:00Z.

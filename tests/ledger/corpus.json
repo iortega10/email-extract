@@ -1,5 +1,5 @@
 {
-  "_comment": "The ledger's corpora, oldest first: each version lists the message names its fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names until the Turn 0.3 fixtures exist; relative fixture paths under --fixtures after that). Growing the corpus adds a version here -- the tool detects a changed file list and appends it automatically; it never bumps a component version.",
+  "_comment": "The ledger's corpora, oldest first: each version lists the message names its fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names for corpus version 1; relative paths under the fixtures corpus source since the Turn 0.3 switch, --fixtures DIR for another source). Growing the corpus adds a version here -- the tool detects a changed file list and appends it automatically; it never bumps a component version.",
   "corpora": [
     {
       "files": [
@@ -13,6 +13,27 @@
         "plain_simple"
       ],
       "version": 1
+    },
+    {
+      "files": [
+        "generated/alternative_text_html.eml",
+        "generated/attachments_mixed.eml",
+        "generated/inline_cid_referenced_and_not.eml",
+        "generated/multipart_mixed_wraps_alternative.eml",
+        "generated/plain_simple.eml",
+        "generated/preamble_epilogue.eml",
+        "generated/rfc2047_folded_duplicate_received.eml",
+        "generated/thread_three_refs_chain.eml",
+        "raw/bad_charset.eml",
+        "raw/malformed_mime.eml",
+        "raw/truncated_base64.eml",
+        "time/date_before_hops.eml",
+        "time/date_no_zone.eml",
+        "time/date_vs_mtime.eml",
+        "time/future_date_in_text.eml",
+        "time/received_clock_skew.eml"
+      ],
+      "version": 2
     }
   ]
 }

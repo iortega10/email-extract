@@ -1,0 +1,113 @@
+{
+  "fixture": "inline_cid_referenced_and_not.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/related (boundary b0-cid-20250304) with a text/html body that references cid:logo@example.test, the referenced inline png (logo.png, Content-ID <logo@example.test>) and a second inline png (spare.png, Content-ID <spare@example.test>) that no text references -- the fixture whose later-phase fact is the cid routing and whose expected gap is the unreferenced one",
+    "generator": "tools/make_fixtures.py, from _fixture_inline_cid_referenced_and_not (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <inline-cid-0006@example.test>)",
+    "phase_numbering": "the design document's phases: 0 = the Phase 0 skeleton walker (spans, decode chain, accounted regions, gaps), 1 = the Phase 1 parser (header projection, body views, attachment manifest), 2 = routing and statuses, 3 = threading and time evidence",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "phase_1_facts": "attach.manifest for the two inline occurrences (D10: cid: resolves only to local parts, so the resolution is decided inside this message) and the expected gap attach.cid_unreferenced for spare@example.test, whose Content-ID no part of the text mentions",
+    "labels_are_typed": "every value was read out of the fixture bytes with a hex-editor-style line dump and typed by a model from the design rules (D4/D10), never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "field raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "expected_gaps": "attach.cid_unreferenced for part 1.3 (phase 1); nothing at phase 0 -- see labels.undetermined for the binary-payload decode question shared with attachments_mixed",
+    "not_yet_labelled": "classification (inline vs attachment) and the decorative/inline filtering verdicts (phase 1-2), statuses (phase 2), quote boundaries (none here), thread edges and TimeEvents (phase 3)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "4c97e49e6bd16c22b89f66cfe9fbed0529c699305bbb6eb8e152c04d742f802d"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 993
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " inline cid referenced and not", "ok", [74, 7], [82, 30], [74, 40]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [114, 4], [119, 31], [114, 38]],
+        [4, "Message-ID", " <inline-cid-0006@example.test>", "ok", [152, 10], [163, 31], [152, 44]],
+        [5, "MIME-Version", " 1.0", "ok", [196, 12], [209, 4], [196, 19]],
+        [6, "Content-Type", " multipart/related; boundary=\"b0-cid-20250304\"", "ok", [215, 12], [228, 46], [215, 61]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/related", [0, 993], [0, 278], [278, 715]],
+        ["1.1", "1", "text/html", [297, 107], [297, 42], [339, 65]],
+        ["1.2", "1", "image/png", [425, 261], [425, 145], [570, 116]],
+        ["1.3", "1", "image/png", [707, 263], [707, 147], [854, 116]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 278]],
+        ["delimiter", "1", [278, 19]],
+        ["headers", "1.1", [297, 42]],
+        ["body", "1.1", [339, 65]],
+        ["delimiter", "1", [404, 21]],
+        ["headers", "1.2", [425, 145]],
+        ["body", "1.2", [570, 116]],
+        ["delimiter", "1", [686, 21]],
+        ["headers", "1.3", [707, 147]],
+        ["body", "1.3", [854, 116]],
+        ["delimiter", "1", [970, 23]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []],
+        ["1.3", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null],
+        ["1.3", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "86a8046a457b31afd287569ac93dae765660afe3cde7a7755c9542a38bcf1c4d"],
+        ["1.2", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f"],
+        ["1.3", "bd3590da2bea4c121b76a261de7cb7eee4d320d5ffafae47ee998f4c403f2b21"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "logo.png", "image/png", "<logo@example.test>", "inline", "base64", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f", 82],
+        ["1.3", "spare.png", "image/png", "<spare@example.test>", "inline", "base64", "bd3590da2bea4c121b76a261de7cb7eee4d320d5ffafae47ee998f4c403f2b21", 82]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.cid_unreferenced", "1.3", 1, "spare.png carries Content-ID <spare@example.test> and the html body mentions only cid:logo@example.test, which is the registry's unreferenced-cid state exactly"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["decode.chain", "parts 1.2 and 1.3", "the same unsettled reading as in attachments_mixed: the design does not say whether the charset ladder runs over non-text payloads, so used_charset and encoding_source are left null for the two png bodies rather than guessed; if the ladder does run, the two parts disagree with each other (logo.png bytes defeat every strict rung and would record body.decode_destroyed_bytes, spare.png's decode as windows-1252 cleanly), which is itself a reason to settle the question"]
+      ]
+    }
+  }
+}
