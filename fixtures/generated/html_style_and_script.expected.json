@@ -2,6 +2,7 @@
   "fixture": "html_style_and_script.eml",
   "labels_provenance": "spec",
   "annotations": {
+    "html_spans_correction": "Turn 1.5 review correction (owner-approved, bytes are the judge): body.html_spans rows 0 (html) and 4 (body): length 12 -> 10 were hand-typed with offsets that disagree with the fixture bytes and with the projection rule the other rows state (text nodes verbatim, nothing inserted; the CRLF text nodes between tags count, the text node after </html> is outside the element). Corrected by hand from the bytes; no other fact in this sidecar changed.",
     "shape": "one text/html utf-8 message with a <style> and a <script> in the head and one paragraph in the body",
     "generator": "tools/make_fixtures.py, from _fixture_html_style_and_script (pinned Date Tue, 4 Mar 2025 08:05:00 +0000, Message-ID <html-style-script-3006@example.test>)",
     "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today",
@@ -270,7 +271,7 @@
           0,
           "html",
           0,
-          12
+          10
         ],
         [
           "1",
@@ -298,7 +299,7 @@
           4,
           "body",
           0,
-          12
+          10
         ],
         [
           "1",

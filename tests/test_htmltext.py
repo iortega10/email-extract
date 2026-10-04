@@ -6,9 +6,12 @@ is what the frozen ``body.html_spans`` labels' spans imply, and it is stamped wi
 ``HTMLTEXT_VERSION``. It is the same coordinate space (un-normalised code points) the
 ``>``-depth spans will use.
 
-**FINDINGS (Turn 1.5).** Five frozen ``body.html_spans`` rows disagree with the bytes and
-with the projection rule the four labelled fixtures otherwise state. The label is frozen and
-never edited; the bytes are the judge; both values are pinned here:
+**FINDINGS (Turn 1.5, RESOLVED in review).** Five frozen ``body.html_spans`` rows disagreed with
+the bytes and with the projection rule the four labelled fixtures otherwise state. The review
+confirmed from the bytes that the labels were hand-typing errors and corrected the two sidecars
+(owner-approved, annotated ``html_spans_correction``, ledger hashes updated in the same commit).
+The original label values are pinned below as history, and the corrected labels must now AGREE
+with the bytes row for row:
 
 * ``html_style_and_script`` rows 0 (``html``) and 4 (``body``) type length 12 where the tree
   gives 10: they count the trailing ``\\r\\n`` (offsets 10-12, a text node **after**
@@ -45,7 +48,7 @@ LABELLED = {
     "html_style_and_script": "1",
 }
 
-#: The five known label/byte disagreements: ``(fixture, ordinal) -> (label row, byte row)``.
+#: The five rows that were corrected: ``(fixture, ordinal) -> (ORIGINAL wrong label row, byte row)``.
 FINDING_ROWS = {
     ("html_style_and_script", 0): (["1", 0, "html", 0, 12], ["1", 0, "html", 0, 10]),
     ("html_style_and_script", 4): (["1", 4, "body", 0, 12], ["1", 4, "body", 0, 10]),
@@ -98,10 +101,11 @@ def test_an_img_and_an_href_projection_match_the_tree_spans() -> None:
     from_fixture = _project("html_href_img_remote_and_cid", "1")
     assert from_fixture.text == projection.text, repr(from_fixture.text)
     assert from_fixture.spans == projection.spans, from_fixture.spans
-    # the frozen label disagrees on three of these rows (FINDING above); both values pinned
+    # the corrected label now equals the byte row (the original wrong value is pinned in FINDING_ROWS)
     rows = _label("html_href_img_remote_and_cid")
-    assert rows[1] == FINDING_ROWS[("html_href_img_remote_and_cid", 1)][0]
-    assert from_fixture.html_spans_rows("1")[1] == FINDING_ROWS[("html_href_img_remote_and_cid", 1)][1]
+    assert rows[1] == FINDING_ROWS[("html_href_img_remote_and_cid", 1)][1]
+    assert rows[1] != FINDING_ROWS[("html_href_img_remote_and_cid", 1)][0]
+    assert from_fixture.html_spans_rows("1")[1] == rows[1]
 
 
 def test_the_projection_rule_id_is_the_htmltext_versions_projection_input() -> None:
@@ -151,23 +155,20 @@ def test_the_node_to_span_map_nests_and_siblings_are_ordered() -> None:
         assert ordered == sorted(ordered), (name, ordered)
 
 
-def test_the_committed_html_spans_labels_agree_except_the_reported_findings() -> None:
-    """The projection rule reproduces the labels row for row, bar the five pinned findings."""
-    disagreements: list[tuple[str, list, list]] = []
+def test_the_committed_html_spans_labels_agree_with_the_bytes_row_for_row() -> None:
+    """The projection rule reproduces every labelled row; the five corrected rows no longer differ."""
     for name, locator in LABELLED.items():
         projection = _project(name, locator)
         rows = _label(name)
         mine = projection.html_spans_rows(locator)
         assert len(rows) == len(mine), (name, len(rows), len(mine))
         for index, (label_row, byte_row) in enumerate(zip(rows, mine)):
-            if label_row == byte_row:
-                continue
-            disagreements.append((name, label_row, byte_row))
-            assert FINDING_ROWS[(name, index)] == (label_row, byte_row), (
-                f"{name} body.html_spans row {index}: the label and the bytes disagree in a "
-                f"way this turn did not report: label={label_row} bytes={byte_row}"
+            assert label_row == byte_row, (
+                f"{name} body.html_spans row {index}: label={label_row} bytes={byte_row}"
             )
-    assert {(name, row[1]) for name, row, _ in disagreements} == set(FINDING_ROWS), disagreements
+            if (name, index) in FINDING_ROWS:
+                original, expected = FINDING_ROWS[(name, index)]
+                assert label_row == expected and label_row != original, (name, index)
 
 
 def test_the_projection_never_touches_the_network_or_the_filesystem(monkeypatch) -> None:
