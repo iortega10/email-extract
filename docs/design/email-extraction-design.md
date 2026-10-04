@@ -628,7 +628,7 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   (Word/Excel 97-2003 FilePass/RC4; distinct from `encrypted_ooxml`, ECMA-376
   EncryptionInfo/EncryptedPackage), `filename_absent`, `filename_unparsable`,
   `disposition_absent`, `cid_unreferenced`, `cid_dangling`, `occurrence_repeated`,
-  `nesting_cap_hit`, `size_cap_hit`, `macro_present_inert`.
+  `macro_present_inert`.
 - **thread**: `no_references`, `parent_not_in_corpus`,
   `references_vs_in_reply_to_disagree`, `duplicate_message_id_ambiguous_parent`,
   `duplicate_message_id_bytes_differ`, `cyclic`, `date_only_ordering`,
@@ -644,9 +644,13 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   `contract_unknown`.
 - **security**: `remote_content_present`, `macro_present`,
   `injection_boundary_applied`.
-- Candidate prune in Phase 0.6: `attach.size_cap_hit` and `attach.nesting_cap_hit`
-  duplicate the `skipped` reasons (D6); keep them only if a gap id adds something
-  the status reason does not.
+- Phase 0.6 prune (resolved): attach.size_cap_hit and attach.nesting_cap_hit are
+  **pruned from this registry**. They duplicated the `skipped` reasons (D6:
+  size_cap / total_size_cap / depth_cap), and the run record already keeps the cap
+  id, the cap value and the declared size, so a gap id there said nothing the
+  status reason did not -- a second place to disagree with the first. No committed
+  fixture or sidecar named either id, so nothing on disk changed. Resolved by
+  `docs/design/phase0-gaps.md`.
 
 ## Triage of items surfaced beyond the opening list
 

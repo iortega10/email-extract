@@ -70,7 +70,7 @@ for _path in (_ROOT,):
 from docextract_core import encode, sha256_json  # noqa: E402
 
 from emailextract import ids as ids_module  # noqa: E402
-from emailextract import model, siblings, store, timeevent, versions  # noqa: E402
+from emailextract import model, seam, siblings, store, timeevent, versions  # noqa: E402
 from emailextract import walk as walk_module  # noqa: E402
 from emailextract.container import EmlContainer  # noqa: E402
 
@@ -359,7 +359,7 @@ def _field_shape(field_: Field) -> list[Any]:
 def contract_records() -> tuple[type, ...]:
     """Every dataclass whose shape is part of the persisted contract, sorted by name."""
     shapes: list[type] = []
-    for module in (model, timeevent, ids_module, walk_module, store, siblings):
+    for module in (model, timeevent, ids_module, walk_module, store, siblings, seam):
         shapes.extend(
             obj for obj in vars(module).values() if isinstance(obj, type) and is_dataclass(obj)
         )

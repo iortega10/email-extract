@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Final
 
-OUTPUT_SCHEMA_VERSION: Final[str] = "2"
+OUTPUT_SCHEMA_VERSION: Final[str] = "3"
 """Version of the output record shapes (EmailDocument and everything it carries).
 
 Moves when a record's serialized shape changes in a way that invalidates cached
@@ -28,6 +28,13 @@ constant this package owns is the one that moves it.
 (``emailextract/siblings.py``): a sibling's stored result, the sibling-derived
 ``page_count``/``sheet_count`` facts, and the citation nesting (via / verbatim /
 stamped). No existing record's fields changed.
+
+3: Turn 0.6 added the matcher seam's contract records
+(``emailextract/seam.py``): ``TextRun``, ``UnitLocation``, ``MatchUnit``,
+``MatchRules``, ``TermList`` and ``TermHit``. The seam module joined the set the
+ledger's contracts fingerprint hashes, so the fingerprint moved; no existing
+record's fields changed and the walker's output did not move. Those records carry
+their own matcher version, not this constant.
 """
 
 TEXTMODEL_VERSION: Final[str] = "1"
@@ -82,4 +89,15 @@ records a version-constant default **symbolically** -- the constant's name, not
 its value -- so bumping this is not a contract change. Before that it was: the
 binary-part charset fix moved ``DECODE_CHAIN_VERSION`` to 2 and not this one for
 exactly that reason.)
+"""
+
+MATCHER_VERSION: Final[str] = "1"
+"""Version of the matcher seam's stub behavior (``emailextract/seam.py``, D8).
+
+Moves when the stub's own matching behavior changes: what it searches, how it
+bounds a token, how it orders hits. It is the stub's own constant, kept separate
+from every other version constant because the real matcher is a separate track
+(track S, in ``docextract_core.match``) with its own constant of the same name
+that moves when the shared matcher moves. Every seam record is stamped with it,
+never with the output record's version.
 """

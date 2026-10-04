@@ -8,8 +8,10 @@ present-but-empty and round-tripping.
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import json
+from pathlib import Path
 
 import pytest
 
@@ -343,3 +345,47 @@ def test_flag_section_present_on_every_record() -> None:
     # frozen D15 shape; neither carries its own FlagSection.
     for cls in (model.FlagHit, timeevent.TimeEvent):
         assert "flags" not in {f.name for f in dataclasses.fields(cls)}
+
+
+#: The siblings' address spaces: a page, a cell/sheet, a slide. Email-extract never fabricates one.
+_SIBLING_ADDRESS_WORDS = ("page", "cell", "sheet", "slide")
+
+
+def test_hit_location_is_opaque_and_producer_shaped() -> None:
+    """D8: email's location names its own space (part/view/span/unit), never a sibling's.
+
+    Written so it fails the moment a page, cell, sheet or slide field is added to ``HitLocation`` or
+    ``FlagHit``: email-extract has no page and no cell to put there.
+    """
+    assert [field.name for field in dataclasses.fields(HitLocation)] == ["part", "view", "span", "unit"]
+    for cls in (HitLocation, FlagHit):
+        offenders = [
+            field.name
+            for field in dataclasses.fields(cls)
+            if any(word in field.name for word in _SIBLING_ADDRESS_WORDS)
+        ]
+        assert not offenders, f"{cls.__name__} carries a sibling's address field: {offenders}"
+
+
+def test_no_email_module_declares_a_sibling_address_field() -> None:
+    """No email-side record fabricates a page/cell/sheet/slide.
+
+    The only place those words may appear is ``SiblingDerivedFacts.page_count`` /
+    ``sheet_count`` -- the **child's own** counts, carried on the citation and never copied (D12).
+    Every other class-level field is checked: a page, cell, sheet or slide added to any record --
+    ``HitLocation`` and ``FlagHit`` above all -- fails here.
+    """
+    allowed = {("SiblingDerivedFacts", "page_count"), ("SiblingDerivedFacts", "sheet_count")}
+    package = Path(model.__file__).resolve().parent
+    found: set[tuple[str, str]] = set()
+    for path in sorted(package.rglob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ClassDef):
+                continue
+            for statement in node.body:
+                if isinstance(statement, ast.AnnAssign) and isinstance(statement.target, ast.Name):
+                    name = statement.target.id
+                    if any(word in name for word in _SIBLING_ADDRESS_WORDS):
+                        found.add((node.name, name))
+    assert found == allowed, f"an email-side record declares a sibling's address field: {found - allowed}"

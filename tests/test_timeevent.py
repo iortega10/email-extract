@@ -8,6 +8,7 @@ entry point. Its version is ``TIMEEVENT_VERSION`` and must never be the record's
 from __future__ import annotations
 
 import dataclasses
+import json
 import pathlib
 import re
 
@@ -20,6 +21,7 @@ from emailextract import (
     Ambiguity,
     OffsetOrigin,
     Precision,
+    Span,
     TimeEvent,
     TimeSource,
     TimeValue,
@@ -215,3 +217,68 @@ def test_a_value_outside_the_vocabulary_raises_at_construction() -> None:
         _event(trust="everyone")
     with pytest.raises(CodecError):
         _event(offset_origin="somewhere")
+
+
+# ------------------------------------- the doc-freeze cannot drift from the code
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+TIME_DOC = ROOT / "docs" / "design" / "timeevent.md"
+
+_DATACLASSES = {"Span": Span, "TimeValue": TimeValue, "TimeSource": TimeSource, "TimeEvent": TimeEvent}
+_ENUMS = {
+    "OffsetOrigin": OffsetOrigin,
+    "Precision": Precision,
+    "Ambiguity": Ambiguity,
+    "Trust": Trust,
+}
+
+
+def _shape_doc() -> dict:
+    """The machine-readable JSON block ``docs/design/timeevent.md`` freezes the shape in."""
+    text = TIME_DOC.read_text(encoding="utf-8")
+    start = text.index("```json") + len("```json")
+    start = text.index("\n", start) + 1
+    end = text.index("```", start)
+    return json.loads(text[start:end])
+
+
+def test_the_dataclass_is_field_for_field_the_documented_shape() -> None:
+    """A field added, removed or reordered is a shape change -- a doc change and a version bump."""
+    declared = _shape_doc()["dataclasses"]
+    assert set(declared) == set(_DATACLASSES), (
+        "the document names a dataclass this module does not have (or misses one)"
+    )
+    for name, cls in _DATACLASSES.items():
+        assert [field.name for field in dataclasses.fields(cls)] == declared[name]["fields"], name
+
+
+def test_every_enum_is_member_for_member_the_documented_shape() -> None:
+    declared = _shape_doc()["enums"]
+    assert set(declared) == set(_ENUMS), "the document names an enum this module does not have"
+    for name, cls in _ENUMS.items():
+        assert [member.value for member in cls] == declared[name], name
+
+
+def test_the_document_states_the_tri_state_the_one_of_and_the_version() -> None:
+    doc = _shape_doc()
+    assert doc["shape"] == "TimeEvent"
+    assert doc["version_constant"] == "TIMEEVENT_VERSION"
+    assert doc["dataclasses"]["TimeValue"]["tri_state"] is True
+    assert doc["dataclasses"]["TimeSource"]["one_of"] == ["field", "property", "part"]
+    assert doc["dataclasses"]["TimeValue"]["used_by"] == ["when_utc", "offset"]
+
+
+def test_the_document_lists_the_open_kind_vocabulary() -> None:
+    kind = _shape_doc()["open_vocabularies"]["kind"]
+    assert kind["closed"] is False
+    assert kind["shared_members"][-1] == "..."
+    assert TimeEvent.__doc__ and kind["shared_members"][0] in TimeEvent.__doc__
+
+
+def test_the_document_names_the_three_policies_and_no_implicit_policy() -> None:
+    """D15: three named policies, and nothing runs by omission."""
+    flat = " ".join(TIME_DOC.read_text(encoding="utf-8").split())
+    for policy_id in ("header_date_claimed", "received_chain_header_order", "owner_manifest"):
+        assert policy_id in flat, policy_id
+    assert "header order and never by timestamp" in flat
+    assert "nothing runs by omission" in flat
