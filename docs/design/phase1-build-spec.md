@@ -1,0 +1,420 @@
+# Phase 1 build spec: container-neutral RFC 822 (revision 2)
+
+Status: **revision 2, ready to execute once the owner commits Turn 1.0a's documents.** Revision 1 was a
+draft; it was debated for six rounds with the hearth-cli model (`docs/design/phase1-debate.md`, the record
+of who changed their mind and why) and every agreed amendment is folded in below, using the debate's
+replacement text. The debate's open owner questions are **decided** in "Decisions" (the owner delegated
+them to Claude's recommendation); the items that need a measurement are the "verify empirically"
+experiments listed at the end. The design (`docs/design/email-extraction-design.md`) wins on any
+conflict: report conflicts. The workbook sibling ran the same process (`workbook-extract/docs/design/
+phase1-build-spec.md`, `phase1-debate.md`); its lessons are in the operating rules.
+
+Phase 0 is validated: email-extract commits `a80137e` to `9f7d3ab`, 388 tests green on Python 3.14 and 3.11.
+
+## Goal
+
+Turn an RFC 822 message (`.eml` bytes) into the **`EmailDocument` record** of the Phase 0 contracts: the
+**headers part** with its structured projection, the **body parts with views and quote boundaries**, the
+**attachment manifest** (identity, classification, type verdicts) and the **run record**, over the
+container-neutral interface, deterministically, with every input byte accounted for. Re-ingest of unchanged
+bytes is a no-op.
+
+Out of scope, and **recorded as not built through one idiom, never as empty**: `.msg` (Phase 1b), routing,
+statuses beyond the skeleton, recursion into `message/rfc822`, `.ics` parsing and
+`container_introspection` (Phase 2), threading and `TimeEvent` emission (Phase 3), matching and flags
+(`FlagSection` stays present-but-empty; Phase 4/5), the query layer and any LLM-facing output. No LLM
+anywhere in the package.
+
+## Operating rules for every build turn (Phase 0 and workbook lessons; each turn prompt restates them)
+
+1. **Read each spec section once, then write files.** Work in a stated order, run pytest after each step,
+   and **stop and ask** if an input is missing; never search the machine. Each turn **declares the modules
+   and the new test function names it will add**, and a **collection test** asserts the declaration (a rule
+   without a mechanism is dropped). Every turn names a **pre-declared stop point** the agent reports at
+   rather than pushes past (turn table below).
+2. **Both interpreters, always, from the first turn** (`tools/runboth.py` ships in Turn 1.0b). The
+   interpreter selector is `py -V:Astral/CPython3.11.15` with a documented fallback (any 3.11 on PATH). The
+   stdlib `email`, `html.parser` and lxml/libxml2 can change behaviour across versions and **patch levels**
+   (the CVE-2023-27043 `getaddresses` change was backported across maintenance releases), so any case that
+   differs is **recorded, not hidden**. The generator never uses the stdlib serializer for fixture bytes, and
+   nothing writes a compressed zip or png whose bytes depend on the zlib build.
+3. **Independence of labels, mechanically enforced.** Sidecars are typed by hand, `labels_provenance: spec`.
+   A sha256 **additions-only ledger** covers every existing `*.expected.json`, **and `tests/support/**` and
+   `emailextract/evals/**`** (changes to a gate need an explicit allow-list in the turn prompt). After the
+   fixtures turns, the prompt allow-list **excludes `fixtures/**` and `*.expected.json`**, and a test asserts
+   that no `emailextract/**` file contains a fixture path or filename literal (**label leak guard**: a rule
+   written from the bytes the agent just read). A disagreement between a label and the parser is a
+   **finding** with both values and the bytes; the bytes are the judge. The parser is never run over a
+   fixture to produce a label.
+4. **Honesty rule.** Nothing reports a state, status or value for input it has not read. A thing not built
+   is recorded by the **one not-built idiom (decision 6)**; every `unknown` state has a fixture that
+   exercises it.
+5. **Gates are proven able to fail, non-vacuously.** Every gap id has a **mutation** case and a catalogue
+   test fails on an uncovered id. The **anti-vacuity triple** is tightened: (a) the patched symbol exists,
+   (b) **the patch was reached** (a wrapper sets a flag; a mutant whose patch is never entered fails as
+   vacuous), (c) the mutant's observation differs from the baseline and the gate flips to fail. Every gate
+   failure names the fixture, the fact and the bytes.
+6. **Contracts are enforced, not listed; pairing invariants live in the parent record's `__post_init__`**,
+   never in either field's type (a build agent reading "checked at construction" per field checks each in
+   isolation and skips the pair). A frozen record never aliases a caller's mutable object. A recorded
+   failure carries a **closed reason id and the part name, never library or exception text** (a
+   construction invariant of the failure record). Version constants are recorded symbolically in the
+   contracts fingerprint.
+7. **Every measured number in a document carries the command that produced it and a hash of the output, and a
+   test re-runs it**; anything not re-runnable is marked "verify empirically" and is not a gate input.
+8. **The review loop.** The build agent never commits. Claude validates adversarially (an independent scan, a
+   seeded mutation fuzz of the fixture bodies, a planted defect per gate) and stores the reviewed diff; the
+   owner commits each turn before the next.
+9. **Privacy.** No real or employer mail in the repo, a fixture, a commit or a log; agents never open the
+   owner's Downloads folder.
+10. **Run hygiene.** DeepSeek at a 250k compaction trigger; Mimo only with `HEARTH_THINKING=disabled`; prompts
+    live outside any repo. The per-turn test ceilings in the turn table are **guidelines reasoned from Phase 0,
+    not measured**.
+
+## Decisions already made (do not reopen)
+
+- **D1:** `.eml` is parsed by the package's own scanner (stdlib gives no raw byte offsets); no `html2text`, no
+  `chardet`, no GPL.
+- **D2:** headers are one part, one paragraph per field, ordered, duplicates kept (identity by ordinal), an
+  obs-fold is one field, each field carries `(raw_offset, raw_length)`; the header region ends at the first
+  empty line and a malformed line **fails open**; addresses are tri-state; `Date` keeps raw, original offset
+  and UTC, `-0000` is not `+0000`, a bad date is never repaired; `Received`, `Authentication-Results`,
+  `DKIM-Signature` and `ARC-*` are claimed, never verified.
+- **D3:** one text; views are predicates over `quote_level`; `quote_boundary_ordinal` and `quote_prefix_depth`
+  are stored separately; every boundary has a rule id and a kind (`quote | forward | signature | list_footer |
+  unknown`); two rule families; **per-view levels never reconciled across views**; signatures are candidates,
+  never stripped; quoted history is labelled, never dropped; non-contiguous views are legal;
+  `multipart/alternative` parts are separate with `selection`.
+- **D4:** type is three recorded verdicts plus winner plus disagreement; classification is separate from
+  status; size never changes classification; `decorative_hint` is `rule_id | absent`; identity is sha256, an
+  occurrence is (filename, message, part path), the `1.2.3` path is a non-stable locator, duplicates are
+  separate occurrences.
+- **D9/D10:** every byte accounted for; never write an attachment under its raw filename; never fetch remote
+  content; `cid:` resolves only to local parts; `data:` URIs are recorded and never expanded; macros inert.
+- **D12 (all three rungs):** the MIME part's raw span is always exact and always carried; the decoded char span
+  is always exact within its named, versioned projection; the within-part byte span is `exact` only under
+  decision 8, else `part_level` with its reason and **no within-part byte span emitted**.
+- **D16:** `body.plain_effectively_empty` is a **fact**, not a gap (resolved in 1.0a: it is declared in
+  `FACTS` as a fact and `phase0-gaps.md` is amended accordingly).
+
+## Decisions (final; the debate's replacement text is the wording to use)
+
+1. **HTML parser.** Decided in Turn 1.0d by a recorded experiment, not by preference. Candidate A: stdlib
+   `html.parser` plus an own stack-based element tree. Candidate B: `lxml.html`. The experiment runs a
+   `HTMLParser` subclass that emits the `(event, text, get_starttag_text())` sequence over every HTML fixture,
+   the resulting element tree, the fired DOM-rule spans and the projection hash, on **both pinned
+   interpreters**, and for B the same plus the **libxml2 version** and `error_log`; the document states that B
+   is pinned by the **wheel**, not the interpreter, and that a two-interpreter identity test says nothing
+   about libxml2. The CPython version is a recorded-only run input and an input to `HTMLTEXT_VERSION`'s key
+   for A. B is chosen only if its tree puts every quote container at the same node as A on the quote
+   fixtures. If neither is clean, A is used with a **named unclosed-container rule** that records
+   `body.html_quote_rule_gap` rather than silently closing the container (an unclosed `<blockquote>` otherwise
+   swallows following new text). The element tree has its own module (`htmltree.py`) and records, per
+   element, the **projected-text span** it covers and the **set of `cid:` references**. No claim about
+   `html.parser` version differences is made without the fingerprint.
+2. **`quote_level` is a derived rank, not a measurement.** Per view and per span: structural rules and the
+   `>`-family each produce boundaries with `(rule_id, kind, ordinal)` and per-line `prefix_depth`; **only
+   `kind = quote` boundaries advance the ordinal**; `forward`, `signature`, `list_footer` and `unknown`
+   boundaries are recorded with their span at level 0. `level = ordinal` where a structural `quote` rule fired
+   in the span, else `level = prefix_depth`. **`view.quote_level_disagreement` is recorded iff
+   `quote_prefix_depth >= 1` and a structural `quote` ordinal >= 1 on the same span and the two resolved
+   ranks differ**; an all-zero depth beside a fired structural rule is a normal state and never a
+   disagreement. `quote_level` carries its resolution `rule_id`; nothing may threshold its magnitude (`new` =
+   0, `quoted` >= 1, `full` = all are the only tests). Ordinal and depth stay stored, never averaged. A **new
+   contract record** holds the per-boundary and per-view facts (`PartRecord` has no quote fields).
+3. **Rule families v1** (each rule has an id and a fixture; **every vendor class and id name is "verify by the
+   owner's structure-only probe"**). *Text:* the `>`-family prefix depth (the alphabet `> >`, `>>`, bare `>`,
+   counted on decoded text, after RFC 3676 space-unstuffing when the part declares `format=flowed`); the
+   English `On ... wrote:` marker; the Outlook flat block, keyed by **a maximal run of >= 2 adjacent labels, all
+   from one language's set, in canonical order as a subsequence**, with the date slot accepting both tokens per
+   language (EN `Sent:`/`Date:`, DE `Gesendet:`/`Datum:`, FR `Envoyé:`/`Date:`), separators accepting any
+   whitespace run before `:` including U+00A0 and U+202F after NFC, **the language per block**, named tables
+   for **English, German and French**; `Begin forwarded message:` and `-----Original Message-----` shapes
+   named in a table (kind `forward` for the banner); the `-- ` signature (exactly dash dash space plus the line
+   end, RFC 3676 4.3, **candidate only**); list footers (a line of at least 30 `_`, and the "You received this
+   message because you are subscribed" sentence, kind `list_footer`, detection only). *DOM:* `gmail_quote` (on a
+   `div` **or a `blockquote`**; the attribution wrapper adds no second ordinal), `blockquote[type=cite]`,
+   Outlook `divRplyFwdMsg` and `#appendonsend` (with the **`x_` prefix** Outlook adds on rewrite),
+   Thunderbird `moz-cite-prefix` and `moz-forward-container`. `body.i18n_reply_marker` fires **only on a
+   label-shaped unknown-language block** (a header-like run of short `Label:` lines directly after a
+   boundary-looking line), never on any absence, otherwise `body.no_boundary_found`. A class or id matching a
+   known vendor prefix family (`gmail_`, `moz-`, `yahoo_`, `RplyFwdMsg`) with no table row is
+   `body.html_quote_rule_gap`, never `body.no_boundary_found`. *Not v1 (owner decision 13):* the Apple
+   attribution table row and Yahoo `yahoo_quoted`, until the owner confirms them from a structure-only probe;
+   both still raise `body.html_quote_rule_gap`. *Declined, no id:* disclaimers and confidentiality footers, client
+   taglines ("Sent from my iPhone"), quoting inside a `message/rfc822` attachment (recorded, not recursed).
+   *Bottom-posting is legal, not a gap:* only a non-contiguous alternation is `body.inline_reply_interleaved`.
+4. **Header projection engine: the package owns it.** Addresses: an own RFC 5322 3.4 address-list tokenizer
+   (addr-spec per 3.2.3, quoted-string, CFWS per 3.2.4, group per 3.4, obs-route per 4) that emits **one span
+   per address**, preserves group members, yields a group with zero members for `undisclosed-recipients:;`,
+   records IDN and SMTPUTF8 verbatim (never IDNA-normalised), and makes an unparseable address tri-state
+   `unknown(reason_id)` with the raw value beside it. Dates: an own RFC 5322 3.3 date-time parser (optional day
+   name, obs-zone table, range checks, offset limit +/-9959) in one file, one entry point, no timezone database,
+   **never raising on input content**; the zone has three recorded states, `zone_stated`,
+   `zone_stated_minus_zero` (`-0000`, never read as UTC) and `zone_absent`, and a missing or invalid date sorts
+   at one named end with a reason, never as an epoch. `email.utils` and `email.headerregistry` appear **only in
+   tests**, as an advisory comparator (its disagreement is recorded and printed, never a gate); a test asserts
+   that the own parser returns a reason id exactly where `parsedate_to_datetime` raises. Version differences
+   between interpreters or patch levels are recorded-only run inputs.
+5. **Encoded words and RFC 2231.** The package validates (the stdlib decodes invalid words silently with
+   `defects = []`): `headers.encoded_word_invalid` on a charset that does not resolve, a B-encoding that is not
+   well-formed base64 or has wrong padding, a Q-encoding with a stray `=`, bad hex or a raw `?`. Unfold first
+   (RFC 5322 2.2.3 keeps the whitespace), then RFC 2047 5(1) (no adjacency to non-whitespace; whitespace
+   between encoded words dropped); join across a split character only for the **same charset**, else
+   `headers.encoded_word_invalid`. RFC 2231 continuations reassemble by index (a missing or duplicate index is an
+   error); `name*` shadows `name` with the conflict recorded; a charset on segment 0 only is legal. Wild forms
+   producers emit (an RFC 2047 word inside a quoted parameter; `filename*=''...` with an empty charset) are
+   **decode with a recorded fallback**, not "unparsable"; `attach.filename_unparsable` is for what cannot be
+   decoded.
+6. **One "not built" idiom, one schema bump.** There is exactly one: `TriValue(state=UNKNOWN,
+   reason_id=NOT_BUILT_IN_PHASE1)`, where `NOT_BUILT_IN_PHASE1 = "not_built_in_phase1"` is a new constant in
+   `ids.py` beside `NOT_BUILT_IN_PHASE0`, registered in the design's reason-id text. `None` keeps its single
+   meaning (the record family has no such axis, or the input did not exercise the field) and an empty list keeps
+   its single meaning (genuinely empty). **Neither is ever the encoding of "not built".** A union `X | NotBuilt`
+   is forbidden: the core codec decodes a union by its first non-`None` member, so it would not round-trip.
+   *Per-record axis fields.* `AttachmentOccurrence` gains `status_axis: TriValue` and `route_axis: TriValue`;
+   `EmailDocument` gains `times_axis`, `thread_edges_axis`, `children_axis` and
+   `same_message_candidates_axis` (all `TriValue`). The closed axis-id tuple is `attachment.status`,
+   `attachment.route`, `document.times`, `document.thread_edges`, `document.children`,
+   `document.same_message_candidates`; a wildcard id is banned. The value fields keep their types. A
+   document-level `deferred` list was **rejected** (it says nothing for a nested record read from a store).
+   *Invariants, enforced in the parent record's `__post_init__`.* (I1) a record has an axis field iff it has the
+   value field. (I2) Phase 1: `status is None` iff `status_axis` is the not-built `TriValue`; symmetric for
+   `route` and the document axes. (I3) built: `status` is a `StatusOutcome` iff `status_axis == TriValue(VALUE,
+   "built")`; absent keeps meaning "no such axis". (I4) any other pair raises `CodecError`; the axis reason is a
+   member of the closed set `{not_built_in_phaseN, "built"}` plus `UNKNOWN(reason_id)` for
+   consulted-and-unknown, so **no contract invariant depends on the current phase**. A test constructs
+   `AttachmentOccurrence(status=StatusOutcome(Status.PARSED), status_axis=<not built>)` and asserts it raises; a
+   scope test asserts that a build marked Phase 2 emits no record whose reason id is `NOT_BUILT_IN_PHASE1`.
+   *Type verdicts.* `declared_mime`, `magic` and `container_introspection` all become `TriValue` (design D4:
+   "each `value | unknown`"). `magic` consulted and nothing matched is **`VALUE("unrecognized")`**; not computed
+   (zero-length part, cap hit, decode failed) is `UNKNOWN(reason_id)`; `container_introspection` is
+   `UNKNOWN(not_built_in_phase1)`. `attach.type_disagreement` iff at least two verdicts are in state `VALUE`
+   with a media-type family and the set of families has size >= 2 (`"unrecognized"` and `UNKNOWN` contribute no
+   family and never fire it); `attach.type_unknown` iff no verdict yields a family; the winner order is `magic`
+   over `declared_mime` over `container_introspection` where known, and a winner must name a known verdict.
+   *Not merged: caps.* A cap hit is a **built observation**: Phase 1 **uses** the existing reasons now
+   (`Status.SKIPPED(size_cap | total_size_cap | depth_cap)`, `Status.TRUNCATED(cap_hit_mid_stream)`,
+   `RunRecord.cap_id` and `cap_value_bytes`). Two real defects are registered as contract work in the contract
+   turn: `RunRecord` models **one** cap (a run that hits depth and total bytes records one), and the reason
+   table has **no id for a part-count cap or a header-bytes cap**. *Not merged:* `FlagSection` (a reserved
+   present-but-empty contract versioned by `FLAG_SCHEMA_VERSION`) and `selection` (built in Phase 1).
+   *Version.* `OUTPUT_SCHEMA_VERSION` **3 to 4**; the core codec envelope is untouched; the contracts ledger
+   line moves; the walk ledger line moves only in the commit that shrinks `walk.UNBUILT_SECTIONS`.
+7. **Type verdicts and the magic table.** `declared_mime=text/plain` with a `PK\x03\x04` prefix is a
+   disagreement and the winner is `magic` (bytes beat claims); "zip" is an honest family and a zip is never
+   guessed to be docx or xlsx. The closed magic table: **zip, OLE-CFB, pdf, png, jpeg, gif, RTF (`{\rtf`),
+   gzip (`1F 8B 08`), 7z (`37 7A BC AF 27 1C`), rar (`Rar!\x1a\x07`)**. Excluded deliberately: WebP and WAV/AVI
+   (`RIFF` needs bytes 8-11), TIFF, `.ics` and `.eml` (text), and any text sniffing. `.msg` is OLE-CFB and needs
+   no row.
+8. **Offset maps and `verbatim_precision`.** The coordinate space is the part's decoded text in code points,
+   **un-normalised** (no CRLF or LF folding). An offset map is built, and a span is `exact`, only for a
+   **strict** decode of the **used** charset (never the declared one), over a stateless charset (single-byte or
+   UTF-8), where the CTE is identity; every other case is `part_level` with `cte_not_identity |
+   multibyte_without_offset_map | decode_fallback`, and **no within-part byte span is emitted**. The property
+   test is independent of how the map is stored: (1) spans are strictly increasing and **partition** both
+   `[0, len(raw))` and `[0, len(text))`; (2) for every span `raw[bo:be].decode(used_charset) == text[cs:ce]` (a
+   fresh re-decode of the slice); (3) for strict decodes `text.encode(used_charset) == raw`; (4)
+   `b"".join(slices) == raw`; (5) an anti-vacuity mutant that breaks one entry's byte length must fail the gate.
+   Assertions (2)-(4) are made only for stateless charsets. Exactness is a property of the **actual decode
+   function** (a UTF-8 BOM stays exact for plain `utf-8` and breaks only under `utf-8-sig` or a U+FEFF strip).
+   **The quote splitter, the `>`-depth counter, the offset map and the quote rules consume one line model
+   (`walk._iter_lines`)**, with a test that the splitter's line starts equal `_iter_lines` over a body containing
+   CR.
+9. **Structural caps** are caller parameters (maximum nesting depth, part count, header bytes, decoded bytes per
+   part and in total). A hit is a recorded built observation using the existing status reasons (decision 6,
+   "not merged: caps"); the part-count and header-bytes reasons and the multi-cap `RunRecord` are added in the
+   contract turn.
+10. **The entry point.** `parse(data: bytes, container_kind=None, *, limits)`: `limits` has **no default** (a
+    `Limits.untrusted()` constructor is provided for callers). With `container_kind=None` it sniffs:
+    `D0CF11E0A1B11AE1` is `cfb_msg` (a named error in Phase 1: no reader, never a guess, never an exception from
+    mid-parse); otherwise **RFC 822 if the bytes begin, after an optional UTF-8 BOM, with at least one `name:
+    value` line before a blank line or EOF**; otherwise a **named error** (closed reason id). The BOM is
+    tolerated by the sniff and handled by decision 14.
+11. **`TimeEvent`s are not emitted in Phase 1**, and `times_axis` records exactly that (decision 6). The `Date`
+    projection and the raw `Received` headers are recorded as header facts; the evidence layer and the conflict
+    policies are Phase 3.
+12. **Retained labels.** The Phase 0 sidecars' `attach.manifest`, `body.selection` and `headers.decoded` stay as
+    typed. A label that contradicts a settled decision **fails the suite as a finding** (both values and the
+    bytes) and the sidecar is **never edited**.
+
+### Owner questions, decided (Claude's recommendation, delegated by the owner)
+
+13. **The quote catalogue** is reviewed by the owner before any quote rule is written (it is the only check not
+    from the same model family). v1 contains the rows of decision 3; **the Apple attribution table row and
+    Yahoo `yahoo_quoted` are NOT v1** until the owner confirms them from a structure-only probe of their own
+    mail (class and id names, never content); they trigger `body.html_quote_rule_gap` meanwhile. Every vendor
+    class name is "verify by probe".
+14. **A leading UTF-8 BOM and an mbox `From ` envelope line are tolerated**, not left as a malformed first
+    field (which loses the first real header). Each is accounted as its own leading `prelude` region of the
+    message (so spans still tile exactly), recorded by the new gap ids `headers.leading_bom` and
+    `headers.mbox_from_line`, and the header scan starts after it. This is a **versioned walker behaviour
+    change** (`EMAIL_PARSER_VERSION` 2; the symbolic fingerprint rule means it is not a contract change) made
+    in Turn 1.1 with its ledger lines; no existing corpus input contains either, so the corpus fingerprints do
+    not move.
+15. **A forward banner reads as level 0 (`new`)**, with a `kind = forward` boundary recorded (D3: an inline
+    forward is never the sender's quoted prior words). The catalogue review confirms it row by row.
+16. **Localized label tables:** English, German, French. More only when the owner's mail needs them.
+17. **Lone CR:** the walker's line model **stays** (changing it would invalidate frozen spans, the ledger and
+    the sidecars with no design mandate). `body.lone_cr_line_terminator` is recorded as a gap, emitted in the
+    header region; decision 8's single line model is the Phase 1 consequence; the independent splitter fuzz
+    (below) cannot see a lone-CR framing bug and the document says so.
+18. **`exact` precision is built only as decision 8 states** (identity CTE, strict stateless decode). The
+    QP and base64 offset maps are **deferred to the phase that builds citations** (Phase 4): `cte_not_identity`
+    is an honest, recorded choice, not a permanent one, and real mail being mostly QP or base64 means `exact`
+    will rarely fire in v1.
+19. **`thread.duplicate_message_id_bytes_differ`** keeps the design's id (same `Message-ID`, different bytes,
+    detected at ingest); the document says why a `thread.*` id appears in a phase that defers threading: it is
+    an ingest-level fact about two files, not a thread edge.
+20. **Test ceilings per turn** (<= 40; <= 25 for quote turns) are guidelines (decision: operating rule 10).
+
+### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
+
+`headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),
+`headers.leading_bom`, `headers.mbox_from_line`, `body.digest_default_not_applied` (a Content-Type-less part in
+`multipart/digest` is `message/rfc822`, RFC 2046 5.1.5), `attach.duplicate_content_id`,
+`body.flowed_reflow_unresolved` (the soft-break **join**; only unstuffing is v1),
+`body.lone_cr_line_terminator`. Deleted as wrong: `rfc2231_unhandled` (contradicts decision 5), `nested_claim`.
+Everything else hearth raised is a **fact** (header line over 998 bytes, boundary over 70 characters, NUL in a
+value, Content-Disposition `size`/`date` parameters recorded verbatim and never trusted) or a **decline**
+(DSN semantics, TNEF, mbox splitting, a stateful-charset offset map beyond `verbatim_reason`). Existing ids stay
+fully qualified (`body.*`, `headers.*`).
+
+## Layout to create (additions)
+
+```
+emailextract/
+  parse.py  headers.py  addresses.py  dates.py  rfc2047.py
+  text.py              # per-part text, charset-alias table, offset maps, the one line model
+  htmltree.py          # own element tree, projected-text span per element, referenced-cid set
+  htmltext.py          # the HTML projection, its own htmltext_version
+  quote/  __init__.py  text_rules.py  dom_rules.py  resolve.py  i18n.py
+  attach.py  assemble.py  ingest.py
+tools/        runboth.py    # plain runner for both interpreters (documented fallback)
+tests/support/  # header scanner (stdlib, 3 comparisons) + the independent byte-level splitter
+docs/design/  email-extraction-design.md (revision 3)  phase1-build-spec.md  phase1-debate.md
+```
+
+## The turns (the debate's agreed order)
+
+| turn | content | new gap ids first emitted | test ceiling | pre-declared stop point |
+|---|---|---|---|---|
+| **1.0a** | **documents only**: design revision 3, the fixture catalogue (every name and the consuming turn), exact `FACTS` ids and value shapes, registry entries (all new ids registered, none emitted), the ledger format and allow-list, the contradictions of "settle in 1.0a" below | registers seven | 0 | owner commits before 1.0b |
+| **1.0b** | **contract plus oracle declarations**: decision 6 (axes, `NOT_BUILT_IN_PHASE1`, three `TriValue` verdicts), the quote-boundary and view-level records, the multi-cap `RunRecord` and the part-count and header-bytes reasons, `OUTPUT_SCHEMA_VERSION` 3 to 4, ledger keys and the **pinned `FACTS` phases**, `FACTS` declarations (phase, no measurer), the additions-only label ledger and its test, `runboth.py` | none | 25 | owner commits |
+| **1.0c** | fixtures and hand-typed sidecars **by fact family, non-quote first**: (1) headers/date/address, (2) body/HTML, (3) attachments/caps; at most ~30 pairs per commit; the **quote catalogue is NOT here** | none | 5 | owner commits **per family** |
+| **1.0d** | entry point, limits, named errors, the HTML decision experiment (a spike plus a document; ships `htmltext_version` only) | none | 15 | owner commits |
+| **1.1** | `headers.py`, `rfc2047.py`; the walker tolerance of decision 14; the header scanner (3 comparisons) | `headers.duplicate_header`, `body.lone_cr_line_terminator`, `headers.leading_bom`, `headers.mbox_from_line` | 40 | after headers, folds and raw spans; `rfc2047.py` becomes its own turn if large |
+| **1.2** | `addresses.py` (own tokenizer) | none | 30 | |
+| **1.3** | `dates.py` (own parser) | none | 25 | |
+| **1.4** | `text.py`: per-part text, alias table, offset maps, the one line model | `body.flowed_reflow_unresolved` | 40 | |
+| **1.5** | selection, `htmltree.py`, `htmltext.py` with the **node-to-span map and the referenced-cid set** | `body.digest_default_not_applied` | 40 | after `htmltree.py` and the node-to-span map, before selection and the cid set |
+| *quote catalogue* | the quote fixtures and sidecars (~15-20 rows), typed and **owner-reviewed before any quote rule is written**, ledger-pinned, `A` only | none | 3 | owner reviews, then commits |
+| **1.6** | quote boundaries, text family (`text_rules.py`, `i18n.py`, `resolve.py` text half) | none | 25 | |
+| **1.7** | quote boundaries, DOM family and resolution | none | 25 | |
+| **1.8** | `attach.py` (the manifest, identity, occurrences, classification, three verdicts, cid sets, hints) | `attach.duplicate_content_id` | 40 | |
+| **1.9** | `assemble.py`, `ingest.py`, `store.py` | none | 30 | |
+| **1.10** | gates over real output, the hostile set, the Phase 1 scope test, close | none | 30 | |
+
+Contradictions of revision 1 that Turn 1.0a settles in the design revision (not left to an agent):
+`body.plain_effectively_empty` is a fact (D16), not a gap; gap ids are written fully qualified; decision 6's
+representation is fixed above; caps-as-statuses are used now (decision 6) and not deferred; the registry
+mechanics (a new id needs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case) are named;
+"Phase 1 ids living in a file called `phase0-gaps.md`" is resolved by keeping that file and adding a Phase 1
+section; the design is revised **once**, in 1.0a (no second revision in the last turn).
+
+## The independent checks
+
+- **Stdlib scanner, three comparisons and no more** (`tests/support/`): field **names and order** from the
+  compat32 raw view only (never `policy.default`'s `headerregistry`); the **content-type tree**; the **decoded
+  text of benign leaves**. Addresses and dates are an **advisory** diff (printed, never a gate). Part spans are
+  never compared against stdlib. It imports nothing from `emailextract`; its own header/body split and field
+  split; **no shared boundary regex**; its own charset resolution through `codecs.lookup`; for HTML it compares
+  element counts and ids, never projected text. Where stdlib is authoritative (disagreement is the package's
+  bug): field order and duplicates, the RFC 2045 5.2 default, RFC 2046 5.1.5 digest children, `message/rfc822`
+  nesting, valid RFC 2047, benign base64 and QP, RFC 2231 continuations. Where stdlib **shares the
+  misreading** (agreement proves nothing; excluded from any gate): unknown CTE, truncated base64, malformed QP,
+  an unknown charset, an invalid encoded word, `defects` versus returned bytes, `parseaddr`/`getaddresses` on
+  garbage, **lone CR as a line break**.
+- **A third check: an independent byte-level delimiter splitter** (~60 lines, `tests/support/`, never a
+  library) run as a **seeded differential fuzz** against the parser, comparing the ordered list of part byte
+  spans, the part count, the preamble and epilogue length per multipart, and the boundary-delimiter line
+  spans. Mutations: flip a `--`; insert or delete a CRLF before a delimiter; truncate mid-boundary; duplicate a
+  delimiter; rotate line endings on delimiter lines; change transport padding; append after the close
+  delimiter; remove the close delimiter; inject delimiter-like text inside a part body; base64/whitespace
+  mutations inside encoded bodies (which must not change any quantity). **Excluded as RFC-ambiguous** (recorded,
+  not gated): a boundary that is a prefix of another in the same message; a delimiter line followed by anything
+  but LWSP; a missing close delimiter (gate on `body.boundary_disagreement` instead); a message with no
+  `Content-Type` that merely resembles a boundary; content that contains the boundary on purpose. Honest
+  limit: its independence is **code lineage, not a different author**; the owner's probe is the strongest
+  common-mode breaker.
+
+## Exit criteria for Phase 1
+
+- The **declared phase-1 fact-id list is pinned in the ledger** (a change to `FACTS` phases fails unless the
+  ledger changes in the same commit); the **deferred set is a closed list in the ledger, empty by default**;
+  L1 is 100% over every phase-1 fact with a **per-(fact x phase) coverage floor** (at least N sidecars, at
+  least one with a non-trivial, non-empty value; the sparse-fact convention is not used for new facts); L1
+  still fails on a wrong sidecar and on an empty or vacuous corpus; the **phase-1 gap gate** passes and fails
+  when a phase-1 gap is dropped.
+- `benign` is an **additions-only sidecar flag** with closed reason ids for exclusions; on every benign fixture
+  the stdlib scanner's three comparisons agree and a planted defect makes each fail; stdlib version
+  differences are recorded.
+- Every Phase 1 gap id has a mutation case (the tightened triple) that fails the gate naming the fixture, the
+  fact and the bytes, and a catalogue test fails on an uncovered id.
+- No-silent-drop passes on every fixture and mutation; **boundary ordinal, prefix depth, rule id and kind are
+  stored per boundary per view** (the Phase 5 precondition); every `exact` span passes the five-part property.
+- **The identity projection is named** and documents are byte-identical in it across two runs, hash seeds,
+  locales, time zones and **both interpreters**; the recorded-only fields (interpreter, platform, parser
+  library versions) are listed and are the only difference in the full record; re-ingest is a no-op; ledger
+  fingerprints are identical on both interpreters; a behaviour change without a bump makes `--check` exit 1 and
+  names the constant.
+- The additions-only ledger passes over sidecars, `tests/support/**` and `emailextract/evals/**`; no existing
+  sidecar is modified across the phase; the label-leak test passes; the fixture set is a **superset of the
+  design's Phase 1 list** (a census test).
+- The seeded fuzz and the **independent splitter fuzz** pass: every mutant returns or raises the parser's
+  declared failure type with a closed reason id; any other `Exception` (and `MemoryError` or `RecursionError`
+  specifically, never `BaseException`) fails with the seed. This is a crash and bounded-resource property, not a
+  correctness property. The hostile set (deep nesting, a part-count bomb, an enormous header block, an
+  encoded-word bomb, a very long base64 run, a `data:` URI, a remote image reference) is recorded at the caps
+  with a **work-per-input-byte budget** asserted non-superlinear (operation counts or a length-scaled ratio,
+  **never absolute seconds**, a single-threaded assumption stated); nothing is fetched (a socket guard fails
+  loudly); no attachment is written under its raw filename.
+- The package imports with no sibling, no `olefile`, no `chardet` (a fresh subprocess after a full ingest); no
+  `.msg`, CFB, routing, recursion, matching, threading or `TimeEvent` emission exists; no GPL anywhere.
+- Final report: a **committed file** with required sections (a test checks it non-empty), a **list of named
+  resolutions each with a test id**, every version bump and why, the licences, and every label-versus-parser
+  disagreement citing the failing test.
+
+## Verify empirically (no code has been run for these; each is a few lines in a scratch directory, never a
+fixture; record the output and the interpreter)
+
+1. The HTML parser fingerprint (Turn 1.0d). 2. A leading BOM: expected a malformed first field today.
+3. NUL in a header value (one field, `ok`). 4. NUL in a name (`unknown`, `headers.malformed_line`).
+5. Lone CR: the walker, `_iter_lines` and `email.feedparser` split identically (so no differential test may
+rely on it). 6. An mbox `From ` line at byte 0. 7. `parsedate_to_datetime` raising on invalid input and
+returning naive for `-0000` and a missing zone, on 3.11.15 and 3.14.3. 8. `getaddresses` across patch levels
+(CVE-2023-27043 `strict`). 9. `headerregistry.AddressHeader` on the same inputs (the missing spike row).
+10. The offset-map property on the stateless-charset fixtures. 11. The walker's `_header_value` first-win on a
+duplicate `Content-Type`.
+
+## Blocked on the owner (do not fake)
+
+- **Committing each turn before the next, and 1.0a before 1.0b**; the quote catalogue review before any quote
+  rule is written.
+- **The owner's structure-only probe** of their own mail for vendor class and id names (the Apple and Yahoo
+  rows are not v1 until then).
+- **Localized label tables** beyond English, German and French, if the owner's mail needs them.
+- **Real mail** never enters the repo; the unmeasured items (html.parser, libxml2 and `email` deltas across
+  patch levels; whether five gap ids suffice for real mail; the test-per-turn ceilings) are settled only by
+  measurement or by the owner's corpus.
+
+## Watch-list
+
+- **Quote detection is where the tool fails worst** (new text attributed to quoted text, or the reverse). The
+  design's measured case, a Gmail reply whose plain alternative has no `>`, is the template.
+- **HTML parsing is the least stable input**: the decision, the pin and the fingerprint exist so a library bump
+  is a visible ledger event; an unclosed `<blockquote>` is the worst misnest.
+- **A model writing the labels and a model writing the rules share misreadings** (lone CR, RFC 2046 reading):
+  real producer files and the owner's probe are the only common-mode breakers.
+- **Phase 1b (`.msg`) and Phase 2 (routing) reuse this phase's text and attachment records**; the shapes frozen in
+  1.4 and 1.8 are what they consume.
