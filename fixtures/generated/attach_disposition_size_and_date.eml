@@ -1,0 +1,31 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach disposition size and date
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-size-date-4110@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-c-size-date-20250304"
+
+--b0-c-size-date-20250304
+Content-Type: text/plain; charset=us-ascii
+
+One attachment with a claimed size and date.
+
+--b0-c-size-date-20250304
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="tiny.pdf"; size=583; date="Tue, 4 Mar 2025 08:00:00 +0000"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKMSAwIG9iago8PCAvVHlwZSAvQ2F0YWxvZyAvUGFnZXMgMiAwIFIgPj4KZW5kb2Jq
+CjIgMCBvYmoKPDwgL1R5cGUgL1BhZ2VzIC9LaWRzIFszIDAgUl0gL0NvdW50IDEgPj4KZW5kb2Jq
+CjMgMCBvYmoKPDwgL1R5cGUgL1BhZ2UgL1BhcmVudCAyIDAgUiAvTWVkaWFCb3ggWzAgMCA3MiA3
+Ml0gL0NvbnRlbnRzIDQgMCBSIC9SZXNvdXJjZXMgPDwgL0ZvbnQgPDwgL0YxIDUgMCBSID4+ID4+
+ID4+CmVuZG9iago0IDAgb2JqCjw8IC9MZW5ndGggNDIgPj4Kc3RyZWFtCkJUIC9GMSAxMiBUZiA4
+IDQwIFRkICh0aW55IGZpeHR1cmUpIFRqIEVUCmVuZHN0cmVhbQplbmRvYmoKNSAwIG9iago8PCAv
+VHlwZSAvRm9udCAvU3VidHlwZSAvVHlwZTEgL0Jhc2VGb250IC9IZWx2ZXRpY2EgPj4KZW5kb2Jq
+CnhyZWYKMCA2CjAwMDAwMDAwMDAgNjU1MzUgZiAKMDAwMDAwMDAwOSAwMDAwMCBuIAowMDAwMDAw
+MDU4IDAwMDAwIG4gCjAwMDAwMDAxMTUgMDAwMDAgbiAKMDAwMDAwMDIzOSAwMDAwMCBuIAowMDAw
+MDAwMzMwIDAwMDAwIG4gCnRyYWlsZXIKPDwgL1NpemUgNiAvUm9vdCAxIDAgUiA+PgpzdGFydHhy
+ZWYKNDAwCiUlRU9GCg==
+
+--b0-c-size-date-20250304--

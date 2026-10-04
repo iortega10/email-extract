@@ -1,0 +1,103 @@
+{
+  "fixture": "attach_unrecognized_magic.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written multipart/mixed (boundary b1-c-unrecognized) with a text/plain note and an application/octet-stream attachment whose bytes match no magic row",
+    "hand_written": "tools/write_raw_fixtures.py, byte literal ATTACH_UNRECOGNIZED_MAGIC",
+    "phase_1_facts": "attach.types: magic consulted and nothing matched is the closed sentinel VALUE('unrecognized'), which contributes no family, so no disagreement fires and the declared MIME still supplies the family",
+    "expected_gaps": "none: the declared MIME yields a family, so attach.type_unknown does not fire",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "6306bb1863f58c784b45afb7341334d15d61a266b08b4a5403fc12f6f97d31ad"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 540
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach unrecognized magic", "ok", [74, 7], [82, 26], [74, 36]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [110, 4], [115, 31], [110, 38]],
+        [4, "Message-ID", " <c-unrecognized-4201@example.test>", "ok", [148, 10], [159, 35], [148, 48]],
+        [5, "MIME-Version", " 1.0", "ok", [196, 12], [209, 4], [196, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b1-c-unrecognized\"", "ok", [215, 12], [228, 46], [215, 61]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 540], [0, 278], [278, 262]],
+        ["1.1", "1", "text/plain", [299, 74], [299, 46], [345, 28]],
+        ["1.2", "1", "application/octet-stream", [396, 119], [396, 96], [492, 23]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 278]],
+        ["delimiter", "1", [278, 21]],
+        ["headers", "1.1", [299, 46]],
+        ["body", "1.1", [345, 28]],
+        ["delimiter", "1", [373, 23]],
+        ["headers", "1.2", [396, 96]],
+        ["body", "1.2", [492, 23]],
+        ["delimiter", "1", [515, 25]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", null, null, "7bit", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "aec260be9f50f848c005040bf6569989b356b01c0c97b16195b6b19614e45a6f"],
+        ["1.2", "04601ceac5b937285510e521733711de7ea67cbca1ed53cba5cae99e47500b79"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["value", "application/octet-stream", null], ["value", "unrecognized", null], ["unknown", null, "not_built_in_phase1"], "declared_mime", false]
+      ]
+    }
+  }
+}

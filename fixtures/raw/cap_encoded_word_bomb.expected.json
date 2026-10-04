@@ -1,0 +1,45 @@
+{
+  "fixture": "cap_encoded_word_bomb.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written single text/plain message whose Subject is a three-level nested encoded word (each level's base64 payload is another encoded word)",
+    "hand_written": "tools/write_raw_fixtures.py, byte literal CAP_ENCODED_WORD_BOMB",
+    "phase_1_facts": "headers.decoded: RFC 2047 decoding is NOT recursive, so one pass over the Subject word yields the level-2 encoded word verbatim as the decoded text",
+    "work_budget": "the property a later test asserts is non-superlinear work per input byte (operation counts or a length-scaled ratio, never absolute seconds, single threaded): a recursive decoder would expand the nest, this decode is one pass",
+    "phase_0_facts": "only container.sha256, container.size_bytes and part.gaps are typed at phase 0: the skeleton walker applies NO structural cap, so its part.tree/part.regions/decode.chain output for this fixture is the uncapped walk and is not what the intended behaviour (a cap hit) is; typing them would assert the walker's uncapped reading as the expected one. part.gaps is typed because a sidecar must state a gap expectation and the walker records no gap on these bytes (the same under either reading)",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a7db80b476eb3b60803c49b585a6077ccacfd7c1d312e24b78ec0897bd213b9e"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 342
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "headers.decoded": {
+      "phase": 1,
+      "value": [
+        [2, "=?utf-8?b?PT91dGYtOD9iP1ltOXRZaUJ2YXc9PT89?="]
+      ]
+    }
+  }
+}

@@ -1,0 +1,94 @@
+{
+  "fixture": "attach_cid_dangling.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/html utf-8 message whose only image is cid:missing@example.test, a cid no part defines",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_cid_dangling",
+    "phase_1_facts": "body.cid_refs: the html part references one cid that no part defines",
+    "expected_gaps": "attach.cid_dangling (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "c8b4e00d4e3178c6c0da0bb50f2c4d1472b13eeeba307c7a4b5623e26c002e92"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 320
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach cid dangling", "ok", [74, 7], [82, 20], [74, 30]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [104, 4], [109, 31], [104, 38]],
+        [4, "Message-ID", " <c-cid-dangling-4104@example.test>", "ok", [142, 10], [153, 35], [142, 48]],
+        [5, "MIME-Version", " 1.0", "ok", [190, 12], [203, 4], [190, 19]],
+        [6, "Content-Type", " text/html; charset=utf-8", "ok", [209, 12], [222, 25], [209, 40]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "text/html", [0, 320], [0, 251], [251, 69]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 251]],
+        ["body", "1", [251, 69]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "44301354622223027be084e06000e55905fd7b58d951394702ec54e0f377a2c8"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.cid_refs": {
+      "phase": 1,
+      "value": [
+        ["1", ["missing@example.test"]]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.cid_dangling", "1", 1, "the html body references cid:missing@example.test and no part carries that Content-ID; the reference is recorded and no part is invented (D4), and the walker does not emit the gap today"]
+      ]
+    }
+  }
+}

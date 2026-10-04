@@ -9,9 +9,11 @@ grouped into Family A (headers/date/address), Family B (body/HTML), Family C
 * every design fixture must have a catalogue row (a design fixture silently dropped from
   the catalogue fails by name);
 * every catalogue row whose family **has landed** must have a committed `.eml` and a
-  sidecar beside it;
+  sidecar beside it (Families A, B and C have all landed, so their rows are all committed);
 * every catalogue row whose family has **not** landed is on a frozen **pending** list, and
-  a pending row whose fixture file already exists fails by name (a family lands as a whole);
+  a pending row whose fixture file already exists fails by name (a family lands as a whole;
+  the family-pending list is now EMPTY, and the quote catalogue is carried by its own
+  `PENDING_QUOTE` list until its own increment);
 * every committed fixture that is not one of the sixteen Phase 0 fixtures must be a
   catalogue row (a fixture committed without a catalogue row fails by name).
 
@@ -54,34 +56,16 @@ PHASE0_STEMS = frozenset(
 )
 
 #: The catalogue rows whose family has NOT been committed yet. This list SHRINKS as each
-#: family lands: Family B's and Family C's rows are committed by the later 1.0c commits and
-#: the quote catalogue by its own increment, and each commit removes its names from here.
-PENDING = frozenset(
+#: family lands: Families A, B and C are all committed by the three 1.0c commits, so it is
+#: **empty** now; the quote catalogue is typed by its own increment (after Turn 1.5) and is
+#: carried by PENDING_QUOTE below until then.
+PENDING = frozenset()
+
+#: The quote catalogue rows (`docs/design/phase1-fixtures.md`, "The quote catalogue"): typed
+#: after Turn 1.5 and owner-reviewed before any quote rule is written, so they stay pending
+#: through their own list until that increment lands.
+PENDING_QUOTE = frozenset(
     {
-        # Family C: attachments and caps (commit 1.0c-C)
-        "attach_manifest_baseline",
-        "attach_inline_referenced",
-        "attach_inline_unreferenced",
-        "attach_cid_dangling",
-        "attach_duplicate_content_id",
-        "attach_duplicate_filename_in_one_message",
-        "attach_message_rfc822_no_filename",
-        "attach_zip_magic_declared_disagree",
-        "attach_unrecognized_magic",
-        "attach_zero_length_part",
-        "attach_disposition_size_and_date",
-        "attach_filename_rfc2231_fallback",
-        "attach_decoration_tracking_pixel",
-        "attach_ole_cfb_magic",
-        "attach_tnef_winmail",
-        "attach_macro_docm",
-        "cap_deep_nesting",
-        "cap_large_part_count",
-        "cap_enormous_header_block",
-        "cap_encoded_word_bomb",
-        "cap_very_long_base64_run",
-        "attach_remote_image_only",
-        # The quote catalogue (typed after Turn 1.5)
         "quoted_outlook_flat",
         "quoted_prefix_gt_deep",
         "inline_reply_interleaved",
@@ -193,7 +177,7 @@ def _real_inputs():
     catalogue_text = CATALOGUE_PATH.read_text(encoding="utf-8")
     return (
         catalogue_rows(catalogue_text),
-        PENDING,
+        PENDING | PENDING_QUOTE,
         committed_stems(),
         sidecar_stems(),
         design_phase1_names(DESIGN_PATH.read_text(encoding="utf-8")),
@@ -218,9 +202,9 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert not (set(catalogued) & PHASE0_STEMS), "a Phase 0 fixture is a catalogue row"
     assert set(catalogued) == set(pending) | (set(catalogued) - set(pending))
     assert census_problems(catalogued, pending, committed, sidecars, design_names) == []
-    # A landed family's rows are committed; a later family's are still pending. Families A
-    # and B are the families this corpus has landed, so none of their rows is pending and
-    # all of them exist.
+    # Every landed family's rows are committed; only the quote catalogue's are still pending.
+    # Families A, B and C are the families this corpus has landed, so none of their rows is
+    # pending and all of them exist.
     family_a = {name for name, family in catalogued.items() if family == "A"}
     assert len(family_a) == 30, sorted(family_a)
     assert not (family_a & pending), sorted(family_a & pending)
@@ -229,13 +213,20 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert len(family_b) == 22, sorted(family_b)
     assert not (family_b & pending), sorted(family_b & pending)
     assert family_b <= committed and family_b <= sidecars
+    family_c = {name for name, family in catalogued.items() if family == "C"}
+    assert len(family_c) == 22, sorted(family_c)
+    assert not (family_c & pending), sorted(family_c & pending)
+    assert family_c <= committed and family_c <= sidecars
+    assert PENDING == frozenset(), "the family-pending list is empty: all three families landed"
     # The same check must fail when a committed fixture is missing, by name.
     problems = census_problems(catalogued, pending, committed - {sorted(family_a)[0]}, sidecars, design_names)
     assert any(sorted(family_a)[0] in problem for problem in problems), problems
-    # ... and for the later family too.
+    # ... and for the later families too.
     problems = census_problems(catalogued, pending, committed - {sorted(family_b)[0]}, sidecars, design_names)
     assert any(sorted(family_b)[0] in problem for problem in problems), problems
-    # ... and when a pending row's fixture file has landed early.
+    problems = census_problems(catalogued, pending, committed - {sorted(family_c)[0]}, sidecars, design_names)
+    assert any(sorted(family_c)[0] in problem for problem in problems), problems
+    # ... and when a pending (quote catalogue) row's fixture file has landed early.
     early = sorted(pending)[0]
     problems = census_problems(catalogued, pending, committed | {early}, sidecars, design_names)
     assert any(early in problem for problem in problems), problems

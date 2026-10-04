@@ -124,13 +124,26 @@ Allow-list (`turn=1.0c-B`): `fixtures/generated/`, `fixtures/raw/` (`SHA256SUMS`
 `tests/test_fixture_census.py`, `tests/test_phase1_family_b.py`, `docs/design/phase1-turn-declarations.md`.
 
 ```declaration turn=1.0c-C
-pending: the attachments/caps family (commit 3 of 3) has not landed yet
 module: tools/make_fixtures.py
 module: tools/write_raw_fixtures.py
 module: fixtures/generated/
 module: fixtures/raw/
 module: tests/ledger/label_ledger.json
+module: tests/ledger/corpus.json
+module: tests/ledger/behavior_ledger.json
+module: tests/test_phase1_family_c.py
+module: tests/test_fixture_census.py
+module: docs/design/phase1-turn-declarations.md
 test: tests/test_phase1_family_c.py::test_the_attachments_family_labels_load_and_are_ledgered
+test: tests/test_phase1_family_c.py::test_every_family_c_fact_id_is_declared
+test: tests/test_phase1_family_c.py::test_every_typed_span_slices_the_fixture_bytes
+test: tests/test_phase1_family_c.py::test_every_family_c_gap_id_is_a_known_id
+test: tests/test_phase1_family_c.py::test_the_family_meets_the_facts_the_catalogue_names
+test: tests/test_phase1_family_c.py::test_the_new_fact_shapes_are_well_formed
+test: tests/test_phase1_family_c.py::test_the_span_check_fails_on_a_planted_wrong_span
+test: tests/test_phase1_family_c.py::test_the_coverage_check_fails_on_a_missing_fact
+test: tests/test_phase1_family_c.py::test_every_zip_payload_is_stored_and_no_png_is_compressed
+test: tests/test_phase1_family_c.py::test_every_fixture_is_under_64_kb
 stop: after the attachments/caps family (the last of the three), before Turn 1.0d
 ```
 

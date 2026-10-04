@@ -252,9 +252,19 @@ Every item maps to at least one fixture above; a reviewer can walk this table ag
 | **total committed sidecars** | **100** | |
 
 Every floor in `docs/design/phase1-facts.md` is met with room: the tightest are `document.axes` (floor
-60, on every one of the ~100 sidecars), `headers.projection` and `body.text` (floor 60 each; every
+80, on every one of the ~100 sidecars), `headers.projection` and `body.text` (floor 60 each; every
 message has headers and almost every one has a text part), and `body.plain_effectively_empty` (floor 2,
 carried by `plain_effectively_empty` and `attach_remote_image_only`'s sibling case). The floor for each
 fact and the observed count are checked by `tests/test_facts_coverage.py` (Turn 1.10); a fact that falls
 below its floor fails, and a fact that moves its phase fails against the pinned ledger
 (`docs/design/phase1-ledgers.md`).
+
+> **Floors re-based after the quote increment (owner decision, Turn 1.0c review).** Family A, B and C carry
+> far fewer sidecars per fact than the floors in `phase1-facts.md` assumed (e.g. `headers.projection` 12 of 60,
+> `attach.types` 5 of 12, `attach.filename` 2 of 10): the floors were set before the catalogue. They are not
+> loosened silently: when the quote catalogue lands, `tests/test_facts_coverage.py` (Turn 1.10) takes each fact's
+> floor as the COUNT ACHIEVED by the committed corpus at that point (a ratchet: coverage may never fall), and
+> `phase1-facts.md` is updated in the same commit with each fact's new floor and the reason. `document.axes` is 80
+> in both documents. The attach.types winner rule: the winner is the first verdict in the order magic,
+> declared_mime, container_introspection that yields a media-type family (`unrecognized` yields none), `null` if
+> none does.

@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_macro_docm.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written multipart/mixed (boundary b1-c-docm) with a text/plain note and a macro-bearing .docm attachment: a ZIP_STORED container with a stored [Content_Types].xml and a stored word/vbaProject.bin stub. INERT: never opened as a document, the macro is a claim and execution is never",
+    "hand_written": "tools/write_raw_fixtures.py, byte literal ATTACH_MACRO_DOCM (the zip members are stored, pinned timestamps, zlib.crc32 only)",
+    "phase_1_facts": "attach.manifest: the macro-bearing occurrence (declared container type, content hash, decoded size)",
+    "expected_gaps": "security.macro_present (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "1dc29fc64937fdd6c828e8f8384f9d065a53728e9a60d94c995a69e09cf2858d"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 2435
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach macro docm", "ok", [74, 7], [82, 18], [74, 28]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [102, 4], [107, 31], [102, 38]],
+        [4, "Message-ID", " <c-macro-docm-4204@example.test>", "ok", [140, 10], [151, 33], [140, 46]],
+        [5, "MIME-Version", " 1.0", "ok", [186, 12], [199, 4], [186, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b1-c-docm\"", "ok", [205, 12], [218, 38], [205, 53]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 2435], [0, 260], [260, 2175]],
+        ["1.1", "1", "text/plain", [273, 73], [273, 46], [319, 27]],
+        ["1.2", "1", "application/vnd.ms-word.document.macroenabled.12", [361, 2057], [361, 157], [518, 1900]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 260]],
+        ["delimiter", "1", [260, 13]],
+        ["headers", "1.1", [273, 46]],
+        ["body", "1.1", [319, 27]],
+        ["delimiter", "1", [346, 15]],
+        ["headers", "1.2", [361, 157]],
+        ["body", "1.2", [518, 1900]],
+        ["delimiter", "1", [2418, 17]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "456d89cb1936ef858affc0dd92fe17a3156a9a2848bed632f55dda14ec975325"],
+        ["1.2", "aeadc1d6dd0c573fb275cdcdfe81a4efefd98d5b89d434a7cba9f5c8c852309f"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "macro.docm", "application/vnd.ms-word.document.macroEnabled.12", null, "attachment", "base64", "aeadc1d6dd0c573fb275cdcdfe81a4efefd98d5b89d434a7cba9f5c8c852309f", 1389]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["security.macro_present", "1.2", 1, "the docm container holds word/vbaProject.bin, so a macro is present; it is recorded and never executed (D10), and the document is never opened or inspected beyond the declared container facts"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_zip_magic_declared_disagree.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-zipdis-20250304) with a text/plain note and an attachment DECLARED application/pdf whose bytes are a ZIP_STORED archive (PK\\x03\\x04)",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_zip_magic_declared_disagree",
+    "phase_1_facts": "attach.types: declared_mime application/pdf vs magic zip, winner magic, disagreement true",
+    "expected_gaps": "attach.type_disagreement (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "a6a32916bbaa74d423d262d231d1fd5c612e8e62c87ebba711c246d5e35fb4d3"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 730
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach zip magic declared disagree", "ok", [74, 7], [82, 35], [74, 45]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [119, 4], [124, 31], [119, 38]],
+        [4, "Message-ID", " <c-zip-disagree-4108@example.test>", "ok", [157, 10], [168, 35], [157, 48]],
+        [5, "MIME-Version", " 1.0", "ok", [205, 12], [218, 4], [205, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-zipdis-20250304\"", "ok", [224, 12], [237, 49], [224, 64]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 730], [0, 290], [290, 440]],
+        ["1.1", "1", "text/plain", [314, 71], [314, 46], [360, 25]],
+        ["1.2", "1", "application/pdf", [411, 291], [411, 125], [536, 166]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 290]],
+        ["delimiter", "1", [290, 24]],
+        ["headers", "1.1", [314, 46]],
+        ["body", "1.1", [360, 25]],
+        ["delimiter", "1", [385, 26]],
+        ["headers", "1.2", [411, 125]],
+        ["body", "1.2", [536, 166]],
+        ["delimiter", "1", [702, 28]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "c65deb2cce4cc344cfe601ad97d5f58574d2656300f3e5ce1e7c8d35062f9c88"],
+        ["1.2", "e3ec79b22b06557cfd86f979a1b31b9e653c13eb15a6a350c169920e6c5445be"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["value", "application/pdf", null], ["value", "zip", null], ["unknown", null, "not_built_in_phase1"], "magic", true]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.type_disagreement", "1.2", 1, "the declared media type (application/pdf) and magic (zip) are both VALUE verdicts with different media-type families, so the disagreement fires and bytes beat claims: winner magic (decisions 6/7)"]
+      ]
+    }
+  }
+}

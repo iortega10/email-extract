@@ -312,6 +312,144 @@ PREAMBLE_ONLY_MESSAGE = (
     b"--b1-pre-only--\r\n"
 )
 
+ATTACH_UNRECOGNIZED_MAGIC = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: attach unrecognized magic\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-unrecognized-4201@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/mixed; boundary="b1-c-unrecognized"\r\n'
+    b"\r\n"
+    b"--b1-c-unrecognized\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+    b"One unrecognized attachment.\r\n"
+    b"--b1-c-unrecognized\r\n"
+    b"Content-Type: application/octet-stream\r\n"
+    b'Content-Disposition: attachment; filename="blob.bin"\r\n'
+    b"\r\n"
+    b"nope: no signature here\r\n"
+    b"--b1-c-unrecognized--\r\n"
+)
+
+ATTACH_OLE_CFB_MAGIC = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: attach ole cfb magic\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-ole-cfb-4202@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/mixed; boundary="b1-c-ole"\r\n'
+    b"\r\n"
+    b"--b1-c-ole\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+    b"One OLE-CFB attachment.\r\n"
+    b"--b1-c-ole\r\n"
+    b"Content-Type: application/octet-stream\r\n"
+    b'Content-Disposition: attachment; filename="legacy.doc"\r\n'
+    b"\r\n"
+    b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 16 + b"invented ole bytes\r\n"
+    b"--b1-c-ole--\r\n"
+)
+
+ATTACH_TNEF_WINMAIL = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: attach tnef winmail\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-tnef-4203@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/mixed; boundary="b1-c-tnef"\r\n'
+    b"\r\n"
+    b"--b1-c-tnef\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+    b"One TNEF attachment.\r\n"
+    b"--b1-c-tnef\r\n"
+    b"Content-Type: application/ms-tnef\r\n"
+    b'Content-Disposition: attachment; filename="winmail.dat"\r\n'
+    b"\r\n"
+    b"\x78\x9f\x3e\x22invented tnef bytes\r\n"
+    b"--b1-c-tnef--\r\n"
+)
+
+#: The docm payload: a ZIP_STORED container (struct fields pinned, zlib.crc32 only)
+#: holding a stored ``[Content_Types].xml`` and a stored ``word/vbaProject.bin``
+#: stub. It is INERT -- never opened as a document, and the macro is a claim.
+ATTACH_MACRO_DOCM = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: attach macro docm\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-macro-docm-4204@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b'Content-Type: multipart/mixed; boundary="b1-c-docm"\r\n'
+    b"\r\n"
+    b"--b1-c-docm\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+    b"One macro-bearing document.\r\n"
+    b"--b1-c-docm\r\n"
+    b"Content-Type: application/vnd.ms-word.document.macroEnabled.12\r\n"
+    b'Content-Disposition: attachment; filename="macro.docm"\r\n'
+    b"Content-Transfer-Encoding: base64\r\n"
+    b"\r\n"
+    b"UEsDBBQAAAAAAABAZFob8JhblQEAAJUBAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbDw/eG1sIHZl\r\n"
+    b"cnNpb249IjEuMCIgZW5jb2Rpbmc9IlVURi04IiBzdGFuZGFsb25lPSJ5ZXMiPz4KPFR5cGVzIHht\r\n"
+    b"bG5zPSJodHRwOi8vc2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvcGFja2FnZS8yMDA2L2NvbnRl\r\n"
+    b"bnQtdHlwZXMiPjxEZWZhdWx0IEV4dGVuc2lvbj0icmVscyIgQ29udGVudFR5cGU9ImFwcGxpY2F0\r\n"
+    b"aW9uL3ZuZC5vcGVueG1sZm9ybWF0cy1wYWNrYWdlLnJlbGF0aW9uc2hpcHMreG1sIi8+PERlZmF1\r\n"
+    b"bHQgRXh0ZW5zaW9uPSJ4bWwiIENvbnRlbnRUeXBlPSJhcHBsaWNhdGlvbi94bWwiLz48T3ZlcnJp\r\n"
+    b"ZGUgUGFydE5hbWU9Ii93b3JkL2RvY3VtZW50LnhtbCIgQ29udGVudFR5cGU9ImFwcGxpY2F0aW9u\r\n"
+    b"L3ZuZC5tcy13b3JkLmRvY3VtZW50Lm1hY3JvRW5hYmxlZC5tYWluK3htbCIvPjwvVHlwZXM+ClBL\r\n"
+    b"AwQUAAAAAAAAQGRaOkkbgCsBAAArAQAACwAAAF9yZWxzLy5yZWxzPD94bWwgdmVyc2lvbj0iMS4w\r\n"
+    b"IiBlbmNvZGluZz0iVVRGLTgiIHN0YW5kYWxvbmU9InllcyI/Pgo8UmVsYXRpb25zaGlwcyB4bWxu\r\n"
+    b"cz0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL3BhY2thZ2UvMjAwNi9yZWxhdGlv\r\n"
+    b"bnNoaXBzIj48UmVsYXRpb25zaGlwIElkPSJySWQxIiBUeXBlPSJodHRwOi8vc2NoZW1hcy5vcGVu\r\n"
+    b"eG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9yZWxhdGlvbnNoaXBzL29mZmljZURv\r\n"
+    b"Y3VtZW50IiBUYXJnZXQ9IndvcmQvZG9jdW1lbnQueG1sIi8+PC9SZWxhdGlvbnNoaXBzPgpQSwME\r\n"
+    b"FAAAAAAAAEBkWvEZlaXSAAAA0gAAABEAAAB3b3JkL2RvY3VtZW50LnhtbDw/eG1sIHZlcnNpb249\r\n"
+    b"IjEuMCIgZW5jb2Rpbmc9IlVURi04IiBzdGFuZGFsb25lPSJ5ZXMiPz4KPHc6ZG9jdW1lbnQgeG1s\r\n"
+    b"bnM6dz0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL3dvcmRwcm9jZXNzaW5nbWwv\r\n"
+    b"MjAwNi9tYWluIj48dzpib2R5Pjx3OnA+PHc6cj48dzp0PmZpeHR1cmU8L3c6dD48L3c6cj48L3c6\r\n"
+    b"cD48L3c6Ym9keT48L3c6ZG9jdW1lbnQ+ClBLAwQUAAAAAAAAQGRatERzRBEAAAARAAAAEwAAAHdv\r\n"
+    b"cmQvdmJhUHJvamVjdC5iaW4BAgMEaW52ZW50ZWQgc3R1YlBLAQIUABQAAAAAAABAZFob8JhblQEA\r\n"
+    b"AJUBAAATAAAAAAAAAAAAAAAAAAAAAABbQ29udGVudF9UeXBlc10ueG1sUEsBAhQAFAAAAAAAAEBk\r\n"
+    b"WjpJG4ArAQAAKwEAAAsAAAAAAAAAAAAAAAAAxgEAAF9yZWxzLy5yZWxzUEsBAhQAFAAAAAAAAEBk\r\n"
+    b"WvEZlaXSAAAA0gAAABEAAAAAAAAAAAAAAAAAGgMAAHdvcmQvZG9jdW1lbnQueG1sUEsBAhQAFAAA\r\n"
+    b"AAAAAEBkWrREc0QRAAAAEQAAABMAAAAAAAAAAAAAAAAAGwQAAHdvcmQvdmJhUHJvamVjdC5iaW5Q\r\n"
+    b"SwUGAAAAAAQABAD6AAAAXQQAAAAA\r\n"
+    b"--b1-c-docm--\r\n"
+)
+
+CAP_ENCODED_WORD_BOMB = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: =?utf-8?b?PT91dGYtOD9iP1BUOTFkR1l0T0Q5aVAxbHRPWFJaYVVKMllYYzlQVDg5Pz0=?=\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-ew-bomb-4205@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+    b"A nested encoded word in the Subject.\r\n"
+)
+
+CAP_VERY_LONG_BASE64_RUN = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: cap very long base64 run\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <c-b64-run-4206@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"Content-Transfer-Encoding: base64\r\n"
+    b"\r\n"
+    + (b"QkJC" * 1365)
+    + b"Qg==\r\n"
+)
+
 FIXTURES = {
     "bad_charset": BAD_CHARSET,
     "truncated_base64": TRUNCATED_BASE64,
@@ -335,6 +473,13 @@ FIXTURES = {
     "gb2312_declared_gbk_bytes": GB2312_DECLARED_GBK_BYTES,
     "windows_1252_declared_iso_8859_1": WINDOWS_1252_DECLARED_ISO_8859_1,
     "preamble_only_message": PREAMBLE_ONLY_MESSAGE,
+    # Family C: attachments and caps (Turn 1.0c, commit 3)
+    "attach_unrecognized_magic": ATTACH_UNRECOGNIZED_MAGIC,
+    "attach_ole_cfb_magic": ATTACH_OLE_CFB_MAGIC,
+    "attach_tnef_winmail": ATTACH_TNEF_WINMAIL,
+    "attach_macro_docm": ATTACH_MACRO_DOCM,
+    "cap_encoded_word_bomb": CAP_ENCODED_WORD_BOMB,
+    "cap_very_long_base64_run": CAP_VERY_LONG_BASE64_RUN,
 }
 
 

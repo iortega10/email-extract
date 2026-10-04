@@ -1,0 +1,23 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach decoration tracking pixel
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-tracking-pixel-4112@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="b0-c-pixel-20250304"
+
+--b0-c-pixel-20250304
+Content-Type: text/html; charset=utf-8
+
+<p>No image reference here.</p>
+
+--b0-c-pixel-20250304
+Content-Type: image/png
+Content-ID: <pixel@example.test>
+Content-Disposition: inline; filename="pixel.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAAD0lEQVR4AQEEAPv/AAAAAAAEAAFl
+ScNgAAAAAElFTkSuQmCC
+
+--b0-c-pixel-20250304--

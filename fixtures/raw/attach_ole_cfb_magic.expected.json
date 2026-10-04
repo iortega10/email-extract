@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_ole_cfb_magic.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written multipart/mixed (boundary b1-c-ole) with a text/plain note and an attachment whose bytes start with the CFB signature D0 CF 11 E0 A1 B1 1A E1 plus zero padding (not a real compound file)",
+    "hand_written": "tools/write_raw_fixtures.py, byte literal ATTACH_OLE_CFB_MAGIC",
+    "phase_1_facts": "attach.types: magic is the OLE-CFB row of the closed magic table; the declared MIME is the only family, so no disagreement fires",
+    "expected_gaps": "attach.ole_container_unknown (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "ebd2722a380da634f9b46808e11d4208eecb64204cbea425fd065cbaafef4dc7"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 510
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach ole cfb magic", "ok", [74, 7], [82, 21], [74, 31]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [105, 4], [110, 31], [105, 38]],
+        [4, "Message-ID", " <c-ole-cfb-4202@example.test>", "ok", [143, 10], [154, 30], [143, 43]],
+        [5, "MIME-Version", " 1.0", "ok", [186, 12], [199, 4], [186, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b1-c-ole\"", "ok", [205, 12], [218, 37], [205, 52]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 510], [0, 259], [259, 251]],
+        ["1.1", "1", "text/plain", [271, 69], [271, 46], [317, 23]],
+        ["1.2", "1", "application/octet-stream", [354, 140], [354, 98], [452, 42]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 259]],
+        ["delimiter", "1", [259, 12]],
+        ["headers", "1.1", [271, 46]],
+        ["body", "1.1", [317, 23]],
+        ["delimiter", "1", [340, 14]],
+        ["headers", "1.2", [354, 98]],
+        ["body", "1.2", [452, 42]],
+        ["delimiter", "1", [494, 16]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", null, null, "7bit", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "34f4569e9c9f3bf3e047535ca1e4c9bf402efbb2d8402910834d9768244f6f18"],
+        ["1.2", "bd8a6a0b6f7c052556f0c9b6d236a4442a7cd11c1822d646b2b20167550a0693"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["value", "application/octet-stream", null], ["value", "ole-cfb", null], ["unknown", null, "not_built_in_phase1"], "magic", false]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.ole_container_unknown", "1.2", 1, "the bytes are a CFB/OLE container but container_introspection is not built in Phase 1, so the container's contents are unknown and it is not one of the recognised office documents (D4/D13)"]
+      ]
+    }
+  }
+}

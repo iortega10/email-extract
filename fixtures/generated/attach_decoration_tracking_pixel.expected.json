@@ -1,0 +1,115 @@
+{
+  "fixture": "attach_decoration_tracking_pixel.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/related (boundary b0-c-pixel-20250304) with a text/html part that references no cid and an inline unreferenced 1x1 image/png (pixel.png)",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_decoration_tracking_pixel",
+    "phase_1_facts": "attach.decorative: one recorded hint rule id for the inline unreferenced 1x1 png; the hint never removes the occurrence",
+    "expected_gaps": "attach.cid_unreferenced (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "9b780c3e4c7a758418dc080c0028a452d3324682001f9dc3b46c16829ee39c28"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 688
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach decoration tracking pixel", "ok", [74, 7], [82, 33], [74, 43]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [117, 4], [122, 31], [117, 38]],
+        [4, "Message-ID", " <c-tracking-pixel-4112@example.test>", "ok", [155, 10], [166, 37], [155, 50]],
+        [5, "MIME-Version", " 1.0", "ok", [205, 12], [218, 4], [205, 19]],
+        [6, "Content-Type", " multipart/related; boundary=\"b0-c-pixel-20250304\"", "ok", [224, 12], [237, 50], [224, 65]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/related", [0, 688], [0, 291], [291, 397]],
+        ["1.1", "1", "text/html", [314, 75], [314, 42], [356, 33]],
+        ["1.2", "1", "image/png", [414, 247], [414, 147], [561, 100]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 291]],
+        ["delimiter", "1", [291, 23]],
+        ["headers", "1.1", [314, 42]],
+        ["body", "1.1", [356, 33]],
+        ["delimiter", "1", [389, 25]],
+        ["headers", "1.2", [414, 147]],
+        ["body", "1.2", [561, 100]],
+        ["delimiter", "1", [661, 27]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "e216d1d095f19b3d39c413d164393c0b2705753736f8bfa729fced25522e8b05"],
+        ["1.2", "4d44c07cf62f61efdc4fe0ea126031bc958585f934e0ef8c1c7d2baca829aeae"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.decorative": {
+      "phase": 1,
+      "value": [
+        ["1.2", "inline_unreferenced_tracking_pixel"]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.cid_unreferenced", "1.2", 1, "pixel.png is an inline occurrence whose Content-ID nothing references; the decorative hint never removes the occurrence (D4)"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["attach.decorative", "1.2", "which recorded hint rule names an unreferenced 1x1 LOCAL png: the design names inline_unreferenced_small_image and inline_unreferenced_tracking_pixel and says a 1x1 REMOTE image is a security fact rather than decoration (D4), but fixes no rule for a local 1x1 unreferenced image; the fixture's own name (decoration_tracking_pixel) is followed"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,118 @@
+{
+  "fixture": "attach_manifest_baseline.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-manifest-20250304) with a text/plain note and two base64 attachments (tiny.pdf, tiny.png); no preamble, no epilogue",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_manifest_baseline (pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "phase_1_facts": "attach.manifest (the two occurrences with name, declared type, disposition, transfer encoding, content hash and decoded size) and attach.types (three verdicts, winner magic over declared, no disagreement)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "1f9348f1c828599a275f5e2cbff3df63eba4a74b475f2a622fed99f406c24f7a"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 1617
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach manifest baseline", "ok", [74, 7], [82, 25], [74, 35]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [109, 4], [114, 31], [109, 38]],
+        [4, "Message-ID", " <c-manifest-4101@example.test>", "ok", [147, 10], [158, 31], [147, 44]],
+        [5, "MIME-Version", " 1.0", "ok", [191, 12], [204, 4], [191, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-manifest-20250304\"", "ok", [210, 12], [223, 51], [210, 66]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 1617], [0, 278], [278, 1339]],
+        ["1.1", "1", "text/plain", [304, 71], [304, 46], [350, 25]],
+        ["1.2", "1", "application/pdf", [403, 924], [403, 122], [525, 802]],
+        ["1.3", "1", "image/png", [1355, 232], [1355, 116], [1471, 116]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 278]],
+        ["delimiter", "1", [278, 26]],
+        ["headers", "1.1", [304, 46]],
+        ["body", "1.1", [350, 25]],
+        ["delimiter", "1", [375, 28]],
+        ["headers", "1.2", [403, 122]],
+        ["body", "1.2", [525, 802]],
+        ["delimiter", "1", [1327, 28]],
+        ["headers", "1.3", [1355, 116]],
+        ["body", "1.3", [1471, 116]],
+        ["delimiter", "1", [1587, 30]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []],
+        ["1.3", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0],
+        ["1.3", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null],
+        ["1.3", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "46ad52f854c97f755ed31a03a23bcc456b24ab71dc52f71535c3357acd2ed15b"],
+        ["1.2", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d"],
+        ["1.3", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "tiny.pdf", "application/pdf", null, "attachment", "base64", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d", 583],
+        ["1.3", "tiny.png", "image/png", null, "attachment", "base64", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f", 82]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["value", "application/pdf", null], ["value", "pdf", null], ["unknown", null, "not_built_in_phase1"], "magic", false],
+        ["1.3", ["value", "image/png", null], ["value", "png", null], ["unknown", null, "not_built_in_phase1"], "magic", false]
+      ]
+    }
+  }
+}

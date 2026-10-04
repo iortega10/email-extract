@@ -1,0 +1,18 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach unrecognized magic
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-unrecognized-4201@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b1-c-unrecognized"
+
+--b1-c-unrecognized
+Content-Type: text/plain; charset=us-ascii
+
+One unrecognized attachment.
+--b1-c-unrecognized
+Content-Type: application/octet-stream
+Content-Disposition: attachment; filename="blob.bin"
+
+nope: no signature here
+--b1-c-unrecognized--

@@ -1,0 +1,102 @@
+{
+  "fixture": "attach_filename_rfc2231_fallback.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-fname-fb-20250304) with a text/plain note and an attachment whose Content-Disposition is filename*=''run.log (an empty charset)",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_filename_rfc2231_fallback",
+    "phase_1_facts": "attach.filename: the raw wild form, decode_state fallback and the recorded fallback_reason empty_charset (decision 5)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "4d90298650f1647199ae5efbc7c56b891a1362981da1168b776e35972166206c"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 635
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach filename rfc2231 fallback", "ok", [74, 7], [82, 33], [74, 43]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [117, 4], [122, 31], [117, 38]],
+        [4, "Message-ID", " <c-filename-fallback-4111@example.test>", "ok", [155, 10], [166, 40], [155, 53]],
+        [5, "MIME-Version", " 1.0", "ok", [208, 12], [221, 4], [208, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-fname-fb-20250304\"", "ok", [227, 12], [240, 51], [227, 66]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 635], [0, 295], [295, 340]],
+        ["1.1", "1", "text/plain", [321, 67], [321, 46], [367, 21]],
+        ["1.2", "1", "application/octet-stream", [416, 189], [416, 131], [547, 58]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 295]],
+        ["delimiter", "1", [295, 26]],
+        ["headers", "1.1", [321, 46]],
+        ["body", "1.1", [367, 21]],
+        ["delimiter", "1", [388, 28]],
+        ["headers", "1.2", [416, 131]],
+        ["body", "1.2", [547, 58]],
+        ["delimiter", "1", [605, 30]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "68437a67b17d6254c5aed78a8c54b8d90aa1677e2ae0bf0a2490e712f30a6b70"],
+        ["1.2", "31771aae324d40f9daf258756ab83620203546ae08e68e6131e9ca98b17dd746"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.filename": {
+      "phase": 1,
+      "value": [
+        ["1.2", "''run.log", "fallback", "run.log", "empty_charset"]
+      ]
+    }
+  }
+}

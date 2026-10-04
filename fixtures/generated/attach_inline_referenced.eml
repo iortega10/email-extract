@@ -1,0 +1,24 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach inline referenced
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-inline-ref-4102@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="b0-c-inline-ref-20250304"
+
+--b0-c-inline-ref-20250304
+Content-Type: text/html; charset=utf-8
+
+<p>Hello Ben.</p>
+<img src="cid:logo@example.test" alt="logo">
+
+--b0-c-inline-ref-20250304
+Content-Type: image/png
+Content-ID: <logo@example.test>
+Content-Disposition: inline; filename="logo.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4AQEOAPH/ABAgMBAgMAAQ
+IDAQIDAKDgGBlyAvegAAAABJRU5ErkJggg==
+
+--b0-c-inline-ref-20250304--

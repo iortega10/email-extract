@@ -1,0 +1,108 @@
+{
+  "fixture": "attach_inline_referenced.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/related (boundary b0-c-inline-ref-20250304) with a text/html part referencing cid:logo@example.test and an inline image/png part carrying that Content-ID",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_inline_referenced",
+    "phase_1_facts": "attach.cid_use (the inline occurrence's cid is referenced) and body.cid_refs (the html part's de-duplicated referenced-cid set)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "60e984f32bde407909f42479ec7f507c285fa59a39150431515f2d48eafeddea"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 742
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach inline referenced", "ok", [74, 7], [82, 25], [74, 35]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [109, 4], [114, 31], [109, 38]],
+        [4, "Message-ID", " <c-inline-ref-4102@example.test>", "ok", [147, 10], [158, 33], [147, 46]],
+        [5, "MIME-Version", " 1.0", "ok", [193, 12], [206, 4], [193, 19]],
+        [6, "Content-Type", " multipart/related; boundary=\"b0-c-inline-ref-20250304\"", "ok", [212, 12], [225, 55], [212, 70]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/related", [0, 742], [0, 284], [284, 458]],
+        ["1.1", "1", "text/html", [312, 107], [312, 42], [354, 65]],
+        ["1.2", "1", "image/png", [449, 261], [449, 145], [594, 116]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 284]],
+        ["delimiter", "1", [284, 28]],
+        ["headers", "1.1", [312, 42]],
+        ["body", "1.1", [354, 65]],
+        ["delimiter", "1", [419, 30]],
+        ["headers", "1.2", [449, 145]],
+        ["body", "1.2", [594, 116]],
+        ["delimiter", "1", [710, 32]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "utf-8", "7bit", "utf-8", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "86a8046a457b31afd287569ac93dae765660afe3cde7a7755c9542a38bcf1c4d"],
+        ["1.2", "a360f5a1b143c41984ba2acd21200f13175cada4ef2e56d7f38fb6df33470b0f"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.cid_use": {
+      "phase": 1,
+      "value": [
+        ["1.2", "<logo@example.test>", "referenced"]
+      ]
+    },
+    "body.cid_refs": {
+      "phase": 1,
+      "value": [
+        ["1.1", ["logo@example.test"]]
+      ]
+    }
+  }
+}

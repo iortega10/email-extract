@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_tnef_winmail.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "hand-written multipart/mixed (boundary b1-c-tnef) with a text/plain note and an application/ms-tnef winmail.dat whose bytes start with 78 9F 3E 22",
+    "hand_written": "tools/write_raw_fixtures.py, byte literal ATTACH_TNEF_WINMAIL",
+    "phase_1_facts": "attach.types: TNEF is not a row of the closed magic table, so magic is the unrecognized sentinel and the declared MIME supplies the family",
+    "expected_gaps": "attach.tnef_present (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "1937b1413d756aaea9021a9c283ef02ac9547067f0cba3f827372f0f01e80099"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 484
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach tnef winmail", "ok", [74, 7], [82, 20], [74, 30]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [104, 4], [109, 31], [104, 38]],
+        [4, "Message-ID", " <c-tnef-4203@example.test>", "ok", [142, 10], [153, 27], [142, 40]],
+        [5, "MIME-Version", " 1.0", "ok", [182, 12], [195, 4], [182, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b1-c-tnef\"", "ok", [201, 12], [214, 38], [201, 53]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 484], [0, 256], [256, 228]],
+        ["1.1", "1", "text/plain", [269, 66], [269, 46], [315, 20]],
+        ["1.2", "1", "application/ms-tnef", [350, 117], [350, 94], [444, 23]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 256]],
+        ["delimiter", "1", [256, 13]],
+        ["headers", "1.1", [269, 46]],
+        ["body", "1.1", [315, 20]],
+        ["delimiter", "1", [335, 15]],
+        ["headers", "1.2", [350, 94]],
+        ["body", "1.2", [444, 23]],
+        ["delimiter", "1", [467, 17]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", null, null, "7bit", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "6d8e6dd5da1aab9b0c9c4597f55ea98a138a8cc9b65ce853b8ddb1f80d31c03a"],
+        ["1.2", "6fab054f6a25cea9d0c4ce684fb54d31056ec96bf8b98610427c77c76d76ca7e"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["value", "application/ms-tnef", null], ["value", "unrecognized", null], ["unknown", null, "not_built_in_phase1"], "declared_mime", false]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.tnef_present", "1.2", 1, "an application/ms-tnef body is present; its contents are not expanded and the message's real body may live inside it (D4/D9). TNEF is unsupported in v1"]
+      ]
+    }
+  }
+}

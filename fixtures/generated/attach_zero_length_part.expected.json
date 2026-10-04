@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_zero_length_part.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-zerolen-20250304) with a text/plain note and a zero-length application/octet-stream attachment (empty.bin)",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_zero_length_part",
+    "phase_1_facts": "attach.manifest: the zero-length occurrence with size 0",
+    "expected_gaps": "none",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "de7b613f89363bee588981d36b255d78cfde1f330890a7122bf83cc855c6d45b"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 561
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach zero length part", "ok", [74, 7], [82, 24], [74, 34]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [108, 4], [113, 31], [108, 38]],
+        [4, "Message-ID", " <c-zero-length-4109@example.test>", "ok", [146, 10], [157, 34], [146, 47]],
+        [5, "MIME-Version", " 1.0", "ok", [193, 12], [206, 4], [193, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-zerolen-20250304\"", "ok", [212, 12], [225, 50], [212, 65]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 561], [0, 279], [279, 282]],
+        ["1.1", "1", "text/plain", [304, 69], [304, 46], [350, 23]],
+        ["1.2", "1", "application/octet-stream", [400, 132], [400, 132], [532, 0]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 279]],
+        ["delimiter", "1", [279, 25]],
+        ["headers", "1.1", [304, 46]],
+        ["body", "1.1", [350, 23]],
+        ["delimiter", "1", [373, 27]],
+        ["headers", "1.2", [400, 132]],
+        ["body", "1.2", [532, 0]],
+        ["delimiter", "1", [532, 29]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "binary", null, "binary", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "468ea28d24513d6ec3f126779d659fd08d294c18f6e833ed54db47dd5bd76109"],
+        ["1.2", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "empty.bin", "application/octet-stream", null, "attachment", "binary", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", 0]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["attach.types", "1.2", "the zero-length part's magic verdict: decision 6 says a not-computed magic (a zero-length part) is UNKNOWN(reason_id), but no reason id for 'not computed' is fixed anywhere readable, so the verdict triple is not typed here rather than inventing a reason id; the manifest row (size 0, sha256 of the empty string) is typed"]
+      ]
+    }
+  }
+}

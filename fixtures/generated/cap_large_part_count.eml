@@ -1,0 +1,54 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: cap large part count
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-large-part-count-4114@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-c-parts-20250304"
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 1
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 2
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 3
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 4
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 5
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 6
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 7
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 8
+
+--b0-c-parts-20250304
+Content-Type: text/plain; charset=us-ascii
+
+child 9
+
+--b0-c-parts-20250304--

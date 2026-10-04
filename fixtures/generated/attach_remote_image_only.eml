@@ -1,0 +1,20 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach remote image only
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-remote-image-4116@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b0-c-remote-20250304"
+
+--b0-c-remote-20250304
+Content-Type: text/plain; charset=us-ascii
+
+ 
+
+--b0-c-remote-20250304
+Content-Type: text/html; charset=utf-8
+
+<p>See below.</p>
+<img src="http://example.test/pic.png" alt="chart">
+
+--b0-c-remote-20250304--

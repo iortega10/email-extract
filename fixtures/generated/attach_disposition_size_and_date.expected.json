@@ -1,0 +1,114 @@
+{
+  "fixture": "attach_disposition_size_and_date.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-size-date-20250304) with a text/plain note and an attachment whose Content-Disposition carries a claimed size=583 and a claimed date=... beside filename=tiny.pdf",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_disposition_size_and_date",
+    "phase_1_facts": "attach.manifest (the occurrence; the disposition's size and date claims are not trusted and the manifest's size is the decoded size) and headers.parameters (the top-level boundary parameter)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "5aeb173402b37123ad804d2d2e5beead52dc95cae576090b9f463bda794ec316"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 1440
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach disposition size and date", "ok", [74, 7], [82, 33], [74, 43]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [117, 4], [122, 31], [117, 38]],
+        [4, "Message-ID", " <c-size-date-4110@example.test>", "ok", [155, 10], [166, 32], [155, 45]],
+        [5, "MIME-Version", " 1.0", "ok", [200, 12], [213, 4], [200, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-size-date-20250304\"", "ok", [219, 12], [232, 52], [219, 67]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 1440], [0, 288], [288, 1152]],
+        ["1.1", "1", "text/plain", [315, 92], [315, 46], [361, 46]],
+        ["1.2", "1", "application/pdf", [436, 973], [436, 171], [607, 802]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 288]],
+        ["delimiter", "1", [288, 27]],
+        ["headers", "1.1", [315, 46]],
+        ["body", "1.1", [361, 46]],
+        ["delimiter", "1", [407, 29]],
+        ["headers", "1.2", [436, 171]],
+        ["body", "1.2", [607, 802]],
+        ["delimiter", "1", [1409, 31]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "65b81c5726fd65c74770f06e443d2956a7a07e75464a4cc86fe8f5b9560ee8b0"],
+        ["1.2", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "tiny.pdf", "application/pdf", null, "attachment", "base64", "f4597a4d779fe32a1ffeba317ee8d4da688057dabba25c07f2878729ea708f6d", 583]
+      ]
+    },
+    "headers.parameters": {
+      "phase": 1,
+      "value": [
+        [6, "Content-Type", "boundary", "b0-c-size-date-20250304", "decoded", null]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["headers.parameters", "1.2 / Content-Disposition", "the disposition's size and date are recorded as the header's claim (never trusted or compared) and the FACTS table's structured-parameter list (a boundary, a charset, a name, a filename) has no column for them; the disposition's filename is a SUBPART parameter and the FACTS table does not fix the ordinal space for a parameter outside the top-level header block, so only the top-level boundary parameter is typed"]
+      ]
+    }
+  }
+}

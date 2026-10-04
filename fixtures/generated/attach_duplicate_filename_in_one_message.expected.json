@@ -1,0 +1,118 @@
+{
+  "fixture": "attach_duplicate_filename_in_one_message.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-dupname-20250304) with a text/plain note and two attachments that share the filename report.pdf AND the same bytes: one content identity, two occurrences",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_duplicate_filename_in_one_message",
+    "phase_1_facts": "attach.manifest: the two occurrences, same filename and same content hash",
+    "expected_gaps": "attach.occurrence_repeated (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "8588211da3338e150e3ebcc3ca8b44d9f98c6f5d0294929595277a21c33508bc"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 2320
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach duplicate filename in one message", "ok", [74, 7], [82, 41], [74, 51]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [125, 4], [130, 31], [125, 38]],
+        [4, "Message-ID", " <c-dup-filename-4106@example.test>", "ok", [163, 10], [174, 35], [163, 48]],
+        [5, "MIME-Version", " 1.0", "ok", [211, 12], [224, 4], [211, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-dupname-20250304\"", "ok", [230, 12], [243, 50], [230, 65]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 2320], [0, 297], [297, 2023]],
+        ["1.1", "1", "text/plain", [322, 71], [322, 46], [368, 25]],
+        ["1.2", "1", "application/pdf", [420, 922], [420, 124], [544, 798]],
+        ["1.3", "1", "application/pdf", [1369, 922], [1369, 124], [1493, 798]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 297]],
+        ["delimiter", "1", [297, 25]],
+        ["headers", "1.1", [322, 46]],
+        ["body", "1.1", [368, 25]],
+        ["delimiter", "1", [393, 27]],
+        ["headers", "1.2", [420, 124]],
+        ["body", "1.2", [544, 798]],
+        ["delimiter", "1", [1342, 27]],
+        ["headers", "1.3", [1369, 124]],
+        ["body", "1.3", [1493, 798]],
+        ["delimiter", "1", [2291, 29]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []],
+        ["1.3", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0],
+        ["1.3", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", "base64", null, "base64", null, false, null],
+        ["1.3", "base64", null, "base64", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "0839c5f4ace798e42a4ffff2487b1dc1eab07b7e4b68bab9ef1a2e1f931daecb"],
+        ["1.2", "b904138998743d7f202b22102a20fe58a17ea53426dc273b53d2eab2e2d72bb5"],
+        ["1.3", "b904138998743d7f202b22102a20fe58a17ea53426dc273b53d2eab2e2d72bb5"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "report.pdf", "application/pdf", null, "attachment", "base64", "b904138998743d7f202b22102a20fe58a17ea53426dc273b53d2eab2e2d72bb5", 581],
+        ["1.3", "report.pdf", "application/pdf", null, "attachment", "base64", "b904138998743d7f202b22102a20fe58a17ea53426dc273b53d2eab2e2d72bb5", 581]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.occurrence_repeated", "1.2, 1.3", 1, "the same bytes appear under the same filename twice: one identity (one content hash) and two occurrences, never merged (D4/D12); the manifest carries both occurrences"]
+      ]
+    }
+  }
+}

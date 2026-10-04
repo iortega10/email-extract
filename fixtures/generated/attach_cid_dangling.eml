@@ -1,0 +1,10 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach cid dangling
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-cid-dangling-4104@example.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<p>Logo below.</p>
+<img src="cid:missing@example.test" alt="logo">

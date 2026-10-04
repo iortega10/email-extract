@@ -1305,6 +1305,400 @@ def _fixture_text_part_with_body_parts_tree() -> bytes:
     )
 
 
+# ------------------------------- Family C : attachments and caps fixtures
+# (Turn 1.0c, commit 3 of 3). Every attachment payload is this file's own bytes
+# (zip_stored / tiny_pdf / tiny_png): nothing compresses anything, so no fixture
+# byte depends on the zlib build (operating rule 2). The five cap fixtures are
+# tiny in the bytes they send and deep or wide in structure.
+
+
+def _c_headers(subject: str, message_id: str, content_type: str) -> list[tuple[str, str]]:
+    """The Family C top-level header block; Content-Type is last (field ordinal 6)."""
+    return [
+        ("From", "Ada Sender <ada@example.test>"),
+        ("To", "Ben Receiver <ben@example.test>"),
+        ("Subject", subject),
+        ("Date", PINNED_DATE_0805),
+        ("Message-ID", f"<{message_id}@example.test>"),
+        ("MIME-Version", "1.0"),
+        ("Content-Type", content_type),
+    ]
+
+
+def _c_inline_leaf(ctype: str, cid: str, filename: str, data: bytes) -> Leaf:
+    """An inline occurrence: a Content-ID, an inline disposition and a stored payload."""
+    return Leaf(
+        [
+            ("Content-Type", ctype),
+            ("Content-ID", cid),
+            ("Content-Disposition", f'inline; filename="{filename}"'),
+            ("Content-Transfer-Encoding", "base64"),
+        ],
+        _b64(data),
+    )
+
+
+def _fixture_attach_manifest_baseline() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach manifest baseline",
+                "c-manifest-4101",
+                'multipart/mixed; boundary="b0-c-manifest-20250304"',
+            ),
+            "b0-c-manifest-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"Manifest baseline body.\r\n"),
+                _attachment_leaf("application/pdf", "tiny.pdf", tiny_pdf("tiny fixture")),
+                _attachment_leaf("image/png", "tiny.png", tiny_png(b"\x10\x20\x30")),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_inline_referenced() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach inline referenced",
+                "c-inline-ref-4102",
+                'multipart/related; boundary="b0-c-inline-ref-20250304"',
+            ),
+            "b0-c-inline-ref-20250304",
+            [
+                _plain_leaf(
+                    "text/html; charset=utf-8",
+                    b'<p>Hello Ben.</p>\r\n<img src="cid:logo@example.test" alt="logo">\r\n',
+                ),
+                _c_inline_leaf(
+                    "image/png", "<logo@example.test>", "logo.png", tiny_png(b"\x10\x20\x30")
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_inline_unreferenced() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach inline unreferenced",
+                "c-inline-unref-4103",
+                'multipart/related; boundary="b0-c-inline-unref-20250304"',
+            ),
+            "b0-c-inline-unref-20250304",
+            [
+                _plain_leaf("text/html; charset=utf-8", b"<p>No image is referenced.</p>\r\n"),
+                _c_inline_leaf(
+                    "image/png", "<spare@example.test>", "spare.png", tiny_png(b"\x40\x50\x60")
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_cid_dangling() -> bytes:
+    return render_message(
+        Leaf(
+            _c_headers(
+                "attach cid dangling", "c-cid-dangling-4104", "text/html; charset=utf-8"
+            ),
+            b'<p>Logo below.</p>\r\n<img src="cid:missing@example.test" alt="logo">\r\n',
+        )
+    )
+
+
+def _fixture_attach_duplicate_content_id() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach duplicate content id",
+                "c-dup-content-id-4105",
+                'multipart/mixed; boundary="b0-c-dupcid-20250304"',
+            ),
+            "b0-c-dupcid-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"Two parts share one Content-ID.\r\n"),
+                Leaf(
+                    [
+                        ("Content-Type", "image/png"),
+                        ("Content-ID", "<dup@example.test>"),
+                        ("Content-Disposition", 'attachment; filename="one.png"'),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(tiny_png(b"\x10\x20\x30")),
+                ),
+                Leaf(
+                    [
+                        ("Content-Type", "image/png"),
+                        ("Content-ID", "<dup@example.test>"),
+                        ("Content-Disposition", 'attachment; filename="two.png"'),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(tiny_png(b"\x40\x50\x60")),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_duplicate_filename_in_one_message() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach duplicate filename in one message",
+                "c-dup-filename-4106",
+                'multipart/mixed; boundary="b0-c-dupname-20250304"',
+            ),
+            "b0-c-dupname-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"Two copies of one file.\r\n"),
+                _attachment_leaf("application/pdf", "report.pdf", tiny_pdf("same bytes")),
+                _attachment_leaf("application/pdf", "report.pdf", tiny_pdf("same bytes")),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+_C_NESTED_MESSAGE = (
+    b"From: Cara Copy <cara@example.test>\r\n"
+    b"Subject: nested message\r\n"
+    b"Date: Tue, 4 Mar 2025 08:04:00 +0000\r\n"
+    b"Message-ID: <c-nested-2001@example.test>\r\n"
+    b"\r\n"
+    b"Nested body line.\r\n"
+)
+
+
+def _fixture_attach_message_rfc822_no_filename() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach message rfc822 no filename",
+                "c-rfc822-no-filename-4107",
+                'multipart/mixed; boundary="b0-c-rfc822-20250304"',
+            ),
+            "b0-c-rfc822-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"Forwarded message attached.\r\n"),
+                Leaf([("Content-Type", "message/rfc822")], _C_NESTED_MESSAGE),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_zip_magic_declared_disagree() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach zip magic declared disagree",
+                "c-zip-disagree-4108",
+                'multipart/mixed; boundary="b0-c-zipdis-20250304"',
+            ),
+            "b0-c-zipdis-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"One archive attachment.\r\n"),
+                Leaf(
+                    [
+                        ("Content-Type", "application/pdf"),
+                        ("Content-Disposition", 'attachment; filename="archive.bin"'),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(zip_stored([("hello.txt", b"hi\n")])),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_zero_length_part() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach zero length part",
+                "c-zero-length-4109",
+                'multipart/mixed; boundary="b0-c-zerolen-20250304"',
+            ),
+            "b0-c-zerolen-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"One empty attachment.\r\n"),
+                Leaf(
+                    [
+                        ("Content-Type", "application/octet-stream"),
+                        ("Content-Disposition", 'attachment; filename="empty.bin"'),
+                        ("Content-Transfer-Encoding", "binary"),
+                    ],
+                    b"",
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_disposition_size_and_date() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach disposition size and date",
+                "c-size-date-4110",
+                'multipart/mixed; boundary="b0-c-size-date-20250304"',
+            ),
+            "b0-c-size-date-20250304",
+            [
+                _plain_leaf(
+                    "text/plain; charset=us-ascii",
+                    b"One attachment with a claimed size and date.\r\n",
+                ),
+                Leaf(
+                    [
+                        ("Content-Type", "application/pdf"),
+                        (
+                            "Content-Disposition",
+                            'attachment; filename="tiny.pdf"; size=583;'
+                            ' date="Tue, 4 Mar 2025 08:00:00 +0000"',
+                        ),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(tiny_pdf("tiny fixture")),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_filename_rfc2231_fallback() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach filename rfc2231 fallback",
+                "c-filename-fallback-4111",
+                'multipart/mixed; boundary="b0-c-fname-fb-20250304"',
+            ),
+            "b0-c-fname-fb-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b"One log attachment.\r\n"),
+                Leaf(
+                    [
+                        ("Content-Type", "application/octet-stream"),
+                        ("Content-Disposition", "attachment; filename*=''run.log"),
+                        ("Content-Transfer-Encoding", "base64"),
+                    ],
+                    _b64(b"An empty charset is a recorded fallback.\n"),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_decoration_tracking_pixel() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach decoration tracking pixel",
+                "c-tracking-pixel-4112",
+                'multipart/related; boundary="b0-c-pixel-20250304"',
+            ),
+            "b0-c-pixel-20250304",
+            [
+                _plain_leaf("text/html; charset=utf-8", b"<p>No image reference here.</p>\r\n"),
+                _c_inline_leaf(
+                    "image/png",
+                    "<pixel@example.test>",
+                    "pixel.png",
+                    tiny_png(b"\x00\x00\x00", 1, 1),
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_attach_remote_image_only() -> bytes:
+    return render_message(
+        Multi(
+            _c_headers(
+                "attach remote image only",
+                "c-remote-image-4116",
+                'multipart/alternative; boundary="b0-c-remote-20250304"',
+            ),
+            "b0-c-remote-20250304",
+            [
+                _plain_leaf("text/plain; charset=us-ascii", b" \r\n"),
+                _plain_leaf(
+                    "text/html; charset=utf-8",
+                    b'<p>See below.</p>\r\n<img src="http://example.test/pic.png" alt="chart">\r\n',
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_cap_deep_nesting() -> bytes:
+    inner = _plain_leaf("text/plain; charset=us-ascii", b"deep leaf\r\n")
+    for depth in (5, 4, 3, 2):
+        boundary = f"b0-c-depth{depth}-20250304"
+        inner = Multi(
+            [("Content-Type", f'multipart/mixed; boundary="{boundary}"')], boundary, [inner]
+        )
+    return render_message(
+        Multi(
+            _c_headers(
+                "cap deep nesting", "c-deep-nesting-4113", 'multipart/mixed; boundary="b0-c-depth1-20250304"'
+            ),
+            "b0-c-depth1-20250304",
+            [inner],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_cap_large_part_count() -> bytes:
+    children = [
+        _plain_leaf("text/plain; charset=us-ascii", f"child {index}\r\n".encode("ascii"))
+        for index in range(1, 10)
+    ]
+    return render_message(
+        Multi(
+            _c_headers(
+                "cap large part count",
+                "c-large-part-count-4114",
+                'multipart/mixed; boundary="b0-c-parts-20250304"',
+            ),
+            "b0-c-parts-20250304",
+            children,
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_cap_enormous_header_block() -> bytes:
+    headers = _c_headers(
+        "cap enormous header block",
+        "c-enormous-header-4115",
+        'multipart/mixed; boundary="b0-c-huge-20250304"',
+    )
+    headers.extend((f"X-Filler-{index:02d}", "f" * 80) for index in range(60))
+    return render_message(
+        Multi(
+            headers,
+            "b0-c-huge-20250304",
+            [_plain_leaf("text/plain; charset=us-ascii", b"tiny body\r\n")],
+            epilogue=b"",
+        )
+    )
+
+
 # ------------------------------------------- the five TimeEvent conflict fixtures
 
 
@@ -1453,6 +1847,23 @@ FIXTURES = {
     "body_no_text_part": _fixture_body_no_text_part,
     "inline_interleaved_reply_body": _fixture_inline_interleaved_reply_body,
     "text_part_with_body_parts_tree": _fixture_text_part_with_body_parts_tree,
+    # Family C: attachments and caps (Turn 1.0c, commit 3)
+    "attach_manifest_baseline": _fixture_attach_manifest_baseline,
+    "attach_inline_referenced": _fixture_attach_inline_referenced,
+    "attach_inline_unreferenced": _fixture_attach_inline_unreferenced,
+    "attach_cid_dangling": _fixture_attach_cid_dangling,
+    "attach_duplicate_content_id": _fixture_attach_duplicate_content_id,
+    "attach_duplicate_filename_in_one_message": _fixture_attach_duplicate_filename_in_one_message,
+    "attach_message_rfc822_no_filename": _fixture_attach_message_rfc822_no_filename,
+    "attach_zip_magic_declared_disagree": _fixture_attach_zip_magic_declared_disagree,
+    "attach_zero_length_part": _fixture_attach_zero_length_part,
+    "attach_disposition_size_and_date": _fixture_attach_disposition_size_and_date,
+    "attach_filename_rfc2231_fallback": _fixture_attach_filename_rfc2231_fallback,
+    "attach_decoration_tracking_pixel": _fixture_attach_decoration_tracking_pixel,
+    "attach_remote_image_only": _fixture_attach_remote_image_only,
+    "cap_deep_nesting": _fixture_cap_deep_nesting,
+    "cap_large_part_count": _fixture_cap_large_part_count,
+    "cap_enormous_header_block": _fixture_cap_enormous_header_block,
 }
 
 FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)

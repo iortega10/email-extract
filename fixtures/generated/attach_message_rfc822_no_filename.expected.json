@@ -1,0 +1,109 @@
+{
+  "fixture": "attach_message_rfc822_no_filename.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "multipart/mixed (boundary b0-c-rfc822-20250304) with a text/plain note and a message/rfc822 part that carries no filename and no Content-Disposition",
+    "generator": "tools/make_fixtures.py, from _fixture_attach_message_rfc822_no_filename",
+    "phase_1_facts": "attach.manifest: one occurrence with no name, no disposition and no transfer encoding (the nested message is identity)",
+    "expected_gaps": "attach.filename_absent (Phase 1, in gaps.later); no phase-0 gap",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 are what the skeleton walker measures today",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "57d6f687ce4861807a168fa8ba81d3e540ce743c84e76f0e24a23909dec7461f"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 643
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [0, "From", " Ada Sender <ada@example.test>", "ok", [0, 4], [5, 30], [0, 37]],
+        [1, "To", " Ben Receiver <ben@example.test>", "ok", [37, 2], [40, 32], [37, 37]],
+        [2, "Subject", " attach message rfc822 no filename", "ok", [74, 7], [82, 34], [74, 44]],
+        [3, "Date", " Tue, 4 Mar 2025 08:05:00 +0000", "ok", [118, 4], [123, 31], [118, 38]],
+        [4, "Message-ID", " <c-rfc822-no-filename-4107@example.test>", "ok", [156, 10], [167, 41], [156, 54]],
+        [5, "MIME-Version", " 1.0", "ok", [210, 12], [223, 4], [210, 19]],
+        [6, "Content-Type", " multipart/mixed; boundary=\"b0-c-rfc822-20250304\"", "ok", [229, 12], [242, 49], [229, 64]]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 643], [0, 295], [295, 348]],
+        ["1.1", "1", "text/plain", [319, 75], [319, 46], [365, 29]],
+        ["1.2", "1", "message/rfc822", [420, 195], [420, 32], [452, 163]]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        ["headers", "1", [0, 295]],
+        ["delimiter", "1", [295, 24]],
+        ["headers", "1.1", [319, 46]],
+        ["body", "1.1", [365, 29]],
+        ["delimiter", "1", [394, 26]],
+        ["headers", "1.2", [420, 32]],
+        ["body", "1.2", [452, 163]],
+        ["delimiter", "1", [615, 28]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        ["1", 0, 0],
+        ["1.1", 0, 0],
+        ["1.2", 0, 0]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, "us-ascii", "7bit", "us-ascii", false, "declared_charset"],
+        ["1.2", null, null, "7bit", null, false, null]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "77f545df2415dd68449666fbda31c311cf9b20d45b20bb6e2d4993573108afc7"],
+        ["1.2", "972f2d3f9d975157175862c849bd1edce7f627f4da05b33617f9095f346e668a"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", null, "message/rfc822", null, null, null, "972f2d3f9d975157175862c849bd1edce7f627f4da05b33617f9095f346e668a", 163]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        ["attach.filename_absent", "1.2", 1, "the message/rfc822 occurrence carries no filename and no Content-Disposition; the occurrence is recorded content-first and the absent name is the gap (registry attach.filename_absent)"]
+      ]
+    }
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "fixture": "cap_enormous_header_block.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one multipart/mixed whose header block is sixty 80-byte X-Filler-NN fields after the seven real headers: over 5 KB of header bytes in tiny body bytes",
+    "generator": "tools/make_fixtures.py, from _fixture_cap_enormous_header_block",
+    "cap_value": "the design fixes NO cap value anywhere readable (the structural caps are caller parameters, fixed by the Turn 1.0d Limits); this fixture is built to sit just over an assumed header bytes (the header region is 5982 bytes over 67 fields) of 5982",
+    "phase_0_facts": "only container.sha256, container.size_bytes and part.gaps are typed at phase 0: the skeleton walker applies NO structural cap, so its part.tree/part.regions/decode.chain output for this fixture is the uncapped walk and is not what the intended behaviour (a cap hit) is; typing them would assert the walker's uncapped reading as the expected one. part.gaps is typed because a sidecar must state a gap expectation and the walker records no gap on these bytes (the same under either reading)",
+    "labels_are_typed": "every value was read out of the fixture bytes (offsets and lengths) and typed by a model from the RFC and format rules and the design, never copied out of the walker; labels_provenance is spec because a model wrote them, not a person",
+    "span_conventions": "a field's raw_span covers its line including the line ending; value_span starts immediately after the colon and keeps the leading space; a part's headers_span includes its closing empty line; the CRLF in front of a boundary line belongs to the delimiter region (RFC 2046), so the regions tile the message exactly",
+    "document_axes": "document.axes: the four not-built document axes unknown(not_built_in_phase1) (decision 6)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "2cefd47ac503fc3ecff01d9a5999f3c662f8301ba443d5548998644fcb3c8950"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 6087
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        ["document.axes", "1", "the intended status skipped(header_bytes_cap) for part 1: the design fixes no cap value and no declared fact carries a status or a cap record, so the cap hit is not typed as a fact id (the narrative status the design names is skipped(header_bytes_cap), Turn 1.0d/1.8)"]
+      ]
+    }
+  }
+}

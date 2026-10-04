@@ -1,0 +1,32 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach duplicate content id
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-dup-content-id-4105@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-c-dupcid-20250304"
+
+--b0-c-dupcid-20250304
+Content-Type: text/plain; charset=us-ascii
+
+Two parts share one Content-ID.
+
+--b0-c-dupcid-20250304
+Content-Type: image/png
+Content-ID: <dup@example.test>
+Content-Disposition: attachment; filename="one.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4AQEOAPH/ABAgMBAgMAAQ
+IDAQIDAKDgGBlyAvegAAAABJRU5ErkJggg==
+
+--b0-c-dupcid-20250304
+Content-Type: image/png
+Content-ID: <dup@example.test>
+Content-Disposition: attachment; filename="two.png"
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAGUlEQVR4AQEOAPH/AEBQYEBQYABA
+UGBAUGAZzgPBttC5CAAAAABJRU5ErkJggg==
+
+--b0-c-dupcid-20250304--

@@ -97,13 +97,13 @@ def test_the_corpus_manifest_lists_each_version_oldest_first() -> None:
     assert [entry["version"] for entry in corpora] == list(range(1, len(corpora) + 1))
     # Corpus version 1 is the Turn 0.2 inline corpus and never moves. The Turn
     # 0.3 switch made the committed fixtures the corpus source, so the newest
-    # version lists exactly today's fixture paths -- 8 generated, the raw 3 and
-    # the 5 conflict fixtures (16), which is the Turn 0.3 exit criterion.
+    # version lists exactly today's fixture paths -- the Turn 1.0c families bring the
+    # corpus to 90 fixtures (58 generated, 27 raw, 5 time).
     assert corpora[0] == {"version": 1, "files": sorted(behavior_ledger.INLINE_CORPUS)}
     names = behavior_ledger.discovered()
     assert corpora[-1]["files"] == names
     assert {name.split("/", 1)[0] for name in names} == {"generated", "raw", "time"}
-    assert len(names) == 68
+    assert len(names) == 90
 
 
 def test_the_fingerprints_are_stable_and_look_like_hashes() -> None:

@@ -1,0 +1,23 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: attach zip magic declared disagree
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <c-zip-disagree-4108@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="b0-c-zipdis-20250304"
+
+--b0-c-zipdis-20250304
+Content-Type: text/plain; charset=us-ascii
+
+One archive attachment.
+
+--b0-c-zipdis-20250304
+Content-Type: application/pdf
+Content-Disposition: attachment; filename="archive.bin"
+Content-Transfer-Encoding: base64
+
+UEsDBBQAAAAAAABAZFp6em/tAwAAAAMAAAAJAAAAaGVsbG8udHh0aGkKUEsBAhQAFAAAAAAAAEBk
+Wnp6b+0DAAAAAwAAAAkAAAAAAAAAAAAAAAAAAAAAAGhlbGxvLnR4dFBLBQYAAAAAAQABADcAAAAq
+AAAAAAA=
+
+--b0-c-zipdis-20250304--
