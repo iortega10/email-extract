@@ -31,6 +31,7 @@ from dataclasses import dataclass, field
 from typing import Final
 
 from .addresses import AddressRow, parse_address_list
+from .dates import DateRecord, parse_date
 from .rfc2047 import DecodedValue, decode_encoded_words
 from .rfc2231 import STRUCTURED_PARAMETERS, parse_parameters
 from .walk import RawHeaderField, WalkResult, _iter_lines, header_fields_at, leading_prelude
@@ -45,6 +46,7 @@ __all__ = [
     "HeaderRegion",
     "address_rows",
     "classify",
+    "date_rows",
     "decoded_rows",
     "fields_named",
     "header_region",
@@ -138,11 +140,12 @@ class HeaderRegion:
     """What Phase 1 measures from one part's header region.
 
     ``fields`` are the walker's field paragraphs, in order. ``gaps`` are this stage's own
-    gap ids (duplicate / lone-CR / invalid encoded word), in first-seen order; ``prelude``
-    are the tolerated-prelude gap ids. ``text_decodes`` maps a text-kind field's ordinal to
-    its RFC 2047 decode; ``addresses`` maps an address-list field's ordinal to its parsed
-    rows (Turn 1.2, :mod:`emailextract.addresses`). None of these are the walker's
-    ``part.gaps``.
+    gap ids (duplicate / lone-CR / invalid encoded word / the date gaps), in first-seen
+    order; ``prelude`` are the tolerated-prelude gap ids. ``text_decodes`` maps a text-kind
+    field's ordinal to its RFC 2047 decode; ``addresses`` maps an address-list field's
+    ordinal to its parsed rows (Turn 1.2, :mod:`emailextract.addresses`); ``dates`` maps a
+    ``date_time`` field's ordinal to its parsed :class:`~emailextract.dates.DateRecord`
+    (Turn 1.3). None of these are the walker's ``part.gaps``.
     """
 
     fields: list[RawHeaderField] = field(default_factory=list)
@@ -150,6 +153,7 @@ class HeaderRegion:
     prelude: list[str] = field(default_factory=list)
     text_decodes: dict[int, DecodedValue] = field(default_factory=dict)
     addresses: dict[int, list[AddressRow]] = field(default_factory=dict)
+    dates: dict[int, DateRecord] = field(default_factory=dict)
 
     def value_bytes(self, raw: bytes, item: RawHeaderField) -> bytes:
         """The verbatim value bytes of one field (between the colon and the content end)."""
@@ -250,12 +254,29 @@ def header_region(raw: bytes, result: WalkResult, *, max_work_units: int) -> Hea
             base_offset=item.value_span.offset,
             max_work_units=max_work_units,
         )
+
+    date_records: dict[int, DateRecord] = {}
+    for item in fields:
+        if item.parse_status != "ok" or classify(item.name) != "date_time":
+            continue
+        record = parse_date(raw[item.value_span.offset : item.value_span.end])
+        date_records[item.ordinal] = record
+        if record.gap is not None:
+            gaps.append(record.gap)
+    if not date_records:
+        # No Date field at all: the design's own headers.no_date names it (D2/D15), and the
+        # record is carried so the fact's row and the gap agree.
+        absent = parse_date(None)
+        if absent.gap is not None:
+            gaps.append(absent.gap)
+
     return HeaderRegion(
         fields=fields,
         gaps=_dedup(gaps),
         prelude=prelude,
         text_decodes=text_decodes,
         addresses=address_lists,
+        dates=date_records,
     )
 
 
@@ -273,9 +294,10 @@ def _parsed_value(item: RawHeaderField, region: HeaderRegion) -> str | None:
     """The scalar a field's kind yields this turn, or ``None`` where it is deferred.
 
     ``text`` yields the RFC 2047-decoded value, ``message_id`` the trimmed id token,
-    ``address_list`` the first addr-spec the tokenizer read (Turn 1.2); the ``date_time``
-    scalar needs the Turn 1.3 parser and is **not** computed here (never with the stdlib)
-    -- the caller reports it deferred by name.
+    ``address_list`` the first addr-spec the tokenizer read (Turn 1.2), and ``date_time``
+    the RFC 3339 UTC instant the date parser derived (Turn 1.3) -- ``None`` when that date
+    has no instant (invalid, no zone, an out-of-range offset), since the richer reason lives
+    in the ``headers.date`` fact.
     """
     kind = classify(item.name)
     if kind == "text":
@@ -293,6 +315,9 @@ def _parsed_value(item: RawHeaderField, region: HeaderRegion) -> str | None:
             if row.addr_spec is not None:
                 return row.addr_spec
         return None
+    if kind == "date_time":
+        record = region.dates.get(item.ordinal)
+        return record.utc if record is not None else None
     return None
 
 
@@ -321,6 +346,19 @@ def projection_rows(region: HeaderRegion) -> list[list[object]]:
         [item.ordinal, item.name, item.raw_value, classify(item.name), _parsed_value(item, region)]
         for item in region.fields
     ]
+
+
+def date_rows(region: HeaderRegion) -> list[list[object]]:
+    """``headers.date`` rows: ``[ordinal, raw, zone_state, offset, utc], ...`` (Turn 1.3).
+
+    One row per ``date_time`` field the header region carries, in ordinal order. When the
+    message carries **no** such field the fact is a single absent row whose ordinal and raw are
+    both ``None`` and whose zone state is ``zone_absent`` with utc ``["unknown",
+    "headers.no_date"]`` -- which is exactly how the labels type a missing Date.
+    """
+    if not region.dates:
+        return [parse_date(None).as_fact_row(None)]
+    return [region.dates[ordinal].as_fact_row(ordinal) for ordinal in sorted(region.dates)]
 
 
 def decoded_rows(region: HeaderRegion) -> list[list[object]]:

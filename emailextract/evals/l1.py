@@ -43,6 +43,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Final, Mapping
 
+from .. import dates as date_stage
 from .. import headers as header_stage
 from ..container import EmlContainer
 from ..parse import Limits
@@ -204,8 +205,11 @@ def _labels_undetermined(measured: Measured) -> Any:
 #: (``Limits.max_work_units_per_input_byte``), never a module default the decoder chose.
 WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_work_units_per_input_byte
 
-#: The **live** gap ids of Turn 1.1: the only ``gaps.later`` rows this turn's components
-#: can emit. A label row naming any other id waits for its own turn (``not_yet``).
+#: The **live** gap ids of Turns 1.1-1.3: the only ``gaps.later`` rows these turns'
+#: components can emit. A label row naming any other id waits for its own turn (``not_yet``).
+#: Turn 1.3 adds the three date gaps (``headers.no_date`` / ``headers.invalid_date`` /
+#: ``headers.date_no_zone``), carried in the header stage's own gap channel (never the
+#: walker's ``part.gaps``).
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
         header_stage.GAP_HEADERS_DUPLICATE_HEADER,
@@ -213,15 +217,17 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         header_stage.GAP_HEADERS_MBOX_FROM_LINE,
         header_stage.GAP_BODY_LONE_CR_LINE_TERMINATOR,
         header_stage.GAP_HEADERS_ENCODED_WORD_INVALID,
+        date_stage.GAP_HEADERS_NO_DATE,
+        date_stage.GAP_HEADERS_INVALID_DATE,
+        date_stage.GAP_HEADERS_DATE_NO_ZONE,
     }
 )
 
 #: The turn each deferred ``parsed_value`` column goes live in -- reported by name, never
-#: computed here (no stdlib ``parseaddr``/``parsedate`` to make the gate pass). Turn 1.2
-#: made the ``address_list`` scalar live, so only ``date_time`` (Turn 1.3) remains.
-DEFERRED_PARSED_VALUE_TURNS: Final[Mapping[str, str]] = MappingProxyType(
-    {"date_time": "1.3"}
-)
+#: computed here (no stdlib ``parseaddr``/``parsedate`` to make the gate pass). Turn 1.2 made
+#: the ``address_list`` scalar live and Turn 1.3 the ``date_time`` scalar, so **no** column is
+#: deferred: every ``headers.projection`` row is compared in full.
+DEFERRED_PARSED_VALUE_TURNS: Final[Mapping[str, str]] = MappingProxyType({})
 
 
 def _region(measured: Measured) -> header_stage.HeaderRegion:
@@ -239,6 +245,14 @@ def _headers_projection(measured: Measured) -> list[list[Any]]:
 def _headers_addresses(measured: Measured) -> list[list[Any]]:
     """``headers.addresses`` rows: one entry per address-list field, the tokenizer's rows in it."""
     return header_stage.address_rows(_region(measured))
+
+
+def _headers_date(measured: Measured) -> list[list[Any]]:
+    """``headers.date`` rows: ``[ordinal, raw, zone_state, offset, utc]`` per Date field.
+
+    A message with no Date field is the single absent row the labels type (Turn 1.3).
+    """
+    return header_stage.date_rows(_region(measured))
 
 
 def _headers_decoded(measured: Measured) -> list[list[Any]]:
@@ -262,11 +276,12 @@ def _gaps_later(measured: Measured) -> list[list[Any]]:
 def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
     """Compare ``headers.projection`` row by row, deferring the parsed scalar by name.
 
-    Columns 0-3 (ordinal, name, raw_value, parsed_kind) are compared for every row; the
-    parsed scalar (column 4) is compared for every kind whose parser exists this turn
-    (``text``, ``message_id``, ``message_id_list``, ``address_list`` from Turn 1.2). For
-    ``date_time`` (Turn 1.3) the column is **not** compared and the count is reported by
-    name -- never silently skipped, never computed with a stdlib parser to make it pass.
+    Columns 0-3 (ordinal, name, raw_value, parsed_kind) are compared for every row; the parsed
+    scalar (column 4) is compared for every kind whose parser exists -- ``text``,
+    ``message_id``, ``message_id_list``, ``address_list`` (Turn 1.2) and ``date_time``
+    (Turn 1.3). :data:`DEFERRED_PARSED_VALUE_TURNS` is now empty, so **every** row's scalar is
+    compared in full; a kind deferred by a later turn would still be reported by name here,
+    never silently skipped (and never computed with a stdlib parser to make it pass).
     """
     if not isinstance(expected, list) or not isinstance(actual, list):
         return expected == actual, None
@@ -511,10 +526,13 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "headers.date": Measure(
             1,
+            _headers_date,
+            live=True,
             note="[[ordinal, raw, zone_state, offset, utc], ...]; zone_state is "
             "zone_stated|zone_stated_minus_zero|zone_absent; offset is '+HHMM'/'-HHMM' or null; "
             "utc is the RFC 3339 instant or ['unknown', reason_id] (headers.no_date/"
-            "headers.invalid_date) -- a missing or invalid date never sorts as an epoch",
+            "headers.invalid_date) -- a missing or invalid date never sorts as an epoch; live "
+            "from Turn 1.3; a message with no Date field is the single absent row the labels type",
         ),
         "headers.parameters": Measure(
             1,

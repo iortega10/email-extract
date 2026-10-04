@@ -541,7 +541,8 @@ def test_the_address_facts_are_live_over_the_corpus() -> None:
 
     deferrals = oracle.deferral_counts()
     assert "headers.projection.address_list:1.2" not in deferrals
-    assert deferrals.get("headers.projection.date_time:1.3") == 12
+    # Turn 1.3 turned the last deferred column live, so nothing is deferred any more.
+    assert deferrals == {}
 
     gate = l1_gate()
     assert gate.passed is True

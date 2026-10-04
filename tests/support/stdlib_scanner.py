@@ -12,11 +12,12 @@ package. Its three comparisons are:
 * **(c) the decoded text** of benign leaves -- a header value's RFC 2047 decode, valid words
   only (the stdlib decodes an invalid word **silently** with ``defects = []``).
 
-Addresses and dates are deliberately **not** here: they are an advisory diff owned by Turn
-1.2 / 1.3. Where the stdlib is authoritative (field order and duplicates, RFC 2045 5.2
-defaults, RFC 2046 5.1.5 digest children, ``message/rfc822`` nesting, valid RFC 2047) a
-disagreement is the package's bug. Where the stdlib **shares the misreading** a comparison
-proves nothing and is excluded -- see :data:`SHARED_MISREADING`.
+Addresses and dates are deliberately **not** part of the three gated comparisons: they are an
+**advisory** diff, owned by Turn 1.2 (addresses) and Turn 1.3 (dates). Where the stdlib is
+authoritative (field order and duplicates, RFC 2045 5.2 defaults, RFC 2046 5.1.5 digest
+children, ``message/rfc822`` nesting, valid RFC 2047) a disagreement is the package's bug.
+Where the stdlib **shares the misreading** a comparison proves nothing and is excluded -- see
+:data:`SHARED_MISREADING`, :data:`SHARED_ADDRESS_MISREADING` and :data:`SHARED_DATE_MISREADING`.
 """
 
 from __future__ import annotations
@@ -26,21 +27,28 @@ import email
 import email.header
 import email.policy
 import email.utils
+import sys
 from dataclasses import dataclass
-from typing import Final
+from typing import Any, Final
 
 __all__ = [
     "ADDRESS_FIELD_NAMES",
+    "DATE_FIELD_NAMES",
     "SHARED_ADDRESS_MISREADING",
+    "SHARED_DATE_MISREADING",
     "SHARED_MISREADING",
     "ScanResult",
+    "StdlibDate",
     "addr_is_locatable",
     "address_fields",
+    "date_fields",
     "decoded_header_value",
+    "interpreter_label",
     "own_raw_fields",
     "scan",
     "split_header_block",
     "stdlib_address_pairs",
+    "stdlib_date",
     "stdlib_parseaddr",
 ]
 
@@ -203,3 +211,80 @@ def addr_is_locatable(value: bytes, addr: str) -> bool:
         if encoded and encoded in value:
             return True
     return False
+
+
+#: The RFC 5322 3.3 date-time field names (Turn 1.3): the fields the advisory date diff covers.
+DATE_FIELD_NAMES: Final[frozenset[str]] = frozenset({"date", "resent-date"})
+
+#: The **closed** reasons the stdlib is known to read a Date differently (Turn 1.3). A
+#: disagreement behind one of these proves nothing about the package, so the date diff is
+#: advisory: printed, never asserted on.
+SHARED_DATE_MISREADING: Final[dict[str, str]] = {
+    "minus_zero_read_as_plus_zero": "parsedate_tz rewrites the '-0000' token to offset 0 (0), "
+    "so the zone STATE the design's D2 preserves is lost",
+    "no_zone_is_naive": "parsedate_to_datetime returns a NAIVE datetime for a missing zone "
+    "(and for '-0000'), so no UTC instant is claimed at all",
+    "naive_read_as_utc": "reading that naive datetime as UTC would invent a zone the field "
+    "never stated",
+    "invalid_repaired": "parsedate_tz returns a 9-tuple with the fields it could guess rather "
+    "than declining an unparseable value the design names headers.invalid_date",
+    "offset_out_of_range_applied": "the stdlib accepts any 4-digit offset (e.g. +9960) that "
+    "the design's +/-9959 limit rejects",
+    "obs_year_mapping": "the stdlib's obs- (2- and 3-digit) year mapping is its own, so a year "
+    "it agrees on is not evidence the package's RFC 5322 4.3 rule is right",
+    "obs_zone_table": "the stdlib maps the US obs-zone names, like the package does, so "
+    "agreement on EST/PDT proves nothing",
+}
+
+
+@dataclass(frozen=True)
+class StdlibDate:
+    """The stdlib's advisory reading of one Date value: recorded-only run input, never a gate.
+
+    ``parsed_tz`` is ``email.utils.parsedate_tz``'s tuple (or ``None``); ``moment`` is
+    ``parsedate_to_datetime``'s ISO rendering (or ``None`` when it raised); ``naive`` says that
+    the datetime came back with no ``tzinfo``; ``error`` is the exception text, kept so a diff
+    row can show it.
+    """
+
+    parsed_tz: tuple[Any, ...] | None
+    moment: str | None
+    naive: bool
+    error: str | None
+
+
+def date_fields(data: bytes) -> list[tuple[str, bytes]]:
+    """This scanner's own reading of the Date fields: ``(lowercased name, value bytes)``.
+
+    Its own :func:`split_header_block` / :func:`own_raw_fields` and its own field-name list
+    (:data:`DATE_FIELD_NAMES`); the value is the raw bytes, so the advisory diff is over the
+    same bytes the package's parser reads.
+    """
+    fields: list[tuple[str, bytes]] = []
+    for name, value in own_raw_fields(split_header_block(data)):
+        lowered = name.decode("latin-1").lower()
+        if lowered in DATE_FIELD_NAMES:
+            fields.append((lowered, value))
+    return fields
+
+
+def stdlib_date(value: bytes) -> StdlibDate:
+    """Run both stdlib date entry points over one value and keep everything, including a raise."""
+    text = value.decode("latin-1")
+    parsed_tz = email.utils.parsedate_tz(text)
+    try:
+        moment = email.utils.parsedate_to_datetime(text)
+    except (TypeError, ValueError) as error:  # the stdlib's own failure mode
+        return StdlibDate(parsed_tz=parsed_tz, moment=None, naive=False, error=f"{type(error).__name__}: {error}")
+    return StdlibDate(
+        parsed_tz=parsed_tz, moment=moment.isoformat(), naive=moment.tzinfo is None, error=None
+    )
+
+
+def interpreter_label() -> str:
+    """The interpreter and patch level, as a recorded-only run input.
+
+    The stdlib's date behaviour differs across versions and patch levels (operating rule 2), so
+    the advisory diff is printed with the interpreter that produced it; it is never keyed on.
+    """
+    return f"CPython {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"

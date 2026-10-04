@@ -274,6 +274,10 @@ the oracle files changed), `tests/ledger/behavior_ledger.json` (appended lines o
 
 ```declaration turn=1.3
 module: emailextract/dates.py
+module: emailextract/headers.py
+module: emailextract/evals/l1.py
+module: tests/support/stdlib_scanner.py
+module: tests/ledger/label_ledger.json
 test: tests/test_dates.py::test_a_stated_zone_is_recorded_with_its_offset
 test: tests/test_dates.py::test_minus_zero_is_not_plus_zero
 test: tests/test_dates.py::test_an_absent_zone_is_zone_absent
@@ -284,11 +288,35 @@ test: tests/test_dates.py::test_an_invalid_date_returns_a_reason_never_an_epoch
 test: tests/test_dates.py::test_the_parser_never_raises_on_input_content
 test: tests/test_dates.py::test_a_reason_id_where_parsedate_to_datetime_raises
 test: tests/test_dates.py::test_the_stdlib_date_diff_is_recorded_only
+test: tests/test_dates.py::test_the_rfc5322_examples_and_obs_forms_parse
+test: tests/test_dates.py::test_a_leap_second_is_recorded_not_silently_rolled
+test: tests/test_dates.py::test_cfws_and_comments_do_not_split_or_supply_the_zone
+test: tests/test_dates.py::test_the_calendar_table_matches_hand_checked_dates
+test: tests/test_dates.py::test_the_date_row_maps_onto_the_facts_row_shape
+test: tests/test_dates.py::test_a_mutation_flips_the_gate_for_every_date_fact
+test: tests/test_dates.py::test_every_emitted_date_gap_id_has_a_mutation_case
+test: tests/test_dates.py::test_a_seeded_fuzz_of_the_parser_never_raises
+test: tests/test_dates.py::test_the_parser_is_linear_in_the_input
+test: tests/test_dates.py::test_the_date_facts_are_live_over_the_corpus
 stop: after the date parser and its advisory comparator
 ```
 
-Allow-list (`turn=1.3`): `emailextract/dates.py`, `tests/test_dates.py`,
-`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+**Refinement declared by the Turn 1.3 prompt (allowed: "add any extra to the block, which is
+allowed, and say so").** The frozen block named one module and ten tests. The turn adds the
+four modules the oracle wiring needs -- `emailextract/headers.py` (the narrow wiring that calls
+`dates.py` for the `date_time` kinds and the Date-absent case), `emailextract/evals/l1.py` (the
+two measurers), `tests/support/stdlib_scanner.py` (the advisory date diff) and
+`tests/ledger/label_ledger.json` (the oracle hashes) -- plus the ten extra test names above
+(RFC examples and obs-forms, the leap second, CFWS/comments, the calendar table, the fact row
+shape, the per-fact mutation, the per-gap anti-vacuity triple, the fuzz, linearity, and the
+live-fact sweep). Twenty tests, under the turn's ceiling of 25.
+
+Allow-list (`turn=1.3`): `emailextract/dates.py`, `emailextract/headers.py`,
+`emailextract/evals/l1.py`, `tests/support/stdlib_scanner.py`, `tests/ledger/label_ledger.json`,
+`tests/ledger/behavior_ledger.json`, `tests/test_dates.py`, `docs/design/phase1-empirical.md`,
+`docs/design/phase1-turn-declarations.md`, and the narrow forced edits to the existing tests
+named in the turn report (`tests/test_turn_declarations.py`, `tests/test_l1_gate.py`,
+`tests/test_addresses.py`, `tests/test_phase0_scope.py`). Not `fixtures/**` or `*.expected.json`.
 
 ## Turn 1.4 -- `text.py`: per-part text, alias table, offset maps, the one line model
 

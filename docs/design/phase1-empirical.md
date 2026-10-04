@@ -154,3 +154,45 @@ so the address rules cannot drift between them).
   doubles a 30 000-byte run of `(`, `\`, `<`, `"` and a 30 000-byte address list and measures
   the best of five; every ratio is ~2.0 (a quadratic scanner would show ~4.0), so no run of a
   repeated delimiter blows up. Runtime ~2.7 s.
+
+## Turn 1.3 — the date parser, its two live facts and the advisory stdlib diff
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.3; the
+command and its output are the record. Both interpreters run the suite; the values below are
+identical on CPython **3.14.3** and **3.11.15** (the code imports the stdlib `email` nowhere and
+uses only its own integer calendar arithmetic, so the date rules cannot drift between them).
+
+* **The L1 oracle now compares 8 more facts, all green.** Command:
+  `python -m emailextract.evals`. Output (both interpreters identical):
+  `L1 matched=792 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=140, phase 3=26`.
+  Before this turn the gate was `matched=784`, `not_yet: phase 1=148`; the 8 newly-live sidecar
+  facts are `headers.date` (the 6 fixtures that carry it: `date_stated_zone`, `date_minus_zero`,
+  `date_absent`, `date_invalid`, `date_offset_out_of_range`, `headers_plain_baseline`) and the
+  two `gaps.later` rows (`headers.no_date` on `date_absent`, `headers.invalid_date` on
+  `date_invalid`).
+* **The `parsed_value` column is now complete.** From `emailextract.evals.l1.deferral_counts()`:
+  `{}` — Turn 1.2 emptied the `address_list` half and Turn 1.3 the `date_time` half, so every
+  `headers.projection` row is compared in full (the 12 `date_time` rows included).
+* **The advisory stdlib date diff (printed, never gated).** Command:
+  `python -m pytest tests/test_dates.py::test_the_stdlib_date_diff_is_recorded_only -q -s`.
+  Over **89** Date fields (every fixture, including the five `fixtures/time/` ones), the own
+  parser and `email.utils.parsedate_to_datetime` disagree on **4** fields, each a catalogued
+  shared misreading: `date_invalid` and `date_offset_out_of_range` (`invalid_repaired` /
+  `offset_out_of_range_applied`: the stdlib raises `ValueError` where the design declines with a
+  reason), and `date_minus_zero` and `time/date_no_zone` (`minus_zero_read_as_plus_zero` /
+  `no_zone_is_naive`: the stdlib returns a **naive** datetime because `parsedate_tz` rewrote the
+  `-0000` token to offset 0, while the own parser keeps `zone_stated_minus_zero` with the instant
+  a `+0000` would give). Every one of the other **85** fields agrees. The one asserted property —
+  `tests/test_dates.py::test_a_reason_id_where_parsedate_to_datetime_raises` — holds over the
+  **4** raising/naive fields: the own parser never raises and never returns an epoch.
+* **The fuzz loop is seeded and bounded.** `Random(13_1003)`; **4000** seeds (89 mutated
+  Date-field values + 11 adversarial inputs, 40 mutations each). No defect found: the parser
+  never raised, every result was a record, and every `utc` was a well-formed RFC 3339 `+00:00`
+  instant (a leap second's `:60` allowed) or an `["unknown", reason]` pair with a registered
+  reason. Runtime ~0.1 s.
+* **The parser is linear.** `tests/test_dates.py::test_the_parser_is_linear_in_the_input` doubles
+  a 100 000-byte run of `(` (one nested comment), `(a)` (many comments) and `9` (one huge word)
+  and measures the best of five; the ratios are **1.97**, **1.87** and **2.05** (a quadratic
+  scanner would show ~4.0), so no run of a repeated delimiter blows up. Runtime ~0.9 s.
+* **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
+  run input, never keyed on; the two runs' date results are identical.

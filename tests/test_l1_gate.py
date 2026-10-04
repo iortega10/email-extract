@@ -54,7 +54,9 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # Turn 1.1 made headers.projection, headers.decoded, headers.parameters and its live
     # gaps.later facts measurable, so 30 phase-1 sidecar facts moved from not_yet to compared.
     # Turn 1.2 made headers.addresses measurable, moving its 7 sidecar facts to compared.
-    assert gate.data["not_yet"] == {1: 148, 3: 26}
+    # Turn 1.3 made headers.date measurable (6 sidecar facts) and turned the two date-gap
+    # gaps.later facts live, moving 8 more phase-1 facts to compared.
+    assert gate.data["not_yet"] == {1: 140, 3: 26}
 
 
 def test_the_committed_corpus_is_green_with_no_label_walker_disagreement() -> None:

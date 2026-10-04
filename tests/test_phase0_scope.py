@@ -34,6 +34,7 @@ EXPECTED_LIBRARY = {
     "__init__.py",
     "addresses.py",
     "container.py",
+    "dates.py",
     "headers.py",
     "ids.py",
     "model.py",
