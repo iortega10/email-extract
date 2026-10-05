@@ -243,3 +243,60 @@ only version-sensitive input is the ``codecs`` table, which is the same on both)
   and the all-one-byte-per-code-point case (the 1 MB ASCII body) is a single entry.
 * **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
   run input, never keyed on; the two runs' text results are identical.
+
+## Turn 1.5b — the referenced-cid set, the alternative grouping and the display rule
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.5b; the
+command and its output are the record. Both interpreters run the suite and the values below are
+identical on CPython **3.14.3** and **3.11.15** (`selection.py`, `htmltree.py` and `htmltext.py`
+import only the stdlib `html.parser`/`html`, which is the interpreter-sensitive input here).
+
+* **The L1 oracle now compares 23 more facts, all green.** Command:
+  `python -m emailextract.evals` (output sha256
+  `936776b42a105a559112315457b9511d999d346aa46b8cd084761d848e058fc7`). Output:
+  `L1 matched=824 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=108, phase 3=26`.
+  Before this turn the gate was `matched=801`, `not_yet: phase 1=131`. The 23 newly-live
+  sidecar facts are `body.html_spans` (9 rows over 4 fixtures), `body.selection` (4 fixtures),
+  `body.alternative_group` (3 fixtures), `body.cid_refs` (3 fixtures),
+  `body.plain_effectively_empty` (2 fixtures) and the four `gaps.later` rows this turn's gap
+  channel emits (`security.remote_content_present` on 3 fixtures, `body.inline_data_uri` on 1,
+  `body.digest_default_not_applied` on 1, `body.no_text_part` on 1).
+* **The five frozen `body.html_spans` rows were corrected before this turn.** Commit `b46949c`
+  fixed the two sidecars the Turn 1.5a finding named (`html_style_and_script` rows 0 and 4,
+  `html_href_img_remote_and_cid` rows 1, 2 and 3) and updated
+  `tests/test_htmltext.py::FINDING_ROWS` to assert agreement. So the oracle compares **every**
+  row: there is no `UNCOMPARABLE` mapping and the gate is `mismatched=0` over the whole corpus.
+* **The HTML corpus, counted.** Command: the `corpus_html_parts` sweep in
+  `tests/test_selection.py` (walking the corpus once). Over the 90 committed fixtures there are
+  **15** parts the walker reads as `text/html` (exactly one per fixture) and **8** parts it reads
+  as `multipart/alternative`. The selection stage emits **17** `body.alternative_group` rows,
+  **102** `body.selection` rows (8 `selected`, 9 `alternative_not_selected`, 85 `n/a`),
+  **5** `body.cid_refs` rows and **2** `body.plain_effectively_empty` rows; the oracle compares
+  only the rows a sidecar types (the labels are the judge where they exist).
+* **The stdlib HTML comparison (the third comparison's HTML half).** Command:
+  `python -m pytest tests/test_selection.py -q`. All **15** HTML parts are comparable and every
+  one agrees, tag multiset and `id` set, between `tests/support/stdlib_scanner.py`'s own
+  start-tag events and the own tree. **0** closed exclusion reasons fire over the corpus
+  (`element_count_cap`, `duplicate_id_attribute`, `misnested_input`, `unclosed_container`); each
+  of the four is reachable on hand-typed input, so the exclusion list is exercised, not decorative.
+* **The fuzz loop is seeded and bounded.** `Random(20250315)`; **1140** seeds (19 bases — the 15
+  corpus HTML texts plus empty, an element-count bomb and two 2 000-character attribute values —
+  × 60 mutants, with byte flips, truncations, repeats and swaps, injected unclosed tags and
+  quotes, NULs and an Arabic-Indic digit in a numeric position). No defect found: projecting never
+  raised, every span nested and stayed in range, projecting twice gave an identical projection,
+  the walk/selection path never raised, and every gap a fuzzed input emitted was registered. A
+  **100 000**-deep `<div>` bomb is a recorded cap (`depth_cap`) and a 100 000-character attribute
+  value is one element with a long value. A planted raiser in `_TreeBuilder._apply_implied_end`
+  makes the fuzz fail with the seed, so the loop is not vacuous. Runtime ~2.6 s.
+* **The projection is linear.** `tests/test_selection.py::test_the_html_stages_are_linear_on_a_megabyte_body`
+  projects a 1 MB and a 2 MB body of `<p>x</p>` at 131 072 and 262 144 elements:
+  **1.544 s → 2.989 s** (1.94×). A quadratic pass would show ~4× or worse, so no body size blows
+  the tree up.
+* **The corpus projection hash is interpreter-stable.** Command:
+  `python tests/support/html_projection_hash.py` and the same file under
+  `py -V:Astral/CPython3.11.15` both print the sha256
+  `c7862f370d94066222e041b2769d9aeb250f693eb0d3fc77915bafc686b8b566` over the 15 HTML parts'
+  projections. The check runs the file under a second CPython and fails loudly on any
+  disagreement (it never silently runs one interpreter twice and calls it "both").
+* **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
+  run input, never keyed on; the two runs build byte-identical projections over the whole corpus.

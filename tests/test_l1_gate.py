@@ -58,7 +58,11 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # gaps.later facts live, moving 8 more phase-1 facts to compared.
     # Turn 1.4 made body.text measurable (8 sidecar facts) and turned its one gap
     # (body.flowed_reflow_unresolved) live, moving 9 more phase-1 facts to compared.
-    assert gate.data["not_yet"] == {1: 131, 3: 26}
+    # Turn 1.5b made body.html_spans, body.alternative_group, body.selection, body.cid_refs
+    # and body.plain_effectively_empty measurable and turned the four new gap ids
+    # (body.digest_default_not_applied, body.no_text_part, security.remote_content_present,
+    # body.inline_data_uri) live, moving 23 more phase-1 facts to compared.
+    assert gate.data["not_yet"] == {1: 108, 3: 26}
 
 
 def test_the_committed_corpus_is_green_with_no_label_walker_disagreement() -> None:

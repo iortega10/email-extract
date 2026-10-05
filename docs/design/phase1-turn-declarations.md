@@ -407,28 +407,59 @@ test: tests/test_selection.py::test_an_alternative_group_id_is_message_local
 test: tests/test_selection.py::test_a_plain_effectively_empty_alternative_is_the_fact
 test: tests/test_selection.py::test_a_digest_child_without_content_type_is_the_gap
 test: tests/test_selection.py::test_a_text_calendar_alternative_is_a_view_not_an_attachment
+test: tests/test_selection.py::test_the_cid_helper_is_deterministic_for_sets
+test: tests/test_selection.py::test_a_message_with_no_text_part_selects_none_and_records_the_gap
+test: tests/test_selection.py::test_the_cid_reference_set_comes_from_the_tree_and_is_deduplicated_in_order
+test: tests/test_selection.py::test_a_cid_a_remote_url_and_a_data_uri_are_three_distinct_kinds
+test: tests/test_selection.py::test_the_cid_helper_is_set_arithmetic_and_case_sensitive
+test: tests/test_selection.py::test_the_selection_path_touches_no_socket_and_no_open
+test: tests/test_selection.py::test_every_emitted_gap_id_has_an_anti_vacuity_case
+test: tests/test_selection.py::test_every_gap_emitted_over_the_corpus_is_catalogued
+test: tests/test_selection.py::test_the_stdlib_scanner_agrees_on_html_shape
+test: tests/test_selection.py::test_the_stdlib_html_exclusions_are_closed_and_reachable
+test: tests/test_selection.py::test_the_html_shape_comparison_can_fail
+test: tests/test_selection.py::test_the_html_and_selection_stages_never_raise_over_a_seeded_fuzz
+test: tests/test_selection.py::test_a_planted_raiser_makes_the_html_fuzz_fail
+test: tests/test_selection.py::test_the_html_stages_are_linear_on_a_megabyte_body
+test: tests/test_selection.py::test_the_corpus_projection_hash_is_interpreter_stable
+test: tests/test_selection.py::test_an_untampered_html_copy_is_green
+test: tests/test_selection.py::test_a_wrong_sidecar_for_each_new_body_fact_fails_the_gate
 test: tests/test_htmltree.py::test_the_cid_reference_set_feeds_cid_dangling_and_unreferenced
 stop: after htmltree.py and the node-to-span map, before selection and the cid set
 ```
 
-**Turn 1.5 as executed.** The four extra `tests/test_htmltree.py` cases (the cap state, the
+**Turn 1.5 as executed, in two halves.** Turn 1.5a landed ``htmltree.py`` and ``htmltext.py``
+(the element tree, the projection, the node-to-span map) and stopped at the block's ``stop:``
+line; Turn 1.5b landed ``selection.py`` (the referenced-cid set, the alternative grouping, the
+display rule, the D16 emptiness fact) and the Phase 1 gap channel beside it, plus the oracle
+rows and the five new facts' gate proofs. The extras declared in the block -- the four extra
+``tests/test_htmltree.py`` cases, the six extra ``tests/test_htmltext.py`` cases (Turn 1.5a)
+and the sixteen ``tests/test_selection.py`` extras (the fact's neighbours, the cid helpers, the
+gap catalogue with its anti-vacuity triple, the stdlib HTML shape comparison with its closed
+exclusions, the seeded fuzz with its planted raiser, the 1 MB linearity test, the
+interpreter-stability hash and the L1 falsifiability proofs for the five new facts) -- are the
+extras both halves' prompts allowed ("add any extra to the block, which is allowed, and say
+so"). They are declared here and collected, so the turn is appended to ``BUILT_TURNS``.
+
+**Turn 1.5a as executed.** The four extra `tests/test_htmltree.py` cases (the cap state, the
 stray/mis-nesting/duplicate records, the implied-end table, the seeded mutation sweep) and
 the six extra `tests/test_htmltext.py` cases (the rule-id key, the nesting/ordering map,
 the label-agreement sweep with its pinned findings, the no-network/no-file guard, the
 remote/`data:` projection, the cap state and the odd-input sweep) are the **extras the
-turn's own prompt allowed** ("add any extra to the block, which is allowed, and say so").
-They are declared here and collected. Turn 1.5 stopped at its pre-declared stop point
-(after ``htmltree.py`` and the node-to-span map), so the ``selection.py`` cases and
-``test_the_cid_reference_set_feeds_cid_dangling_and_unreferenced`` are **declared but not
-yet collected**: the turn is not appended to ``BUILT_TURNS`` until its tests all land.
+half's own prompt allowed** ("add any extra to the block, which is allowed, and say so").
+Turn 1.5a stopped at its pre-declared stop point (after ``htmltree.py`` and the node-to-span
+map), so the ``selection.py`` cases and
+``test_the_cid_reference_set_feeds_cid_dangling_and_unreferenced`` were **declared but not
+collected** at that commit.
 
 Allow-list (`turn=1.5`): `emailextract/htmltree.py`, `emailextract/htmltext.py`,
 `emailextract/selection.py`, `emailextract/versions.py`, `tests/test_htmltree.py`,
 `tests/test_htmltext.py`, `tests/test_selection.py`, `tests/support/stdlib_scanner.py`,
-`tests/ledger/label_ledger.json`, `tests/ledger/behavior_ledger.json`,
-`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`, and the narrow
-forced edits the turn reports (`tests/test_phase0_scope.py`, `tests/test_html_parser_experiment.py`).
-Not `fixtures/**`.
+`tests/support/html_projection_hash.py`, `tests/ledger/label_ledger.json`,
+`tests/ledger/behavior_ledger.json`, `docs/design/phase1-empirical.md`,
+`docs/design/phase1-turn-declarations.md`, and the narrow forced edits the turn reports
+(`tests/test_phase0_scope.py`, `tests/test_html_parser_experiment.py`,
+`tests/test_turn_declarations.py`, `tests/test_l1_gate.py`). Not `fixtures/**`.
 
 ## The quote catalogue increment (between 1.5 and 1.6)
 

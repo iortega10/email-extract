@@ -28,7 +28,9 @@ import email.header
 import email.policy
 import email.utils
 import sys
+from collections import Counter
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from typing import Any, Final
 
 __all__ = [
@@ -37,8 +39,10 @@ __all__ = [
     "DATE_FIELD_NAMES",
     "SHARED_ADDRESS_MISREADING",
     "SHARED_DATE_MISREADING",
+    "SHARED_HTML_MISREADING",
     "SHARED_MISREADING",
     "SHARED_TEXT_MISREADING",
+    "HtmlShape",
     "ScanResult",
     "StdlibDate",
     "StdlibLeafText",
@@ -47,6 +51,7 @@ __all__ = [
     "date_fields",
     "decoded_header_value",
     "decoded_leaf_texts",
+    "html_shape",
     "interpreter_label",
     "own_raw_fields",
     "scan",
@@ -388,3 +393,79 @@ def decoded_leaf_texts(data: bytes) -> tuple[StdlibLeafText, ...]:
 BENIGN_TEXT_CHARSETS: Final[frozenset[str]] = frozenset(
     {"ascii", "utf-8", "iso8859-1", "cp1252"}
 )
+
+
+# ----------------------------------------------------- the HTML shape (Turn 1.5b)
+
+#: The **closed** reasons an HTML shape comparison proves nothing (Turn 1.5b). Each is a
+#: case where the own tree and the stdlib's flat start-tag events legitimately differ, and
+#: every difference is one the tree **records** as its own repair (decision 1), so a
+#: comparison over such input would be measuring the repair policy, not a defect.
+SHARED_HTML_MISREADING: Final[dict[str, str]] = {
+    "element_count_cap": "the own tree stopped at a caller's element-count cap and recorded a "
+    "truncated state, so it has fewer elements than the source has start tags",
+    "duplicate_id_attribute": "a repeated attribute name is first-wins in the tree (and recorded "
+    "as a duplicate) while the stdlib's event list keeps both values, so the id sets differ "
+    "by construction",
+    "misnested_input": "crossed elements are closed on the nearest match and recorded in "
+    "misnested_closures; the stdlib emits the same start tags but the closures are the tree's "
+    "own recorded repair",
+    "unclosed_container": "an unclosed container is recorded, never closed (the named "
+    "unclosed-container rule), which is the tree's own recorded state rather than the stdlib's",
+}
+
+
+@dataclass(frozen=True)
+class HtmlShape:
+    """The stdlib's own reading of one HTML text: the tag multiset and the ``id`` value set.
+
+    ``tag_counts`` is sorted ``(tag, count)`` pairs -- the multiset of start tags the stdlib's
+    ``HTMLParser`` emitted (**never** projected text, never a re-serialization). ``ids`` is the
+    sorted set of ``id`` attribute values it saw. This is the shape the own tree must match.
+    """
+
+    tag_counts: tuple[tuple[str, int], ...]
+    ids: tuple[str, ...]
+
+
+class _StartTagShape(HTMLParser):
+    """The stdlib's own start-tag events: a tag multiset and an ``id`` value set.
+
+    ``handle_startendtag`` is overridden so a ``<br/>`` is counted **once** (the base class
+    would call ``handle_starttag`` then ``handle_endtag``); nothing else is overridden, so the
+    parser's own CDATA handling for ``script``/``style`` and its tag/attribute lowercasing are
+    the stdlib's, not a reimplementation.
+    """
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.tag_counts: Counter[str] = Counter()
+        self.ids: set[str] = set()
+
+    def handle_starttag(self, tag: str, attrs) -> None:
+        self._record(tag, attrs)
+
+    def handle_startendtag(self, tag: str, attrs) -> None:
+        self._record(tag, attrs)
+
+    def _record(self, tag: str, attrs) -> None:
+        self.tag_counts[tag] += 1
+        for name, value in attrs:
+            if name.lower() == "id" and value is not None:
+                self.ids.add(value)
+
+
+def html_shape(html_text: str) -> HtmlShape:
+    """The stdlib's start-tag events over ``html_text``: the tag multiset and the ``id`` set.
+
+    Its own ``HTMLParser`` (no shared code with the package, which this module never imports)
+    and **no text projection**: the comparison this feeds is element counts and ids only. The
+    *exclusions* are :data:`SHARED_HTML_MISREADING`, applied by the test, never here.
+    """
+    shape = _StartTagShape()
+    shape.feed(html_text)
+    shape.close()
+    return HtmlShape(
+        tag_counts=tuple(sorted(shape.tag_counts.items())),
+        ids=tuple(sorted(shape.ids)),
+    )

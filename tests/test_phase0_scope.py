@@ -44,6 +44,7 @@ EXPECTED_LIBRARY = {
     "rfc2047.py",
     "rfc2231.py",
     "seam.py",
+    "selection.py",
     "siblings.py",
     "store.py",
     "text.py",

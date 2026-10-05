@@ -11,9 +11,17 @@ Every failure names the input, the fact and the reason.
 
 from __future__ import annotations
 
+import json
 import random
+from pathlib import Path
 
 from emailextract import htmltree
+from emailextract import selection as selection_stage
+from emailextract.container import EmlContainer, memory_bytes
+from emailextract.walk import walk
+
+ROOT = Path(__file__).resolve().parent.parent
+GENERATED = ROOT / "fixtures" / "generated"
 
 DROP = frozenset({"style", "script", "head"})
 IDENTITY = str  # the caller's text policy: verbatim
@@ -189,3 +197,97 @@ def test_the_tree_never_raises_over_a_seeded_mutation_set() -> None:
                     parent = by_ordinal[element.parent_ordinal]
                     assert parent.projected_offset <= element.projected_offset, (text, element)
                     assert element.projected_end <= parent.projected_end, (text, element)
+
+
+# --------------------------------------- the cid set read off the tree (Turn 1.5b)
+
+
+def _cid_fixture(name: str):
+    """``(referenced cids, Content-IDs, the sidecar's typed attach cid gaps)`` for one fixture."""
+    raw = (GENERATED / f"{name}.eml").read_bytes()
+    result = walk(EmlContainer(memory_bytes(raw)))
+    referenced = [
+        cid
+        for _part, cids in selection_stage.cid_ref_rows(
+            raw, result, max_depth=16, max_elements=1000
+        )
+        for cid in cids
+    ]
+    content_ids = [
+        field.raw_value.strip().strip("<>").strip()
+        for part in result.parts
+        for field in part.header_fields
+        if field.name.lower() == "content-id"
+    ]
+    sidecar = json.loads((GENERATED / f"{name}.expected.json").read_text(encoding="utf-8"))
+    typed = [
+        row[0]
+        for row in sidecar["facts"].get("gaps.later", {}).get("value", [])
+        if row[0].startswith("attach.cid_")
+    ]
+    return referenced, content_ids, typed
+
+
+def test_the_cid_reference_set_feeds_cid_dangling_and_unreferenced() -> None:
+    """The tree's cid set plus the walked ``Content-ID``s drive Turn 1.8's helper.
+
+    ``attach.cid_dangling`` / ``attach.cid_unreferenced`` stay in ``gaps.later`` (Turn 1.8
+    emits them), so this turn only proves the two inputs the helper will take are the ones
+    the frozen sidecars type -- and that a cid is compared as an RFC 2392 addr-spec.
+    """
+    cases = {
+        "attach_cid_dangling": (
+            ["missing@example.test"],
+            [],
+            ["missing@example.test"],
+            [],
+            ["attach.cid_dangling"],
+        ),
+        "attach_inline_unreferenced": (
+            [],
+            ["spare@example.test"],
+            [],
+            ["spare@example.test"],
+            ["attach.cid_unreferenced"],
+        ),
+        "attach_decoration_tracking_pixel": (
+            [],
+            ["pixel@example.test"],
+            [],
+            ["pixel@example.test"],
+            ["attach.cid_unreferenced"],
+        ),
+        "attach_inline_referenced": (["logo@example.test"], ["logo@example.test"], [], [], []),
+    }
+    for name, (referenced_expected, content_ids_expected, dangling, unreferenced, typed_gaps) in cases.items():
+        referenced, content_ids, typed = _cid_fixture(name)
+        assert referenced == referenced_expected, (name, referenced)
+        assert content_ids == content_ids_expected, (name, content_ids)
+        assert typed == typed_gaps, (name, typed)
+        assert selection_stage.dangling_and_unreferenced(referenced, content_ids) == (
+            dangling,
+            unreferenced,
+        ), name
+    # the comparison is case-sensitive as an addr-spec (RFC 2392), so a fold is not applied
+    assert selection_stage.dangling_and_unreferenced(
+        ["Logo@example.test"], ["logo@example.test"]
+    ) == (["Logo@example.test"], ["logo@example.test"])
+
+
+def test_the_tree_records_the_referenced_cid_set() -> None:
+    """The cid set is read from the element tree's own attributes, never a regex over the HTML.
+
+    A ``cid:`` inside a dropped subtree or a comment is not an element and never reaches the
+    set; a cid url is normalized once (brackets/whitespace stripped, percent-decoded once,
+    a ``?``/``#`` suffix kept verbatim, RFC 2392 has neither).
+    """
+    tree = _tree(
+        '<img src=" cid:a%2Fb@example.test ">'
+        '<img src="cid:logo@example.test?x=1#frag">'
+        '<!-- <img src="cid:comment@example.test"> -->'
+        "<style>p{background:url(cid:style@example.test)}</style>"
+    )
+    sources = [value for element in tree.elements for name, value in element.attributes if name == "src"]
+    assert sources == [" cid:a%2Fb@example.test ", "cid:logo@example.test?x=1#frag"], sources
+    values = [selection_stage._cid_value(source) for source in sources]
+    assert values == ["a/b@example.test", "logo@example.test?x=1#frag"], values

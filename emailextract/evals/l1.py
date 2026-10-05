@@ -45,6 +45,7 @@ from typing import Any, Callable, Final, Mapping
 
 from .. import dates as date_stage
 from .. import headers as header_stage
+from .. import selection as selection_stage
 from .. import text as text_stage
 from ..container import EmlContainer
 from ..parse import Limits
@@ -206,11 +207,13 @@ def _labels_undetermined(measured: Measured) -> Any:
 #: (``Limits.max_work_units_per_input_byte``), never a module default the decoder chose.
 WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_work_units_per_input_byte
 
-#: The **live** gap ids of Turns 1.1-1.4: the only ``gaps.later`` rows these turns'
+#: The **live** gap ids of Turns 1.1-1.5b: the only ``gaps.later`` rows these turns'
 #: components can emit. A label row naming any other id waits for its own turn (``not_yet``).
 #: Turn 1.3 adds the three date gaps (``headers.no_date`` / ``headers.invalid_date`` /
 #: ``headers.date_no_zone``); Turn 1.4 adds the body stage's ``body.flowed_reflow_unresolved``,
-#: all carried in their stage's own gap channel (never the walker's ``part.gaps``).
+#: all carried in their stage's own gap channel (never the walker's ``part.gaps``). Turn 1.5b
+#: adds the selection/HTML stage's four ids; ``body.html_quote_rule_gap`` is the tree's own
+#: (Turn 1.5a) and joins the channel when the selection stage carries it.
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
         header_stage.GAP_HEADERS_DUPLICATE_HEADER,
@@ -222,6 +225,11 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         date_stage.GAP_HEADERS_INVALID_DATE,
         date_stage.GAP_HEADERS_DATE_NO_ZONE,
         text_stage.GAP_BODY_FLOWED_REFLOW_UNRESOLVED,
+        selection_stage.GAP_BODY_DIGEST_DEFAULT_NOT_APPLIED,
+        selection_stage.GAP_BODY_NO_TEXT_PART,
+        selection_stage.GAP_SECURITY_REMOTE_CONTENT_PRESENT,
+        selection_stage.GAP_BODY_INLINE_DATA_URI,
+        selection_stage.htmltree.GAP_BODY_HTML_QUOTE_RULE_GAP,
     }
 )
 
@@ -271,11 +279,18 @@ def _gaps_later(measured: Measured) -> list[list[Any]]:
     """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``.
 
     The header stage's gaps (Turn 1.1-1.3) and the body stage's (Turn 1.4, the flowed part's
-    deferred reflow), each from its own channel -- never the walker's ``part.gaps``.
+    deferred reflow; Turn 1.5b, the digest/no-text/remote/``data:``/unclosed-quote gaps),
+    each from its own channel -- never the walker's ``part.gaps``.
     """
     pairs = [
         *header_stage.later_gaps(_region(measured)),
         *text_stage.body_gaps(measured.raw, measured.walked()),
+        *selection_stage.body_gaps(
+            measured.raw,
+            measured.walked(),
+            max_depth=HTML_MAX_DEPTH,
+            max_elements=HTML_MAX_ELEMENTS,
+        ),
     ]
     return [[gap_id, locator, 1, ""] for gap_id, locator in pairs]
 
@@ -287,6 +302,57 @@ def _body_text(measured: Measured) -> list[list[Any]]:
     row at all -- the walker's own text-part decision, reused, never widened.
     """
     return text_stage.part_text_rows(measured.raw, measured.walked())
+
+
+# ------------------------------------------- Turn 1.5b: the HTML and selection facts
+
+#: The caller's caps for the HTML projection the oracle runs: the approved untrusted
+#: defaults (``Limits.untrusted()``), so the oracle's tree is built under the same bound a
+#: real caller would use. ``htmltext.project``/``htmltree.build_tree`` take no default.
+HTML_MAX_DEPTH: Final[int] = Limits.untrusted().max_depth
+HTML_MAX_ELEMENTS: Final[int] = Limits.untrusted().max_parts
+
+
+def _html_spans(measured: Measured) -> list[list[Any]]:
+    """``body.html_spans`` rows: ``[part, element_ordinal, tag, offset, length]``.
+
+    One row per element of the own tree (``htmltree``/``htmltext``), for every part the
+    walker read as ``text/html``, in part-tree then document order -- the ``projected_offset``/
+    ``projected_length`` span the element covers in the HTML projection.
+    """
+    rows: list[list[Any]] = []
+    for locator, projection in selection_stage.html_projections(
+        measured.raw, measured.walked(), max_depth=HTML_MAX_DEPTH, max_elements=HTML_MAX_ELEMENTS
+    ):
+        rows.extend(projection.html_spans_rows(locator))
+    return rows
+
+
+def _body_cid_refs(measured: Measured) -> list[list[Any]]:
+    """``body.cid_refs`` rows: ``[part, [cid, ...]]`` for parts that reference any cid."""
+    return selection_stage.cid_ref_rows(
+        measured.raw, measured.walked(), max_depth=HTML_MAX_DEPTH, max_elements=HTML_MAX_ELEMENTS
+    )
+
+
+def _body_alternative_group(measured: Measured) -> list[list[Any]]:
+    """``body.alternative_group`` rows: ``[part, group_id]`` for parts inside an alternative."""
+    return selection_stage.alternative_group_rows(measured.raw, measured.walked())
+
+
+def _body_selection(measured: Measured) -> list[list[Any]]:
+    """``body.selection`` rows: ``[part, 'selected'|'alternative_not_selected'|'n/a']``.
+
+    The walker carries no selection measurement of its own (Turn 1.5b found none), so this
+    is the one measurer; the selection stage is a pure function of the part tree and the
+    parts' declared types, never of the content.
+    """
+    return selection_stage.selection_rows(measured.raw, measured.walked())
+
+
+def _body_plain_effectively_empty(measured: Measured) -> list[list[Any]]:
+    """``body.plain_effectively_empty`` rows: ``[part, emptiness_rule]`` (D16, a fact)."""
+    return selection_stage.plain_effectively_empty_rows(measured.raw, measured.walked())
 
 
 def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
@@ -482,8 +548,14 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "body.selection": Measure(
             1,
+            _body_selection,
+            live=True,
             note="[[part, 'selected'|'alternative_not_selected'|'n/a']] the recorded "
-            "alternative display rule (D3/D16; needs the parser)",
+            "alternative display rule (D3/D16); the walker measures no selection of its own, so "
+            "this measurer is the selection stage's (Turn 1.5b): a group member is "
+            "selected/alternative_not_selected by the closed preference order (text/plain, then "
+            "text/html, then text/calendar; an effectively-empty text/plain is skipped), and a "
+            "displayable text view outside any group is n/a",
         ),
         "headers.decoded": Measure(
             1,
@@ -572,24 +644,37 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "body.alternative_group": Measure(
             1,
+            _body_alternative_group,
+            live=True,
             note="[[part, group_id], ...] one row per part inside a multipart/alternative; group_id "
-            "is a message-local stable id (the multipart's part locator plus an ordinal)",
+            "is a message-local stable id (the multipart's part locator plus an ordinal). Live "
+            "from Turn 1.5b: the locator itself is the message-local ordinal path the frozen "
+            "labels type ('1' for the group at part 1, '1.1.1' for the group at part 1.1.1)",
         ),
         "body.html_spans": Measure(
             1,
+            _html_spans,
+            live=True,
             note="[[part, element_ordinal, tag, projected_offset, projected_length], ...] one row "
             "per element of the own element tree, in document order; the span is the element's span "
-            "in the HTML projection",
+            "in the HTML projection (htmltext); live from Turn 1.5b",
         ),
         "body.cid_refs": Measure(
             1,
+            _body_cid_refs,
+            live=True,
             note="[[part, [cid, ...]], ...] one row per part that references any cid: (an HTML img "
-            "src or a href); the list is the de-duplicated set of cids the part references",
+            "src or a href); the list is the de-duplicated set of cids the part references, in "
+            "first-occurrence order; the cid comes from the element TREE, never a regex over raw "
+            "HTML; live from Turn 1.5b",
         ),
         "body.plain_effectively_empty": Measure(
             1,
-            note="[[part, emptiness_rule], ...] one row per text/plain alternative present but "
-            "effectively empty; emptiness_rule is whitespace_only|stub_only",
+            _body_plain_effectively_empty,
+            live=True,
+            note="[[part, emptiness_rule], ...] one row per text/plain part present but effectively "
+            "empty (D16, a FACT not a gap); emptiness_rule is whitespace_only|stub_only, and only "
+            "whitespace_only is emitted (no frozen sidecar types stub_only); live from Turn 1.5b",
         ),
         "body.quote_boundaries": Measure(
             1,
