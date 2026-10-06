@@ -27,6 +27,7 @@ import email
 import email.header
 import email.policy
 import email.utils
+import hashlib
 import sys
 from collections import Counter
 from dataclasses import dataclass
@@ -38,16 +39,19 @@ __all__ = [
     "BENIGN_TEXT_CHARSETS",
     "DATE_FIELD_NAMES",
     "SHARED_ADDRESS_MISREADING",
+    "SHARED_ATTACHMENT_MISREADING",
     "SHARED_DATE_MISREADING",
     "SHARED_HTML_MISREADING",
     "SHARED_MISREADING",
     "SHARED_TEXT_MISREADING",
     "HtmlShape",
     "ScanResult",
+    "StdlibAttachmentLeaf",
     "StdlibDate",
     "StdlibLeafText",
     "addr_is_locatable",
     "address_fields",
+    "attachment_leaves",
     "date_fields",
     "decoded_header_value",
     "decoded_leaf_texts",
@@ -469,3 +473,94 @@ def html_shape(html_text: str) -> HtmlShape:
         tag_counts=tuple(sorted(shape.tag_counts.items())),
         ids=tuple(sorted(shape.ids)),
     )
+
+
+# --------------------------------------------- the attachment leaves (Turn 1.8)
+
+#: The **closed** reasons an attachment-leaf comparison proves nothing (Turn 1.8). Each is a
+#: case where the stdlib either shares the package's misreading or reads a different tree, so a
+#: comparison over such a fixture would measure a repair policy rather than a defect.
+SHARED_ATTACHMENT_MISREADING: Final[dict[str, str]] = {
+    "no_recursion": "the stdlib descends into message/rfc822 and hands back the nested Message "
+    "list for its payload, so the leaf's sha256/size are not the package's body bytes at all",
+    "digest_default": "the package records Content-Type None for a digest child (its own gap) so "
+    "the child is an occurrence, while the stdlib applies RFC 2046 5.1.5 and calls it text/plain",
+    "truncated_base64": "the stdlib's base64 is lenient exactly where the package's falls back and "
+    "keeps the raw payload verbatim, so the decoded sha256 and size are not the same reading",
+    "malformed_qp": "the stdlib repairs a stray '=' or a bad hex pair exactly where the package "
+    "keeps the bytes verbatim, so the decoded sha256 and size are not the same reading",
+    "unknown_cte": "an unknown Content-Transfer-Encoding is passed through raw by both, but only "
+    "by accident; the package records the fallback, so agreement proves nothing",
+    "leading_bom": "the stdlib reads a leading UTF-8 BOM and the first header line as the body, "
+    "so the two read different bytes and therefore a different tree",
+    "text_calendar_view": "the package reads every text/* leaf as a body view (D4: a "
+    "text/calendar alternative is a VIEW, never an attachment); this scanner excludes only "
+    "text/plain and text/html, so it counts a calendar leaf the package correctly does not",
+}
+
+
+@dataclass(frozen=True)
+class StdlibAttachmentLeaf:
+    """The stdlib's own reading of one attachment leaf: recorded-only run input, never a gate."""
+
+    content_type: str
+    transfer_encoding: str | None
+    sha256: str | None
+    size: int | None
+    error: str | None
+
+
+def _own_attachment_walk(part: Any, leaves: list[StdlibAttachmentLeaf]) -> None:
+    """This scanner's own traversal: the package's rule, restated here, not imported.
+
+    A ``message`` part is an attachment leaf and is **never** descended into (the package does
+    not recurse in Phase 1); a declared ``multipart/*`` part is a container (descended into when
+    the stdlib found children, never an attachment leaf even when the boundary never appeared);
+    a ``text/plain`` / ``text/html`` leaf is the body view. Everything else is an attachment
+    leaf, and its decoded payload comes from the stdlib's own ``get_payload(decode=True)``.
+    """
+    maintype = (part.get_content_maintype() or "").lower()
+    if maintype == "message":
+        leaves.append(_leaf(part))
+        return
+    if maintype == "multipart":
+        payload = part.get_payload()
+        if isinstance(payload, list):
+            for child in payload:
+                _own_attachment_walk(child, leaves)
+        return
+    if maintype == "text" and (part.get_content_subtype() or "").lower() in ("plain", "html"):
+        return
+    leaves.append(_leaf(part))
+
+
+def _leaf(part: Any) -> StdlibAttachmentLeaf:
+    content_type = part.get_content_type()
+    encoding = part.get("Content-Transfer-Encoding")
+    try:
+        payload = part.get_payload(decode=True)
+    except Exception as error:  # noqa: BLE001 -- recorded, never raised (advisory diff)
+        return StdlibAttachmentLeaf(content_type, encoding, None, None, f"{type(error).__name__}: {error}")
+    if payload is None:
+        return StdlibAttachmentLeaf(content_type, encoding, None, None, None)
+    return StdlibAttachmentLeaf(
+        content_type=content_type,
+        transfer_encoding=encoding,
+        sha256=hashlib.sha256(payload).hexdigest(),
+        size=len(payload),
+        error=None,
+    )
+
+
+def attachment_leaves(data: bytes) -> tuple[StdlibAttachmentLeaf, ...]:
+    """The stdlib's attachment leaves, in ``walk()`` order: count, order, sha256 and size.
+
+    Its own traversal (:func:`_own_attachment_walk`) over ``email.message_from_bytes`` with the
+    ``compat32`` policy, its own sha256 and its own ``get_payload(decode=True)``: this is the
+    fourth comparison's input, the attachment analogue of :func:`decoded_leaf_texts`. The
+    *exclusions* are :data:`SHARED_ATTACHMENT_MISREADING`, applied by the test, never here.
+    """
+    message = email.message_from_bytes(data, policy=email.policy.compat32)
+    leaves: list[StdlibAttachmentLeaf] = []
+    _own_attachment_walk(message, leaves)
+    return tuple(leaves)

@@ -98,6 +98,7 @@ __all__ = [
     "body_gaps",
     "canonical_charset",
     "charset_known",
+    "decoded_payload",
     "flowed_declared",
     "line_bounds",
     "part_text_rows",
@@ -581,6 +582,27 @@ def _verbatim_reason(
     if canonical is None or canonical in NOT_OFFSET_MAPPABLE:
         return REASON_MULTIBYTE_WITHOUT_OFFSET_MAP
     return None
+
+
+def decoded_payload(raw: bytes, part: PartShape) -> bytes | None:
+    """The part's transfer-decoded **payload bytes**, or ``None`` when it has none to give.
+
+    Turn 1.8's narrow exposure (the attachment stage reads a bounded prefix of a part's payload
+    and its decoded size): this is the same decode the walker ran and hashed, through the same
+    ``walk._decode_cte`` `analyse_part` uses, so nothing here is a second decode *rule*.
+
+    ``None`` has exactly one cause: the walker **skipped** the part for a size cap and left
+    ``part.body_sha256 = None`` (Turn 1.5c: nothing was decoded, so there are no payload bytes and
+    a caller must never decode them again). A multipart's ``body_sha256`` is also ``None``; its
+    bytes are its children's regions rather than a payload, so ``None`` is the honest answer there
+    too. A leaf whose decode produced no bytes returns ``b""`` -- not ``None``: the bytes exist and
+    are empty, which is a different fact from "the part was not read".
+    """
+    if part.body_sha256 is None:
+        return None
+    payload = raw[part.body_span.offset : part.body_span.end]
+    _used_cte, decoded, _fired, _gap = _decode_cte(payload, part.decode_chain.declared_cte)
+    return decoded
 
 
 def analyse_parts(raw: bytes, result: WalkResult) -> tuple[PartText, ...]:

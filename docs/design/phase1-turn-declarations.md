@@ -604,27 +604,107 @@ Allow-list (`turn=1.7`): `emailextract/quote/`, `emailextract/versions.py`, `tes
 ```declaration turn=1.8
 module: emailextract/attach.py
 module: emailextract/text.py
+module: emailextract/selection.py
+module: emailextract/evals/l1.py
+module: tests/test_attach.py
+module: tests/support/stdlib_scanner.py
+module: tests/test_phase0_scope.py
+module: tests/test_l1_gate.py
+module: tests/test_turn_declarations.py
+module: tests/ledger/label_ledger.json
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-build-spec.md
+module: docs/design/phase1-turn-declarations.md
 test: tests/test_attach.py::test_identity_is_the_content_sha256_not_the_path
 test: tests/test_attach.py::test_an_occurrence_is_filename_message_and_part_path
 test: tests/test_attach.py::test_classification_comes_from_disposition_and_filename_never_size
-test: tests/test_attach.py::test_a_decorative_hint_never_removes_an_occurrence
+test: tests/test_attach.py::test_a_message_rfc822_occurrence_is_recorded_and_not_recursed
 test: tests/test_attach.py::test_the_magic_table_matches_zip_ole_pdf_png_jpeg_gif_rtf_gzip_7z_rar
 test: tests/test_attach.py::test_a_declared_text_plain_with_a_zip_prefix_wins_for_magic
 test: tests/test_attach.py::test_magic_consulted_and_unmatched_is_the_unrecognized_value
 test: tests/test_attach.py::test_a_not_computed_magic_is_unknown_with_a_reason
+test: tests/test_attach.py::test_the_magic_read_is_bounded_to_the_prefix
 test: tests/test_attach.py::test_container_introspection_is_not_built_in_phase1
 test: tests/test_attach.py::test_type_disagreement_needs_two_families
 test: tests/test_attach.py::test_type_unknown_iff_no_verdict_yields_a_family
 test: tests/test_attach.py::test_the_winner_order_prefers_magic
-test: tests/test_attach.py::test_a_duplicate_content_id_records_the_gap
+test: tests/test_attach.py::test_the_declared_mime_verdict_keeps_the_headers_own_case
 test: tests/test_attach.py::test_a_cid_reference_decides_unreferenced_and_dangling
+test: tests/test_attach.py::test_a_duplicate_content_id_records_the_gap
+test: tests/test_attach.py::test_a_repeated_occurrence_is_one_identity_and_two_occurrences
 test: tests/test_attach.py::test_a_filename_with_an_empty_charset_is_a_recorded_fallback
+test: tests/test_attach.py::test_a_nameless_message_occurrence_records_the_absent_filename_gap
+test: tests/test_attach.py::test_a_decorative_hint_never_removes_an_occurrence
+test: tests/test_attach.py::test_the_tracking_pixel_rule_reads_the_declared_dimensions
 test: tests/test_attach.py::test_a_five_hundred_kilobyte_cap_hit_is_skipped_not_truncated
+test: tests/test_attach.py::test_a_total_cap_skips_the_part_and_every_later_part
+test: tests/test_attach.py::test_the_gap_ids_partition_into_emitted_and_defined
+test: tests/test_attach.py::test_the_attachment_gap_ids_are_what_the_corpus_types
+test: tests/test_attach.py::test_every_emitted_gap_id_has_a_mutation_case
+test: tests/test_attach.py::test_a_dropped_gap_mutant_is_caught_by_the_gate
+test: tests/test_attach.py::test_the_careless_mutants_are_all_named
+test: tests/test_attach.py::test_a_mutant_that_takes_the_identity_from_the_filename_is_caught
+test: tests/test_attach.py::test_a_mutant_that_classifies_by_size_is_caught
+test: tests/test_attach.py::test_a_mutant_that_guesses_a_zip_as_docx_is_caught
+test: tests/test_attach.py::test_a_mutant_that_takes_the_winner_from_declared_mime_is_caught
+test: tests/test_attach.py::test_a_mutant_that_treats_unrecognized_as_a_family_is_caught
+test: tests/test_attach.py::test_a_mutant_that_collapses_an_unknown_magic_is_caught
+test: tests/test_attach.py::test_a_mutant_that_gives_a_zero_length_part_a_magic_value_is_caught
+test: tests/test_attach.py::test_a_mutant_that_drops_a_duplicate_content_id_occurrence_is_caught
+test: tests/test_attach.py::test_a_mutant_that_removes_an_occurrence_on_a_hint_is_caught
+test: tests/test_attach.py::test_a_mutant_that_hints_a_referenced_image_is_caught
+test: tests/test_attach.py::test_a_mutant_that_hints_a_non_one_pixel_image_is_caught
+test: tests/test_attach.py::test_a_mutant_that_reads_past_the_tracking_pixel_header_is_caught
+test: tests/test_attach.py::test_a_mutant_that_guesses_a_charset_for_an_empty_charset_is_caught
+test: tests/test_attach.py::test_a_mutant_that_opens_a_tnef_or_zip_or_docm_attachment_is_caught
+test: tests/test_attach.py::test_a_mutant_that_truncates_a_cap_hit_part_is_caught
+test: tests/test_attach.py::test_a_mutant_that_invents_a_tracking_pixel_is_caught
+test: tests/test_attach.py::test_the_stdlib_scanner_agrees_on_the_attachment_leaves
+test: tests/test_attach.py::test_the_seeded_attachment_fuzz_finds_no_defect
+test: tests/test_attach.py::test_the_attachment_work_is_linear_in_the_parts
+test: tests/test_attach.py::test_a_planted_raiser_fails_the_fuzz_with_its_seed
+test: tests/test_attach.py::test_a_wrong_manifest_sha_fails_the_gate
+test: tests/test_attach.py::test_a_wrong_winner_fails_the_gate
+test: tests/test_attach.py::test_a_wrong_disagreement_flag_fails_the_gate
+test: tests/test_attach.py::test_a_missing_cid_use_row_fails_the_gate
+test: tests/test_attach.py::test_a_wrong_decoded_filename_fails_the_gate
+test: tests/test_attach.py::test_a_wrong_decorative_hint_fails_the_gate
+test: tests/test_attach.py::test_an_empty_or_vacuous_attach_corpus_fails_the_gate
+test: tests/test_attach.py::test_the_five_attachment_facts_are_live_and_compared
+test: tests/test_attach.py::test_the_cid_dangling_row_stays_deferred_for_its_finding
+test: tests/test_attach.py::test_attach_is_deterministic_across_runs_and_interpreters
+test: tests/test_attach.py::test_an_attached_text_file_is_an_attachment_not_a_body_view
+test: tests/test_attach.py::test_an_inline_text_part_stays_a_body_view
 stop: after the manifest, identity, verdicts and cid sets
 ```
 
-Allow-list (`turn=1.8`): `emailextract/attach.py`, `emailextract/text.py`, `emailextract/versions.py`,
-`tests/test_attach.py`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+Allow-list (`turn=1.8`): `emailextract/attach.py` (new), `emailextract/text.py` (the one
+`decoded_payload` exposure), `emailextract/selection.py` (the one public `is_body_view`),
+`emailextract/evals/l1.py`, `tests/test_attach.py`, `tests/support/stdlib_scanner.py` (extended
+with the attachment-leaf comparison), `tests/ledger/label_ledger.json` (an explicit
+one-off rewrite of the two changed oracle files' hashes only),
+`docs/design/phase1-empirical.md`, `docs/design/phase1-build-spec.md`,
+`docs/design/phase1-turn-declarations.md`, and the narrow forced edits
+`tests/test_phase0_scope.py` (the new module's name in `EXPECTED_LIBRARY`),
+`tests/test_l1_gate.py` (the new `not_yet` count) and `tests/test_turn_declarations.py`
+(`"1.8"` in `BUILT_TURNS`). Not `fixtures/**`, not `*.expected.json`, not `model.py`, not
+`ids.py`, not `walk.py`, not `versions.py`.
+
+**The turn's stop point.** Turn 1.8 stops after the manifest, the identity, the occurrences, the
+classification, the three type verdicts, the cid sets and the decorative hints are green and the
+ledgers are updated -- before Turn 1.9 (`assemble.py`, `ingest.py`, `store.py`), Turn 1.6 (the
+quote rules) and the phase-1 report.
+
+**Two findings this block records.** (1) `attach.cid_dangling` is **measured and not emitted**:
+`attach_cid_dangling` types the row while `html_href_img_remote_and_cid` -- whose own
+`not_yet_labelled` annotation names the same case -- types no such row, and the oracle's
+`gaps.later` comparison is exact over live ids for every sidecar that labels it, so no live
+emission satisfies both frozen sidecars; the measured dangling list rides
+`attach.Attachments.dangling` and the row stays `not_yet`. (2) The disagreement and the declared
+media type are read at the **container** level the frozen corpus fixes (build-spec decision 25):
+a declared OOXML type names the zip container it *is* and a generic `application/octet-stream`
+claim names none, while the manifest's `declared_mime` column keeps the header's own case (the
+frozen macro-container row types `macroEnabled.12`, not the walker's lowercased form).
 
 ## Turn 1.9 -- `assemble.py`, `ingest.py`, `store.py`
 

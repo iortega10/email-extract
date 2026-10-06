@@ -64,7 +64,12 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # body.inline_data_uri) live, moving 23 more phase-1 facts to compared.
     # The quote-catalogue follow-up (rows 27-29) adds three sidecars whose quote facts
     # are still not_yet, moving 9 more phase-1 facts to not_yet.
-    assert gate.data["not_yet"] == {1: 192, 3: 26}
+    # Turn 1.8 made attach.manifest, attach.types, attach.filename, attach.decorative and
+    # attach.cid_use measurable and turned its eight attachment gap ids live, moving 29
+    # more phase-1 facts to compared (attach.cid_dangling stays deferred: the two sidecars
+    # that carry the case disagree about whether the row is typed, and a label is never
+    # edited -- the turn's finding, reported with its bytes).
+    assert gate.data["not_yet"] == {1: 163, 3: 26}
 
 
 def test_the_committed_corpus_is_green_with_no_label_walker_disagreement() -> None:

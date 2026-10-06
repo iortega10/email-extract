@@ -43,6 +43,7 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Final, Mapping
 
+from .. import attach as attach_stage
 from .. import dates as date_stage
 from .. import headers as header_stage
 from .. import selection as selection_stage
@@ -213,7 +214,13 @@ WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_field_work_units_
 #: ``headers.date_no_zone``); Turn 1.4 adds the body stage's ``body.flowed_reflow_unresolved``,
 #: all carried in their stage's own gap channel (never the walker's ``part.gaps``). Turn 1.5b
 #: adds the selection/HTML stage's four ids; ``body.html_quote_rule_gap`` is the tree's own
-#: (Turn 1.5a) and joins the channel when the selection stage carries it.
+#: (Turn 1.5a) and joins the channel when the selection stage carries it. Turn 1.8 adds the
+#: attachment stage's eight -- its ``attach.EMITTED_GAP_IDS`` -- and **not**
+#: ``attach.cid_dangling``: the frozen ``html_href_img_remote_and_cid`` sidecar references a cid
+#: with no matching part (its own annotation names the ``attach_cid_dangling`` case) and types no
+#: such row, while ``attach_cid_dangling`` types one, so no live emission of that id can satisfy
+#: both. The measured dangling list rides ``attach.Attachments.dangling`` instead, and the row
+#: ``attach_cid_dangling`` types stays ``not_yet`` (the turn's finding, reported with its bytes).
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
         header_stage.GAP_HEADERS_DUPLICATE_HEADER,
@@ -230,6 +237,7 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         selection_stage.GAP_SECURITY_REMOTE_CONTENT_PRESENT,
         selection_stage.GAP_BODY_INLINE_DATA_URI,
         selection_stage.htmltree.GAP_BODY_HTML_QUOTE_RULE_GAP,
+        *attach_stage.EMITTED_GAP_IDS,
     }
 )
 
@@ -291,6 +299,7 @@ def _gaps_later(measured: Measured) -> list[list[Any]]:
             max_depth=HTML_MAX_DEPTH,
             max_elements=HTML_MAX_ELEMENTS,
         ),
+        *attach_stage.gap_pairs(_attachments(measured)),
     ]
     return [[gap_id, locator, 1, ""] for gap_id, locator in pairs]
 
@@ -353,6 +362,52 @@ def _body_selection(measured: Measured) -> list[list[Any]]:
 def _body_plain_effectively_empty(measured: Measured) -> list[list[Any]]:
     """``body.plain_effectively_empty`` rows: ``[part, emptiness_rule]`` (D16, a fact)."""
     return selection_stage.plain_effectively_empty_rows(measured.raw, measured.walked())
+
+
+def _attachments(measured: Measured) -> attach_stage.Attachments:
+    """The whole attachment stage for this fixture, walked once per fact (cheap; the walk is done).
+
+    The caller's caps for the referenced-cid set are the approved untrusted defaults (decision 9:
+    a cap is a caller parameter), and ``limits`` is ``None`` -- the oracle walks **unbounded**
+    (``walk(EmlContainer(raw))``), so no cap can have fired and nothing needs re-stating.
+    """
+    return attach_stage.attachments(
+        measured.raw,
+        measured.walked(),
+        max_depth=HTML_MAX_DEPTH,
+        max_elements=HTML_MAX_ELEMENTS,
+    )
+
+
+def _attach_manifest(measured: Measured) -> list[list[Any]]:
+    """``attach.manifest`` rows: the occurrences' ``[part, filename, declared_mime, cid, ...]``.
+
+    The walker measures no manifest of its own (Turn 1.8 found none), so this measurer *is* the
+    attachment stage's, and the three Phase 0 sidecars that typed the fact stay compared against
+    it (the facts document's finding 1: the ``declared_mime`` column is the declared verdict's
+    projected value, which is why those labels keep their plain string).
+    """
+    return attach_stage.manifest_rows(_attachments(measured))
+
+
+def _attach_types(measured: Measured) -> list[list[Any]]:
+    """``attach.types`` rows: the three verdicts, the winner and the disagreement (decision 6)."""
+    return attach_stage.type_rows(_attachments(measured))
+
+
+def _attach_filename(measured: Measured) -> list[list[Any]]:
+    """``attach.filename`` rows: the raw filename, its decode state and the recorded fallback."""
+    return attach_stage.filename_rows(_attachments(measured))
+
+
+def _attach_decorative(measured: Measured) -> list[list[Any]]:
+    """``attach.decorative`` rows: the decorative hint (``rule_id | null``), never a removal."""
+    return attach_stage.decorative_rows(_attachments(measured))
+
+
+def _attach_cid_use(measured: Measured) -> list[list[Any]]:
+    """``attach.cid_use`` rows: the cid and whether any body view references it."""
+    return attach_stage.cid_use_rows(_attachments(measured))
 
 
 def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
@@ -543,8 +598,15 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         # Phase 1: the parser's facts (identity, then body views and the attachment manifest).
         "attach.manifest": Measure(
             1,
+            _attach_manifest,
+            live=True,
             note="[[part, filename, declared_mime, cid, disposition, transfer_encoding, "
-            "content_sha256, size]] the attachment occurrences (D4; needs the parser)",
+            "content_sha256, size]] the attachment occurrences (D4); the walker measures no "
+            "manifest of its own, so this measurer is the attachment stage's (Turn 1.8): "
+            "filename is the DECODED name or null, declared_mime is the declared verdict's "
+            "projected value (the header's own media type, parameters dropped), cid keeps the "
+            "Content-ID header's value, disposition is the header's disposition token or null, "
+            "transfer_encoding is the declared CTE or null and size is the decoded payload size",
         ),
         "body.selection": Measure(
             1,
@@ -691,29 +753,48 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "attach.types": Measure(
             1,
+            _attach_types,
+            live=True,
             note="[[part, declared_mime, magic, container_introspection, winner, disagreement], ...] "
             "one row per attachment occurrence; each verdict is a triple [state, value | null, "
             "reason_id | null] with state value|absent|unknown (magic consulted and clean is "
-            "['value', 'unrecognized', null]); winner is magic|declared_mime|"
-            "container_introspection|null; disagreement is a bool",
+            "['value', 'unrecognized', null]; not computed is ['unknown', null, reason_id] with a "
+            "member of the closed magic reason tuple, the zero-length body among them); winner is "
+            "magic|declared_mime|container_introspection|null; disagreement is a bool, true iff the "
+            "verdicts name two CONTAINER families (Turn 1.8's decision 25: a declared OOXML type "
+            "names the zip container it is and a generic application/octet-stream claim names none)",
         ),
         "attach.filename": Measure(
             1,
+            _attach_filename,
+            live=True,
             note="[[part, filename_raw, decode_state, decoded_value, fallback_reason], ...] one row "
-            "per occurrence that carries a filename; decode_state is decoded|fallback|absent|"
-            "unparsable; fallback_reason is null unless decode_state=fallback",
+            "per occurrence that carries a filename; filename_raw is the parameter's value as "
+            "written (''run.log); decode_state is decoded|fallback|absent|unparsable (absent has no "
+            "row); fallback_reason is null unless decode_state=fallback, then "
+            "encoded_word_in_parameter|empty_charset|missing_continuation_index|"
+            "duplicate_continuation_index (an empty charset is a recorded fallback, never "
+            "'unparsable'); live from Turn 1.8",
         ),
         "attach.decorative": Measure(
             1,
+            _attach_decorative,
+            live=True,
             note="[[part, rule_id | null], ...] one row per attachment occurrence; rule_id is a "
             "recorded hint rule (inline_unreferenced_small_image|inline_unreferenced_tracking_pixel) "
-            "or null; the hint never removes an occurrence",
+            "or null; the hint never removes an occurrence. Turn 1.8 fires only "
+            "inline_unreferenced_tracking_pixel (an inline, unreferenced png/gif whose declared "
+            "dimensions are 1x1); inline_unreferenced_small_image is the empty set in Phase 1",
         ),
         "attach.cid_use": Measure(
             1,
-            note="[[part, cid, referenced], ...] one row per occurrence that carries a Content-ID; "
-            "referenced is referenced|unreferenced|n/a, decided against body.cid_refs; a cid-less "
-            "occurrence is ['<part>', null, 'n/a']",
+            _attach_cid_use,
+            live=True,
+            note="[[part, cid, referenced], ...] one row per occurrence; cid keeps the Content-ID "
+            "header's value (angle brackets included) and referenced is referenced|unreferenced|n/a, "
+            "decided against body.cid_refs case-sensitively on the normalised cid (whitespace and one "
+            "angle-bracket pair stripped); a cid-less occurrence is ['<part>', null, 'n/a']; live "
+            "from Turn 1.8",
         ),
         # Phase 3: threading and time evidence (D7/D15).
         "thread.claims": Measure(

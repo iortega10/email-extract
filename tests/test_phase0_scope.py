@@ -33,6 +33,7 @@ EVALS = PACKAGE / "evals"
 EXPECTED_LIBRARY = {
     "__init__.py",
     "addresses.py",
+    "attach.py",
     "container.py",
     "dates.py",
     "headers.py",

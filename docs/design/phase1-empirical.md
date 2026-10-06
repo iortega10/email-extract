@@ -347,3 +347,58 @@ command and its output are the record.
 * **Decode chunk size: `walk.DECODE_CHUNK` = 8 192 input bytes**, and the recorded
   `declared_size_bytes` of a decoded cap is the skipped region's span length -- the part's
   **encoded** body length, an exact, already-measured bound on its decoded size.
+
+## Turn 1.8 -- the attachment manifest, its five facts and the fuzz
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.8; the
+command and a sha256 of its output are the record.
+
+* **The five attachment facts are live and the corpus is green.**
+  `python -m pytest -q` -> **1560 passed, 1 skipped** in 61.8 s on CPython 3.14.3, and the same
+  **1560 passed, 1 skipped** in 62.6 s under the CPython 3.11.15 venv. `python -m pytest
+  tests/test_attach.py -q` -> **65 passed**: 58 test functions, one of them parametrized over
+  the eight emitted gap ids (65 collected ids). Command: `python -m emailextract.evals` ->
+  `L1 matched=1176 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=163, phase 3=26;
+  no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass`, output sha256
+  `923af1ee4c647b8d788ad06fd8ad6b78f640cb0d4f36565b3566b7f9b26ae723` -- **byte-identical under
+  CPython 3.11.15** (same hash). That is **29 more compared facts** than the 1147/0/{1:192, 3:26}
+  Turn 1.5c recorded, and 29 fewer `not_yet`: the five facts' 29 committed rows.
+* **The attachment rows hash to one value on both interpreters.** Command:
+  `python -c "import sys; sys.path.insert(0,'tests'); import test_attach as T;
+  print(T.attach_corpus_hash())"` -> `c39325c9cc5ad311b20e2d003a0985febefeeba7fbcb27904c3250a13c29419b`
+  (the same string from the CPython 3.11.15 venv). The hash covers the five facts' rows, the gap
+  pairs and the cap records of every one of the 119 fixtures.
+* **The committed corpus's attachment coverage** (rows per fact over `fixtures/**/*.expected.json`,
+  excluding `real/`): `attach.manifest` **9 sidecars / 15 rows**, `attach.types` **5 / 6**,
+  `attach.filename` **2 / 2**, `attach.decorative` **1 / 1**, `attach.cid_use` **2 / 2**. Every
+  one is below the floor `docs/design/phase1-facts.md` declares for it (10, 12, 10, 4, 5): the
+  Turn 1.0c "floors re-based after the quote increment" finding, unchanged by this turn.
+* **The independent check compares 115 of 119 fixtures.** Every fixture's attachment leaves are
+  compared to the stdlib's own `compat32` walk (count, order, decoded sha256, decoded size and
+  declared content type) with four excluded, each under a closed reason: two `no_recursion`
+  (the stdlib descends into `message/rfc822` and hands back the nested `Message` list, so it has
+  no payload bytes at all), one `digest_default` (the package records `Content-Type` `None` for a
+  digest child, the stdlib applies RFC 2046 5.1.5 and calls it `text/plain`) and one
+  `text_calendar_view` (the package reads every `text/*` leaf as a body view; this scanner's own
+  statement excludes only `text/plain`/`text/html`). A planted wrong size flips it.
+* **The fuzz: 48 seeds, one mutation of an attachment fixture each, 0.06 s.** Seed `n` mutates a
+  fixed fixture with `random.Random(n)`, twice, from nine mutation kinds (byte flips, truncation,
+  a repeated/swapped chunk, a 200-character `filename=` value, a NUL in a header name, an Arabic-
+  Indic digit `size=` parameter, a signature one byte late, a truncated PNG signature, a 1x1
+  header with a zero height). No seed raises; the recorded read lengths never exceed 24 bytes
+  (`IMAGE_HEADER_BYTES`) while the magic reads are exactly 16 (`MAGIC_PREFIX_BYTES`); a planted
+  raiser on the third call is reported as `seed 2 on <fixture>: RuntimeError: planted raiser`.
+* **The work is linear in the parts, measured with the bounded-read counter (never a clock).**
+  Four occurrences request **128** bytes and sixteen occurrences request **512** -- exactly
+  `4.00x`, i.e. 32 bytes per occurrence (16 for the magic, 16 for the TNEF prefix; an image
+  header adds 24+16 for the candidates), whatever the payload sizes are. Across the whole fuzz,
+  `sum(requested) <= 100 x occurrences + 100` holds with no seed near the bound.
+* **The two ledgers.** `python tools/update_behavior_ledger.py --check` exits **0** before and
+  after with no new lines: the `walk`, `decode_chain` and `contracts` fingerprints do not move
+  (no version constant changed and no fingerprinted module changed). `python
+  tools/update_label_ledger.py --check` exits **0** after an explicit one-off rewrite of exactly
+  two entries -- `emailextract/evals/l1.py`
+  `c99cff7edb54...` -> `b144a81900b8...` and `tests/support/stdlib_scanner.py`
+  `7d65f5400e98...` -> `b905e9580126...` -- with **all 119** `fixtures/**/*.expected.json`
+  entries byte-identical (proved: the ledger diff is two `-`/`+` line pairs and no other line
+  moves; every sidecar's recorded hash equals its file's bytes).

@@ -306,6 +306,58 @@ anywhere in the package.
     moves under `limits=None`) and no `LIMITS_VERSION` is introduced: nothing emits it and no ledger line keys
     it.
 
+### Turn 1.8 -- the attachment stage (the choices items 3 and 6 of the turn force)
+
+25. **The attachment stage's two forced choices, both from the frozen corpus and both recorded as
+    findings in the turn's report.** *(a) The magic verdict's not-computed reasons.* The closed
+    tuple in `attach.py` is exactly four members: `magic_part_skipped_cap` (the walker skipped the
+    part for a size cap: nothing was decoded, so nothing can be sniffed), `magic_body_undecodable`
+    (the part has body bytes and the transfer decode produced none), `magic_body_encrypted`
+    (defined and **never emitted** in Phase 1: the encrypted-OOXML prefix check needs the
+    introspection decision 6 defers) and `magic_body_empty` (a zero-length body decoded fine and
+    there are no bytes to sniff, so it is `UNKNOWN(magic_body_empty)` and not the
+    consulted-and-clean sentinel `VALUE("unrecognized")` -- the earlier plan-debate row that made a
+    zero-length leaf `UNRECOGNIZED` is replaced here). They are *not* gap ids, *not* status reasons
+    and *not* in the gap registry: they are the closed reason ids of that one `TriValue`.
+    *(b) The disagreement and the declared media type are read at the **container** level.* The
+    frozen `attach_ole_cfb_magic` `attach.types` row (declared `application/octet-stream`, magic
+    `ole-cfb`, `disagreement` false) and the frozen macro-container `gaps.later` (declared
+    `application/vnd.ms-word.document.macroEnabled.12`, magic `zip`, **no** disagreement row, while
+    the pdf/zip fixture does type one) are both reproduced only by reading the verdicts the way D4
+    itself discusses them ("DOCX/XLSX/PPTX are all zip and `.xls`/`.doc`/`.msg` are all OLE-CFB"):
+    `attach.container_family` maps the model's `type_family_of` through two closed declared-media-type
+    tables (a declared OOXML type names the zip container it *is*; a declared `.doc`/`.xls`/`.msg`
+    type names OLE-CFB) and a generic `application/octet-stream` claim names no family, because a
+    claim of no specific type cannot contradict anything. `attach.disagrees` then applies the model's
+    own set rule (>= 2 families); the design's own example (`declared_mime=text/plain` with a
+    `PK\x03\x04` prefix **is** a disagreement) still holds. The winner and the families stay the
+    model's functions, and the manifest's `declared_mime` column is the media type **as the header
+    writes it** (the frozen macro-container row types `macroEnabled.12`, while the walker's
+    `part.content_type` is lowercased and its `part.tree` label types that lowercased form).
+    The turn reports both as label-versus-brief findings with their bytes; no label was edited and
+    neither `model.py` nor `walk.py` was changed.
+26. **The decorative hint's rule, decided by recommendation** (the undetermined entry 6 of
+    `attach_decoration_tracking_pixel` the Turn 1.0c review left open; D4). `attach.decorative`
+    carries `rule_id | null` per occurrence and never removes one.
+    `inline_unreferenced_tracking_pixel` fires iff the occurrence is **inline**, its cid is
+    **unreferenced**, its magic verdict is `png` or `gif` (never `jpeg`: JPEG dimensions are not
+    read), and the image's declared pixel dimensions in the **first 24 bytes** of the decoded
+    payload are exactly 1 x 1 (a PNG `IHDR` width/height at bytes 16-23, a GIF logical screen
+    width/height at bytes 6-9 little-endian). `inline_unreferenced_small_image` is the **empty**
+    closed set in Phase 1 -- no size threshold is fixed by the design -- so the id is in the
+    vocabulary, never fires, and a test asserts it never fires. A referenced image is never a hint,
+    a non-inline image is never a hint, and nothing is hinted from size alone.
+27. **`attach.cid_dangling` is measured and not emitted by this phase's corpus** (a finding, not a
+    preference). The registry gives the id first emission to Turn 1.8 and `attach_cid_dangling`
+    types its row (locator: the **referencing part's** path), but `html_href_img_remote_and_cid`
+    references `cid:logo@example.test` with no part carrying it -- its own `not_yet_labelled`
+    annotation names "the Family C `attach_cid_dangling` case" -- and types no such row, while the
+    oracle's `gaps.later` comparison is **exact over live ids** for every sidecar that labels it.
+    No live emission can satisfy both frozen sidecars and no label is ever edited, so the measured
+    dangling cids ride `attach.Attachments.dangling` (pinned by a test) and the row
+    `attach_cid_dangling` types stays `not_yet`. The other eight attachment gap ids are live, which
+    is exactly the set the labelled sidecars type.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

@@ -71,6 +71,7 @@ __all__ = [
     "display_text",
     "external_references",
     "html_projections",
+    "is_body_view",
     "plain_effectively_empty_rows",
     "selection_rows",
 ]
@@ -498,12 +499,26 @@ def _is_digest_child_without_content_type(part: PartShape, parts: Mapping[str, P
     return parent is not None and _media(parent) == _DIGEST
 
 
+def _is_explicit_attachment(part: PartShape) -> bool:
+    """A part whose own ``Content-Disposition`` is ``attachment`` (RFC 2183): an attached text file
+    (``.txt``, ``.csv``, ``.ics``, ``.html``) is an attachment occurrence, never a displayable body
+    view, whatever its ``text/*`` media type. ``inline`` and an absent disposition leave the part a view
+    (a body part, or an inline text part, is displayed)."""
+    for field in part.header_fields:
+        if field.parse_status == "ok" and field.name.lower() == "content-disposition":
+            token = field.raw_value.split(";", 1)[0].strip().lower()
+            return token == "attachment"
+    return False
+
+
 def _is_body_view(part: PartShape, parts: Mapping[str, PartShape]) -> bool:
     """Whether a part is a **displayable text view**: a ``text/*`` part (an absent
     ``Content-Type`` defaults to ``text/plain``, RFC 2045 5.2), except a
     ``multipart/digest`` child with no ``Content-Type`` (that child is ``message/rfc822``,
     the recorded gap, never a text view)."""
     if _is_digest_child_without_content_type(part, parts):
+        return False
+    if _is_explicit_attachment(part):
         return False
     media = _media(part)
     return not media or media.startswith("text/")
@@ -515,6 +530,19 @@ def _reads_as_text(part: PartShape) -> bool:
     ladder (it declares no ``Content-Type``), so it *reads* as text even though it is not a
     displayable view."""
     return part.decode_chain.used_charset is not None
+
+
+def is_body_view(part: PartShape, parts: Mapping[str, PartShape]) -> bool:
+    """The **public** body-view predicate: Turn 1.8's attachment rule reuses this one rule.
+
+    Exposed in Turn 1.8 (the attachment stage needs it and must not restate it): a leaf that is
+    not a view and not a container is an attachment occurrence. It is exactly
+    :func:`_is_body_view` -- a ``text/*`` leaf (an absent ``Content-Type`` defaults to
+    ``text/plain``, RFC 2045 5.2) that is not a ``multipart/digest`` child without a
+    ``Content-Type`` -- so a ``text/calendar`` alternative is a view, never an attachment, while
+    a ``message/rfc822`` part is not one.
+    """
+    return _is_body_view(part, parts)
 
 
 def _alternative_children(
