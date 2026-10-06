@@ -570,11 +570,90 @@ test: tests/test_quote_text.py::test_bottom_posting_is_legal_not_a_gap
 test: tests/test_quote_text.py::test_a_non_contiguous_alternation_is_inline_reply_interleaved
 test: tests/test_quote_text.py::test_an_unknown_language_label_block_is_the_i18n_gap
 test: tests/test_quote_text.py::test_only_quote_boundaries_advance_the_ordinal
+# Refinement (the turn's own prompt allows extras; every one is stated): the span convention,
+# the one line model, the hard-wrap window's negative, the work counter, the hostile line, the
+# Outlook span and the forward-banner/no-suppression case.
+test: tests/test_quote_text.py::test_gt_family_span_includes_the_final_terminator_at_the_part_end
+test: tests/test_quote_text.py::test_the_lone_cr_line_model_is_the_one_splitter
+test: tests/test_quote_text.py::test_a_hard_wrapped_attribution_is_a_two_line_window_and_three_lines_are_not
+test: tests/test_quote_text.py::test_the_scanner_is_single_pass_and_linear_in_the_line_count
+test: tests/test_quote_text.py::test_the_scan_is_deterministic_on_a_hostile_single_line
+test: tests/test_quote_text.py::test_an_outlook_block_span_runs_to_the_end_of_the_part
+test: tests/test_quote_text.py::test_a_forward_banner_is_not_suppressed_by_an_inner_block
+test: tests/test_quote_text.py::test_the_quote_rows_are_identical_on_both_interpreters
+test: tests/test_quote_resolve.py::test_quote_rows_carry_per_line_depths_and_ordinals_in_document_order
+test: tests/test_quote_resolve.py::test_the_view_level_is_the_higher_of_the_ordinal_and_the_deepest_depth
+test: tests/test_quote_resolve.py::test_a_view_with_no_quote_boundary_and_no_prefix_line_has_no_level_row
+test: tests/test_quote_resolve.py::test_the_disagreement_predicate_is_false_beside_an_all_zero_depth
+test: tests/test_quote_resolve.py::test_the_label_blind_evidence_names_the_row_and_column_only
+# The two renames this turn forced (their old names stay in the frozen Phase 0 baseline); the
+# label correction that followed renamed them to assert the green corpus, and the ids below are
+# the collected ones (a rename in the same commit as its tests is what this document binds).
+test: tests/test_l1_gate.py::test_the_committed_corpus_is_green_with_the_quote_facts_live
+test: tests/test_metrics_cli.py::test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live
 stop: after the text family and the resolution rule
 ```
 
-Allow-list (`turn=1.6`): `emailextract/quote/`, `emailextract/versions.py`, `tests/test_quote_text.py`,
-`tests/test_quote_resolve.py`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+Allow-list (`turn=1.6`): `emailextract/quote/`, `emailextract/versions.py`, `emailextract/evals/l1.py`,
+`tests/test_quote_text.py`, `tests/test_quote_resolve.py`, `docs/design/phase1-turn-declarations.md`,
+`tests/ledger/label_ledger.json` (the oracle hash only), and the narrow test edits the turn forces
+(`tests/test_turn_declarations.py` adds `1.6`; `tests/test_phase0_scope.py` adds the `quote/`
+subpackage; `tests/test_versions.py` adds the new constant; `tests/test_l1_gate.py` states the
+corpus the labels and the rules then agreed on). Not `fixtures/**`, not `*.expected.json`, not the
+walker.
+
+## Turn 1.6b -- the adjudicated quote conventions
+
+```declaration turn=1.6b
+module: emailextract/quote/text_rules.py
+module: emailextract/quote/resolve.py
+module: emailextract/versions.py
+module: emailextract/evals/l1.py
+module: tests/test_quote_text.py
+module: tests/test_quote_resolve.py
+test: tests/test_quote_text.py::test_the_line_model_has_no_phantom_trailing_line
+test: tests/test_quote_text.py::test_an_attribution_span_carries_the_unprefixed_block_that_follows
+test: tests/test_quote_text.py::test_a_gt_run_inside_an_attribution_is_one_boundary_with_recorded_depths
+test: tests/test_quote_text.py::test_a_blank_line_after_an_attribution_leaves_the_gt_run_its_own_boundary
+test: tests/test_quote_text.py::test_a_flat_block_stops_before_a_later_forward_banner
+test: tests/test_quote_text.py::test_a_forward_banner_nests_a_flat_block_and_covers_every_line_to_the_end
+test: tests/test_quote_text.py::test_a_span_stopping_before_a_blank_line_ends_at_the_last_content_line
+test: tests/test_quote_text.py::test_every_quote_rule_id_has_a_mutation_case
+test: tests/test_quote_text.py::test_a_careless_quote_mutant_is_caught
+test: tests/test_quote_text.py::test_the_seeded_fuzz_over_mutated_text_parts_is_bounded
+test: tests/test_quote_text.py::test_a_planted_raiser_fails_the_fuzz_with_the_seed
+test: tests/test_quote_text.py::test_the_work_budget_stops_the_scan_and_the_stop_is_reported
+test: tests/test_quote_resolve.py::test_the_resolution_rule_is_the_first_structural_quote_boundary
+test: tests/test_quote_resolve.py::test_the_first_structural_quote_boundary_wins_over_a_later_one
+test: tests/test_quote_resolve.py::test_a_forward_only_view_has_a_level_row_at_zero_with_the_banners_rule
+stop: after the reviewer's adjudicated conventions (decisions 33-39), the mutation catalogue, the fuzz and the budget stop
+```
+
+Allow-list (`turn=1.6b`): `emailextract/quote/` (all), `emailextract/versions.py` (`QUOTE_RULES_VERSION`
+only), `emailextract/evals/l1.py` (the measurers' evidence only), `tests/test_quote_text.py`,
+`tests/test_quote_resolve.py`, `tests/ledger/label_ledger.json` (the `evals/l1.py` hash only),
+`docs/design/phase1-empirical.md`, `docs/design/phase1-turn-declarations.md`,
+`docs/design/phase1-build-spec.md`, and the narrow test edits the turn forces
+(`tests/test_l1_gate.py` and `tests/test_metrics_cli.py` state the corpus the corrected labels give;
+`tests/test_quote_catalogue.py` counts the walker's physical lines -- no phantom trailing line).
+Not `fixtures/**`, not `*.expected.json`, not the walker.
+
+### The correction that follows the label correction
+
+The label correction landed in the sidecars and left three things: the two tests 1.6 had renamed
+(their collected ids are declared in the 1.6 block above), one **html-view** label row carrying the
+same phantom-line hand-typing error the correction fixed in the plain view, and the counts the
+documents below still stated. `thunderbird_moz_forward_container` part 1.2's span `(9, 21)` is the
+projected text `"The forwarded note.\r\n"` -- **one** physical line, per decision 33 -- so its typed
+`[0, 0]` is corrected to `[0]` from the bytes, and the review document's section 20 is corrected with
+it. This is an owner-visible, ledger-frozen label edit and is recorded here as the allow-list entry
+the label ledger requires.
+
+Allow-list (the correction): `docs/design/phase1-turn-declarations.md`,
+`docs/design/quote-catalogue-review.md` (section 20's typed rows),
+`fixtures/generated/thunderbird_moz_forward_container.expected.json` (that one row and its correction
+note), `tests/ledger/label_ledger.json` (that sidecar's hash only), `docs/design/phase1-empirical.md`
+and `docs/design/phase1-build-spec.md` (the counts that follow from the corrected labels).
 
 ## Turn 1.7 -- quote boundaries, DOM family and resolution
 

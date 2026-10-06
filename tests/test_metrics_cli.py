@@ -72,11 +72,17 @@ def test_the_cli_exits_one_on_a_tampered_corpus(tmp_path: Path) -> None:
     assert "container.sha256 mismatch" in output
 
 
-def test_the_cli_exits_zero_on_the_committed_corpus() -> None:
-    """Every gate passes over the committed fixtures: no label/walker disagreement remains."""
+def test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live() -> None:
+    """The committed corpus is green, quote facts included (Turn 1.6 adjudication, decisions 33-39).
+
+    The reviewer corrected the catalogue's hand-typed phantom-line and span errors; the rules and the
+    labels now agree on every row, so the CLI's verdict is success and the quote facts are measured.
+    """
     completed = run_cli()
     assert completed.returncode == 0, completed.stdout + completed.stderr
-    assert "mismatched=0" in completed.stdout
+    output = completed.stdout
+    assert "pass matched=1224 mismatched=0" in output, output
+    assert "no-silent-drop" in output and "pass fixtures=119" in output, output
 
 
 def test_the_table_names_every_gate_it_reports() -> None:

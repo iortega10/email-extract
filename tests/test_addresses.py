@@ -428,7 +428,10 @@ def test_every_emitted_gap_id_has_a_mutation_case(monkeypatch: pytest.MonkeyPatc
     ), gate.evidence
 
     monkeypatch.setattr(header_stage, "parse_address_list", real)
-    assert l1_gate().passed is True, "restoring the rule must restore green"
+    # Turn 1.6 wired the TEXT family live, so the corpus is red for exactly the quote facts
+    # while the reviewer adjudicates the catalogue: the restored state is that named state, not
+    # a plain green (a mismatch outside the quote facts still fails this).
+    assert oracle.quote_only_mismatches(l1_gate()), "restoring the rule must leave only the quote facts red"
 
 
 def test_a_seeded_fuzz_of_the_tokenizer_never_raises() -> None:
@@ -545,5 +548,7 @@ def test_the_address_facts_are_live_over_the_corpus() -> None:
     assert deferrals == {}
 
     gate = l1_gate()
-    assert gate.passed is True
-    assert gate.data["mismatched"] == 0
+    # Turn 1.6: the corpus is red for exactly the quote facts (see test_l1_gate.py), so the
+    # address facts are asserted matched and the mismatches are asserted to be quote-only.
+    assert oracle.quote_only_mismatches(gate), gate.data["mismatches"]
+    assert gate.data["mismatched"] == len(gate.data["mismatches"])

@@ -1689,7 +1689,8 @@ def test_the_five_attachment_facts_are_live_and_compared() -> None:
     compared = {outcome.fact_id for outcome in report.outcomes if outcome.status is l1.Status.OK}
     for fact_id in facts:
         assert fact_id in compared, fact_id
-    assert report.mismatches == ()
+    # After the Turn 1.6 adjudication the corpus is green: no fact is red, the quote facts included.
+    assert not report.mismatches, [outcome.fact_id for outcome in report.mismatches]
 
 
 def test_the_cid_dangling_row_stays_deferred_for_its_finding() -> None:

@@ -8,7 +8,8 @@
     "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
     "quote_rule_note": "thunderbird_moz_cite_prefix (decision 3); kind quote, ordinal 1. The following bare blockquote carries no type=cite, so blockquote_type_cite does not fire.",
     "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
-    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "quote_span_correction": "Quote-span correction (owner-delegated reviewer adjudication, docs/design/phase1-build-spec.md decision 33): the plain-view per-line prefix_depth list counts the walker's physical lines (no phantom trailing line); corrected from the bytes. No other fact in this sidecar changed."
   },
   "facts": {
     "container.sha256": {
@@ -461,7 +462,6 @@
           "quote",
           1,
           [
-            0,
             0,
             0
           ],

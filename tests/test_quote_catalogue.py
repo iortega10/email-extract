@@ -250,6 +250,16 @@ def html_span_problems(sidecar: Sidecar) -> list[str]:
     return problems
 
 
+#: The catalogue stems whose hand-typed ``body.quote_boundaries`` row counted a **phantom trailing
+#: line** (build-spec decision 33: a boundary has one ``prefix_depth`` entry per physical line it
+#: covers, and the walker's line model has no empty line after a final terminator). The reviewer's
+#: adjudication corrected every one of them in the sidecars -- eight plain-view rows over seven
+#: stems, plus ``thunderbird_moz_forward_container``'s html-view row -- so the residue is empty and
+#: ``quote_problems`` reports nothing over the whole catalogue. The tuple is emptied rather than
+#: deleted so the finding keeps its name.
+STALE_QUOTE_LABELS: tuple[str, ...] = ()
+
+
 def quote_problems(sidecar: Sidecar) -> list[str]:
     """Every problem with a sidecar's typed quote facts and typed spans."""
     problems: list[str] = []
@@ -286,7 +296,12 @@ def quote_problems(sidecar: Sidecar) -> list[str]:
             problems.append(f"{sidecar.stem} quote_boundaries {part}/{view}: span {offset, length} "
                             f"outside the {len(text)}-code-point view")
             continue
-        lines = text[offset:offset + length].split("\r\n")
+        piece = text[offset : offset + length]
+        lines = piece.split("\r\n")
+        if lines and lines[-1] == "":
+            # Decision 33: the walker's line model yields no phantom trailing line, so a span
+            # that reaches the end of the part (and keeps its final terminator) is N lines.
+            lines.pop()
         for line, depth in zip(lines, depths):
             # A `>`-family prefix is a run of `>` characters optionally separated by SP or
             # TAB only; U+00A0 (NBSP) is neither and stops the count (row 29).
@@ -407,6 +422,7 @@ def test_the_catalogue_labels_load_and_are_ledgered() -> None:
             assert isinstance(reason, str) and reason
     # Non-vacuous: only quote rows advance ordinals, and the catalogue has both quote and
     # non-quote kind rows (so the rule is exercised in both directions).
+    assert STALE_QUOTE_LABELS == (), STALE_QUOTE_LABELS  # the adjudication corrected every label
     kinds = {
         kind
         for name in CATALOGUE
@@ -424,7 +440,7 @@ def test_the_three_hole_rows_exist_and_type_the_decided_rules(tmp_path: Path) ->
     # attribution plus the quoted line; the THREE-line attribution must NOT fire.
     hard = _facts(loaded["on_wrote_hard_wrapped"])
     rules = [(row[2], row[3], row[4], row[6], row[7]) for row in hard["body.quote_boundaries"]]
-    assert rules == [("on_wrote_en", "quote", 1, 11, 86), ("gt_family", "quote", 2, 170, 16)], rules
+    assert rules == [("on_wrote_en", "quote", 1, 11, 86), ("gt_family", "quote", 2, 170, 18)], rules
     text = hard["body.text"][0][1]
     fired = text[11:11 + 86]
     assert fired.startswith("On Mon, 3 Mar 2025 at 09:15, Ada Sender"), fired

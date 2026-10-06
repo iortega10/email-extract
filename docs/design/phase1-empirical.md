@@ -402,3 +402,132 @@ command and a sha256 of its output are the record.
   `7d65f5400e98...` -> `b905e9580126...` -- with **all 119** `fixtures/**/*.expected.json`
   entries byte-identical (proved: the ledger diff is two `-`/`+` line pairs and no other line
   moves; every sidecar's recorded hash equals its file's bytes).
+
+## Turn 1.6 -- the TEXT quote families, the level rule and the work budget
+
+The rules are the build spec's decision 3 (families v1, text half), the signed spans Q1/Q5/Q7
+and decision 2 (ordinals, the derived level, the disagreement predicate). This section records
+the **recorded-only run inputs**, the **measured numbers** and the **work budget**; every
+number carries the command that produced it.
+
+* **Recorded-only run inputs.** CPython 3.14.3 (`python`, the interpreter the numbers below
+  come from) has `unicodedata.unidata_version` **16.0.0**; CPython 3.11.15 (the second pinned
+  interpreter, `C:/Users/ivan_/AppData/Local/Temp/wbv311/Scripts/python.exe`) has **14.0.0**.
+  The full suite is green on both (1591 passed, 1 skipped on each), and
+  `tests/test_quote_text.py::test_the_quote_rows_are_identical_on_both_interpreters` pins the
+  quote output over the whole corpus with one digest, so an NFC or `str.lower()` difference
+  between the two Unicode databases would be a failure, not a silent difference:
+  sha256 of `{stem: [quote_boundary_rows, view_level_rows, gap_pairs]}` over the 119 fixtures
+  (`json.dumps(..., sort_keys=True, ensure_ascii=False)`) =
+  **eb635f72cf17dab7c0a2469f2f7133ecfd010d2a73b8301087ebc4b44a78bf7d**.
+* **The L1 result against the quote catalogue, as measured (label-blind).** `python -m
+  emailextract.evals` reports `matched=1197 mismatched=27 unmeasurable=0 unmodelled=0`, with
+  `not_yet: phase 1=115, phase 3=26`; 19 of the mismatches are `body.quote_boundaries` and 8
+  `body.view_levels`, over the 19 catalogue stems named in `tests/test_l1_gate.py`. The evidence
+  names the stem, the fact, the row index, the differing column's **name** and this turn's
+  measured value and never a labelled one, so the numbers can be recorded without revealing a
+  label. The four patterns are the turn's findings for the reviewer (the rules were written
+  without reading any catalogue label, per decision 13); no rule, threshold or span convention
+  was adjusted to move one.
+* **The work budget and its exact counts (item 8a).** `text_rules.WORK` is the walker's own
+  `WorkCounter` pattern (reset/read by a test, never a clock): one step per line read and one
+  per character examined in a prefix run. Measured with `.scratch/quote_work.py` (inline
+  messages, one text part each, CRLF, `text/plain; charset=utf-8`):
+
+  | input | 1000 lines | 2000 lines | 4000 lines | ratio |
+  |---|---|---|---|---|
+  | `> line N` (a `>` run) | 4000 steps | 8000 | 16000 | exactly 2.0000 |
+  | `On day N, nobody ...` (never `wrote:`) | 2000 | 4000 | 8000 | exactly 2.0000 |
+  | `Novel: value N` (label-shaped, unblocked) | 2000 | 4000 | 8000 | exactly 2.0000 |
+
+  A single line of 200 000 `>` characters costs exactly **200 003** steps in 0.071 s; one line
+  of 1 000 000 characters that is not a prefix costs **2** steps in 0.211 s. The part-level
+  ceiling is `Limits.max_field_work_units_per_byte` (**64**) work units per text code point --
+  the caller's own number, re-used rather than invented -- so a 1e6-code-point part has a budget
+  of 64 000 000 and every input above is far inside it. **Not done this turn:** the budget's
+  *hit* is not yet recorded in the closed cap vocabulary (there is no quote-stage reason id;
+  `Limits` has no field for it either), the mutation catalogue (item 8b) and the seeded fuzz
+  (item 8c) are not built, and the assembled record does not yet carry the quote facts (Turn
+  1.9). The turn reported these as open.
+* **The two ledgers.** `python tools/update_behavior_ledger.py --check` exits **0** before and
+  after with no new lines: `walk`, `decode_chain` and `contracts` do not move (the quote stage
+  is not one of `contract_records()`'s fingerprinted modules, and no version constant it keys
+  changed). `python tools/update_label_ledger.py --check` exits **0** after an explicit one-off
+  rewrite of exactly **one** entry -- `emailextract/evals/l1.py` `b144a81900b8...` ->
+  `7f6d3d8c2392...` -- with **all 119** `fixtures/**/*.expected.json` entries byte-identical
+  (proved: the ledger diff is one `-`/`+` line pair and no other line moves).
+
+## Turn 1.6b -- the adjudicated conventions, the mutation catalogue, the fuzz and the budget stop
+
+This turn implements the reviewer's adjudication of Turn 1.6's 27-row disagreement against the
+bytes (build-spec decisions 33-39) and finishes 1.6's items 8b/8c/8d. The rules stay label-blind:
+the conventions are prose from the decisions and the catalogue is never read. Every number below
+carries the command that produced it.
+
+* **Recorded-only run inputs.** The same two interpreters (CPython 3.14.3 and 3.11.15, Unicode
+  16.0.0 / 14.0.0). The full suite is green on both (**1626 passed, 1 skipped** on each), and the
+  quote output's single digest over the 119 fixtures
+  (`tests/test_quote_text.py::test_the_quote_rows_are_identical_on_both_interpreters`,
+  sha256 of `{stem: [quote_boundary_rows, view_level_rows, gap_pairs]}` with `sort_keys=True`,
+  `ensure_ascii=False`) is **a171f158888bc927087fc596835e953f9f6749cf24981a2fe40b9902b7d5dbbe** --
+  identical on both, so no rule of this turn moves with the Unicode database.
+  `QUOTE_RULES_VERSION` moves **"1" -> "2"** (span conventions, absorption and the resolution
+  rule changed); the walker's constants do not move with it (the walk/decode fingerprints below).
+* **The L1 result against the quote catalogue, as measured (label-blind).** This turn's rules left
+  `matched=1217 mismatched=7 unmeasurable=0 unmodelled=0` with `not_yet: phase 1=115, phase 3=26`,
+  identically on 3.14.3 and 3.11.15: all 7 were `body.quote_boundaries` rows, with
+  `body.view_levels` matching on every stem and the evidence carrying stem + fact + row + column +
+  this turn's **measured** value, never a labelled one. **Finding.** Each of the 7 was a hand-typed
+  `prefix_depth` counting one line more than the body has: four (`gmail_quote_on_blockquote`,
+  `html_gmail_quote`, `outlook_com_appendonsend`, `vendor_prefix_class_no_table_row`) carry
+  **byte-identical** plain text to `mixed_origin_quote`, whose label the correction did reach, and
+  `html_outlook_divrplyfwd` is byte-identical to `quoted_outlook_flat`; no rule can satisfy two
+  labels that disagree on the same bytes. The catalogue's own consistency checker
+  (`tests/test_quote_catalogue.py::quote_problems`, corrected this turn to the walker's physical
+  lines -- no phantom trailing line) reported those 7 stems (8 rows) **and** a ninth, html-view row
+  (`thunderbird_moz_forward_container` part 1.2 typed 2 depths for the one-line span
+  `"The forwarded note.\r\n"`). The reviewer's label correction fixed the 8 from the bytes and this
+  correction pass took the ninth with them, so `python -m emailextract.evals` now reports
+  **`matched=1224 mismatched=0 unmeasurable=0 unmodelled=0`, `not_yet: phase 1=115, phase 3=26`** on
+  both interpreters: the corpus is green with the quote facts live, and
+  `tests/test_l1_gate.py::test_the_committed_corpus_is_green_with_the_quote_facts_live` pins it.
+* **The mutation catalogue (item 7a).** `tests/test_quote_text.py`'s `MUTANTS` holds **20**
+  careless readings, keyed by the rule each breaks. All **8** rule ids the TEXT stage can emit
+  (`text_rules.SCAN_RULES`) have at least one case
+  (`test_every_quote_rule_id_has_a_mutation_case` asserts the coverage); the extras cover the
+  interleaving, i18n, resolution-rule and view-row rules and the two anti-patterns
+  (`str.splitlines` as the line model; a nested-quantifier regex, which a 26-`>` ReDoS input
+  defeats in ~2 s while the anchored scanner takes microseconds). Each case names the fixture
+  that types the rule (the L1 gate must flip, naming a quote fact) or an inline label-blind
+  observation (which must move), and the **anti-vacuity triple** is asserted: the patched symbol
+  exists (`monkeypatch.setattr`), the patch was **reached** (a counter), and the observation
+  differs from the baseline.
+* **The seeded fuzz (item 7b).** `tests/test_quote_text.py::_fuzz_fixtures`, seed **20250304**,
+  **8** mutations per fixture over all **119** fixtures = **952** cases, **0** failures in
+  **0.30 s** on 3.14.3 (mutation kinds: byte flips, truncation, a repeated chunk, swapped chunks,
+  an injected `>` run, NBSP + NULs, a giant line, non-ASCII digits). The invariants: no exception,
+  every returned span inside the view's text, and quote ordinals that strictly increase from 1.
+  `test_a_planted_raiser_fails_the_fuzz_with_the_seed` patches the scanner to raise and asserts
+  the fuzz reports the failure **with its seed**, so the harness is able to fail.
+* **The work budget's hit (item 7c) -- the owner's ruling.** `tests/test_quote_text.py::
+  test_the_work_budget_stops_the_scan_and_the_stop_is_reported` pins today's behaviour: the
+  scanner stops cleanly, `ScanResult.truncated` reports the stop and every span stays inside the
+  text. It is **not** recorded in the closed cap vocabulary: the five `Status.SKIPPED` reasons
+  (`size_cap`, `total_size_cap`, `depth_cap`, `part_count_cap`, `header_bytes_cap`) are keyed on
+  `Limits` fields (`CAP_LIMIT_FIELDS`) and none of them is the quote stage's per-code-point step
+  ceiling (`Limits.max_field_work_units_per_byte`), so no existing closed id fits. Asked, the
+  owner ruled **keep today's behaviour** (the stop is reported and tested; no
+  `UnknownSection`/`CapRecord` until an owner names a reason id, which is a `model.REASON_TABLE`
+  decision for a later turn), and no id was invented.
+* **The two ledgers.** `python tools/update_behavior_ledger.py --check` exits **0** on both
+  interpreters, with no new lines: `walk`, `decode_chain` and `contracts` do not move (a
+  `QUOTE_RULES_VERSION` bump is not one of the fingerprinted components). `python
+  tools/update_label_ledger.py --check` exits **0** over **131** entries with **none added, none
+  removed and 20 changed** (the tool refuses to write a changed recorded file, so each rewrite is
+  explicit and named in an allow-list): `emailextract/evals/l1.py` (this turn's evidence; the hash
+  the correction left is `8f530e48bfdc...`) and **19** sidecars -- the **18** the reviewer's label
+  correction recorded, plus
+  `fixtures/generated/thunderbird_moz_forward_container.expected.json` for the ninth phantom row
+  (recorded `7adb326ad1c3...`, rewritten to `d8241ca586d2...`). Proof, the same shape the 1.6
+  section used: a script diff of the ledger against `HEAD` reports exactly those 20 keys, and
+  `git diff --name-only HEAD -- fixtures` reports exactly those 19 sidecars.

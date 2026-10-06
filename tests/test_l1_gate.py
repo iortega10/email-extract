@@ -69,15 +69,35 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # more phase-1 facts to compared (attach.cid_dangling stays deferred: the two sidecars
     # that carry the case disagree about whether the row is typed, and a label is never
     # edited -- the turn's finding, reported with its bytes).
-    assert gate.data["not_yet"] == {1: 163, 3: 26}
+    # Turn 1.6 wired the TEXT family of the quote rules live (there are still no DOM rules),
+    # so the two quote facts' sidecar rows moved from not_yet to compared:
+    # 9 quote-fact rows in the quote catalogue's three hole rows; 19 more body.quote_boundaries
+    # and 8 more body.view_levels rows over the catalogue.
+    assert gate.data["not_yet"] == {1: 115, 3: 26}
 
 
-def test_the_committed_corpus_is_green_with_no_label_walker_disagreement() -> None:
-    """Every fact the skeleton walker can produce matches its hand-typed label, over all 16 fixtures."""
+#: The stems (and the row count) Turn 1.6's first run disagreed with -- the finding, and the end of
+#: the red state. Each row was a hand-typed ``prefix_depth`` counting one phantom trailing line, on
+#: a body whose plain text is **byte-identical** to a stem the correction did reach
+#: (``mixed_origin_quote``, ``quoted_outlook_flat``) or a forward banner whose span decision 28
+#: fixes, so no rule could satisfy both labels. The reviewer's adjudication (decisions 33-39)
+#: corrected the labels from the bytes, so the set is empty and the corpus is green:
+#: ``test_the_committed_corpus_is_green_with_the_quote_facts_live`` pins that, and this tuple is
+#: emptied rather than deleted so the finding keeps its name.
+QUOTE_MISMATCH_STEMS: tuple[str, ...] = ()
+
+
+def test_the_committed_corpus_is_green_with_the_quote_facts_live() -> None:
+    """Every fact matches, the quote facts included (the Turn 1.6 adjudication corrected the labels).
+
+    The oracle's quote evidence still names the fixture, the fact, the row, the column and the
+    turn's MEASURED value and never a labelled one (independence rule 3).
+    """
     gate = l1_gate()
-    assert list(gate.data["mismatches"]) == [], gate.data["mismatches"]
-    assert gate.data["mismatched"] == 0
+    assert gate.data["mismatched"] == 0, gate.data["mismatches"]
     assert gate.passed is True
+    assert gate.data["matched"] > 0
+    assert QUOTE_MISMATCH_STEMS == (), QUOTE_MISMATCH_STEMS  # every label was corrected from the bytes
 
 
 def test_the_gate_reports_every_phase_the_corpus_waits_on() -> None:

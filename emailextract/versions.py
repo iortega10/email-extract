@@ -71,6 +71,31 @@ keys on it. It ships so a later turn that *does* stamp a citation with the proje
 constant already owned by the module that defines the projection.
 """
 
+QUOTE_RULES_VERSION: Final[str] = "2"
+"""Version of the quote stage's rules (``emailextract/quote``, Turn 1.6).
+
+Moves when the rule tables, a span convention, or the level rule changes: the closed
+label heads and their languages (``quote/i18n.py``), which shapes count as a block, the
+signed span conventions of the ``quote_boundaries`` rows (a run to the end of the part
+keeps its final terminator, an attribution carries the block that follows it, the
+Outlook block runs on), the ordinal rule (only a quote advances it) and the derived
+per-view level with its resolution rule. A pure refactor that changes none of those does
+not move it.
+
+**"2" (Turn 1.6b)** moves it on the reviewer's adjudication (build-spec decisions 33-39):
+the walker's physical lines with no phantom trailing line; a span that ends before another
+boundary or before a blank line ends at its last non-blank content line; an attribution's
+span is its lines plus the contiguous non-blank block that follows; a ``>`` run inside an
+attribution's or a flat block's span is part of that boundary (one quote, one ordinal); the
+Outlook flat block's extent ends before the next boundary of any kind; the resolution rule is
+the first structural quote boundary's, else ``gt_family``, else the first boundary of any kind;
+and a view with **any** recognised boundary has a ``body.view_levels`` row.
+
+The walker's parser and decode-chain constants do **not** move with it: this stage reads
+the decoded text the body stage already produced and adds no decode rule, so a quote-rule
+change cannot move a corpus fingerprint keyed by the walker.
+"""
+
 HTMLTEXT_SCHEMA: Final[str] = "1"
 
 

@@ -421,8 +421,8 @@ listing.
 
   | part | view | rule_id | kind | ordinal | [prefix_depth] | span (offset, length) |
   |---|---|---|---|---|---|---|
-  | 1.1 | plain | `forward_banner` | forward | 0 | [0, 0, 0] | (11, 47) |
-  | 1.2 | html | `thunderbird_moz_forward_container` | forward | 0 | [0, 0] | (9, 21) |
+  | 1.1 | plain | `forward_banner` | forward | 0 | [0, 0] | (11, 47) |
+  | 1.2 | html | `thunderbird_moz_forward_container` | forward | 0 | [0] | (9, 21) |
 
 - **Typed expectation — `body.view_levels`:**
 

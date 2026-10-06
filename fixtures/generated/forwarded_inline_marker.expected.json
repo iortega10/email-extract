@@ -8,7 +8,8 @@
     "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
     "quote_rule_note": "forward_banner, kind forward, so it is recorded at level 0 and does not advance the ordinal (owner decision 15: an inline forward is never the sender's quoted words). The block's From/Date/Subject order is not the flat block's canonical order, so outlook_flat_en does not also fire.",
     "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
-    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "quote_span_correction": "Quote-span correction (owner-delegated reviewer adjudication after the label-blind Turn 1.6 run, docs/design/phase1-build-spec.md decisions 33 to 39): per-line prefix_depth lists count the walker's physical lines (no phantom trailing line), spans that reach the end of the part include the final terminator, and the plain-view rows below were corrected from the bytes. No other fact in this sidecar changed."
   },
   "facts": {
     "container.sha256": {
@@ -286,11 +287,26 @@
             0,
             0,
             0,
-            0,
             0
           ],
           14,
           138
+        ],
+        [
+          "1",
+          "plain",
+          "outlook_flat_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          40,
+          112
         ]
       ]
     },
@@ -300,8 +316,8 @@
         [
           "1",
           "plain",
-          0,
-          "forward_banner"
+          1,
+          "outlook_flat_en"
         ]
       ]
     }

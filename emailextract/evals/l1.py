@@ -46,8 +46,10 @@ from typing import Any, Callable, Final, Mapping
 from .. import attach as attach_stage
 from .. import dates as date_stage
 from .. import headers as header_stage
+from .. import quote as quote_package  # noqa: F401  the stage's own package (Turn 1.6)
 from .. import selection as selection_stage
 from .. import text as text_stage
+from ..quote import resolve as quote_stage
 from ..container import EmlContainer
 from ..parse import Limits
 from ..walk import WalkResult, walk
@@ -61,12 +63,14 @@ __all__ = [
     "Measure",
     "OracleError",
     "Outcome",
+    "QUOTE_FACT_IDS",
     "Report",
     "Status",
     "check",
     "check_all",
     "check_path",
     "deferral_counts",
+    "quote_only_mismatches",
 ]
 
 #: The phase this package claims to be at. Bumping it is what turns "not yet measurable"
@@ -362,6 +366,95 @@ def _body_selection(measured: Measured) -> list[list[Any]]:
 def _body_plain_effectively_empty(measured: Measured) -> list[list[Any]]:
     """``body.plain_effectively_empty`` rows: ``[part, emptiness_rule]`` (D16, a fact)."""
     return selection_stage.plain_effectively_empty_rows(measured.raw, measured.walked())
+
+
+# ------------------------------------------------ Turn 1.6: the quote-stage facts
+
+#: The row columns of the two quote facts, by position. Only the **name** of a column may
+#: appear in this turn's failure evidence (independence rule 3): the labelled value never does.
+QUOTE_ROW_COLUMNS: Final[Mapping[str, tuple[str, ...]]] = MappingProxyType(
+    {
+        "body.quote_boundaries": (
+            "part",
+            "view",
+            "rule_id",
+            "kind",
+            "ordinal",
+            "prefix_depth",
+            "span_offset",
+            "span_length",
+        ),
+        "body.view_levels": ("part", "view", "level", "resolution_rule_id"),
+    }
+)
+
+#: The view this turn measures. Every other view (``html``) belongs to Turn 1.7's DOM family; a
+#: labelled row naming one is reported **by name**, never silently dropped and never measured
+#: with a rule this turn does not own.
+QUOTE_MEASURED_VIEW: Final[str] = quote_stage.VIEW_PLAIN
+
+
+def _quote_boundaries(measured: Measured) -> list[list[Any]]:
+    """``body.quote_boundaries`` rows: the TEXT family's boundaries on the plain view (Turn 1.6).
+
+    ``[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, span_length]`` --
+    one row per boundary per view, only ``kind = quote`` advancing the ordinal, the depth kept
+    per line and the span in the view's code points.
+    """
+    return quote_stage.quote_boundary_rows(measured.raw, measured.walked())
+
+
+def _quote_view_levels(measured: Measured) -> list[list[Any]]:
+    """``body.view_levels`` rows: ``[part, view, level, resolution_rule_id]`` per plain view.
+
+    One row per view (not per span), the level a derived rank that carries the rule that
+    resolved it; a view with **no** boundary at all -- nothing fired and no ``>`` line -- has no
+    row (so the frozen four columns stay four and nothing is averaged).
+    """
+    return quote_stage.view_level_rows(measured.raw, measured.walked())
+
+
+def _quote_rows_compare(fact_id: str):
+    """The quote facts' comparison: the measured view's rows, row by row, **label-blind**.
+
+    Rows are compared on every column, and the first disagreement is reported as the row index
+    plus the **name** of the differing column plus the **measured** value -- never the labelled
+    one (independence rule 3: running L1 must not reveal a label). A labelled row naming a view
+    this turn does not measure (``html``) is reported as a count by name, not compared; that is
+    a row of a later turn and the report says so.
+    """
+    columns = QUOTE_ROW_COLUMNS[fact_id]
+
+    def compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
+        if not isinstance(expected, list) or not isinstance(actual, list):
+            return False, f"the label is not a list of rows ({type(expected).__name__})"
+        labelled = [
+            row
+            for row in expected
+            if isinstance(row, list) and len(row) >= 2 and row[1] == QUOTE_MEASURED_VIEW
+        ]
+        deferred = len(expected) - len(labelled)
+        if len(labelled) != len(actual):
+            return False, (
+                f"row count: {len(labelled)} labelled {QUOTE_MEASURED_VIEW} row(s), "
+                f"{len(actual)} measured"
+            )
+        for index, (label_row, measured_row) in enumerate(zip(labelled, actual)):
+            if len(label_row) != len(columns):
+                return False, f"row {index}: the label row is not {len(columns)} columns"
+            for position, name in enumerate(columns):
+                if label_row[position] != measured_row[position]:
+                    return False, (
+                        f"row {index}: column {name!r} -- measured {measured_row[position]!r} "
+                        "(the labelled value is never printed: independence rule 3)"
+                    )
+        if deferred:
+            return True, (
+                f"{deferred} labelled row(s) name a view of a later turn (Turn 1.7, not compared)"
+            )
+        return True, None
+
+    return compare
 
 
 def _attachments(measured: Measured) -> attach_stage.Attachments:
@@ -740,16 +833,29 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         ),
         "body.quote_boundaries": Measure(
             1,
+            _quote_boundaries,
+            compare=_quote_rows_compare("body.quote_boundaries"),
+            live=True,
             note="[[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, "
             "span_length], ...] one row per boundary per view; kind is quote|forward|signature|"
             "list_footer|unknown and only kind=quote advances ordinal (the rank within the view); "
-            "prefix_depth is per line; span is in the view's code points",
+            "prefix_depth is per line; span is in the view's code points. Live from Turn 1.6 for "
+            "the TEXT family on the plain view (the DOM family and the html view are Turn 1.7; a "
+            "labelled html row is reported by name, not compared), and the comparison prints the "
+            "row index, the differing column's name and the MEASURED value only (independence "
+            "rule 3: a run must not reveal a label)",
         ),
         "body.view_levels": Measure(
             1,
+            _quote_view_levels,
+            compare=_quote_rows_compare("body.view_levels"),
+            live=True,
             note="[[part, view, level, resolution_rule_id], ...] one row per view (not per span); "
             "level is the derived rank and carries the rule that resolved it; ordinal and depth are "
-            "stored, never averaged",
+            "stored, never averaged; a view with any recognised boundary has a row (level 0 when "
+            "every boundary is a forward, signature or list footer) and a view with no boundary "
+            "at all has none (the frozen four columns stay four). Live from Turn 1.6 for the "
+            "plain view, with the same label-blind evidence as body.quote_boundaries",
         ),
         "attach.types": Measure(
             1,
@@ -821,6 +927,23 @@ FACT_PHASES: Mapping[str, int] = MappingProxyType(
     {fact_id: measure.phase for fact_id, measure in FACTS.items()}
 )
 
+
+#: The fact ids this turn's measurers own (Turn 1.6). While the reviewer adjudicates the
+#: catalogue's mismatches, the L1 gate is red for **exactly** these facts and for nothing else,
+#: and the anti-vacuity controls of the older turns assert that state instead of a plain green
+#: corpus (a non-quote mismatch still fails them; see :func:`quote_only_mismatches`).
+QUOTE_FACT_IDS: Final[tuple[str, ...]] = ("body.quote_boundaries", "body.view_levels")
+
+
+def quote_only_mismatches(gate: Any) -> bool:
+    """Whether every mismatch of a gate is a quote-fact mismatch (vacuously true when there is none).
+
+    A control for tests that restore a rule and expect nothing OUTSIDE the quote facts to move: any
+    mismatch on a fact outside :data:`QUOTE_FACT_IDS` makes it false. After the Turn 1.6 adjudication
+    the committed corpus is green, so an unmodified run has no mismatches at all and this is true.
+    """
+    lines = list(getattr(gate, "data", {}).get("mismatches") or ())
+    return all(any(fact in line for fact in QUOTE_FACT_IDS) for line in lines)
 
 class OracleError(ValueError):
     """The oracle and the labels disagree about what is being checked.

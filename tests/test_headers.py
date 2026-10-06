@@ -19,6 +19,7 @@ import pytest
 from emailextract import headers as header_stage
 from emailextract import walk as walk_module
 from emailextract.container import EmlContainer
+from emailextract.evals import l1 as oracle
 from emailextract.evals import l1_gate
 from emailextract.versions import EMAIL_PARSER_VERSION
 from emailextract.walk import leading_prelude, walk
@@ -217,7 +218,10 @@ def test_gap_falsification_duplicate_header_and_leading_bom(monkeypatch: pytest.
     ), gate.evidence
 
     monkeypatch.setattr(header_stage, "leading_prelude", real_prelude)
-    assert l1_gate().passed is True, "restoring the rules must restore green"
+    # Turn 1.6 wired the TEXT family live: the corpus is red for exactly the quote facts while
+    # the reviewer adjudicates the catalogue (see test_l1_gate.py), and the restored state is
+    # that named state -- a mismatch outside the quote facts still fails this.
+    assert oracle.quote_only_mismatches(l1_gate()), "restoring the rules must leave only the quote facts red"
 
     # The tag the emitter uses is the one the walker module owns (they must agree).
     assert walk_module.leading_prelude is real_prelude

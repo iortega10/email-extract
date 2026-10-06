@@ -358,6 +358,97 @@ anywhere in the package.
     `attach_cid_dangling` types stays `not_yet`. The other eight attachment gap ids are live, which
     is exactly the set the labelled sidecars type.
 
+### Turn 1.6 -- the TEXT quote families (the choices the turn forced)
+
+28. **The forward banner's span (a gap in Q5).** Q5 signs the banner's kind (`forward`) and its
+    level (0), not its span. Decided: the banner line through the end of the part, or to the next
+    forward-family hit -- the same convention Q1 gives the Outlook block, because the content
+    after the banner **is** the forwarded message. Measured consequence: a banner followed by a
+    blank line, an Outlook flat block and a body is one 7-line span of depth 0.
+29. **The "boundary-looking line" the i18n gap is keyed on.** The registry's trigger for
+    `body.i18n_reply_marker` names it without defining it. Decided: a non-blank line that is not
+    itself a short `Label:` line, ends with `:`, and carries at least two tokens
+    (`Am ... schrieb Ada Sender:`, `Dne ... napsal Ada Sender:`); a bare `Subject:` is a label,
+    not a boundary.
+30. **A list footer fires per rule, not once per view.** The 30-`_` run and the subscribed
+    sentence are separate named shapes, so a message carrying both records two `list_footer`
+    rows (ordinal 0, level 0), each spanning from its own line to the end of the part.
+31. **`view.quote_level_disagreement` is per view, over the view's two resolved ranks.** It fires
+    iff the view's deepest prefix depth >= 1 **and** its highest `quote` ordinal >= 1 **and** those
+    two ranks differ, so the design's stated Gmail case (ordinal 2 beside depth 1) records it and
+    a bottom-posted single run (1 and 1) does not. Consequence, reported as a finding: a deep
+    `>`-only view (ordinal 1, depth 3) and an interleaved reply (ordinals 1 and 2, depth 1) also
+    record it.
+32. **The quote stage's gaps are implemented but not wired into the oracle's `gaps.later` this
+    turn.** `body.no_boundary_found` fires for nearly every plain view with no quoting, so wiring
+    it (or the interleaving/i18n/disagreement ids) would add a corpus-wide row to fixtures whose
+    labels predate the turn. The predicates are pure functions in `quote/resolve.py`, tested and
+    reported with the turn; the wiring is the turn that has the reviewer's adjudication and the
+    assembled record (1.7/1.9).
+
+### Turn 1.6 adjudication (the reviewer's rulings against the bytes, after the blind run)
+
+Turn 1.6's rules were written WITHOUT the catalogue labels; the label-blind oracle then reported 27
+row differences over 19 stems (9 stems agreed outright, including the flowed, `>`-spacing,
+interleaving, bottom-posting and unknown-language cases). The reviewer, who may see both, judged each
+difference against the bytes and the signed decisions. Some were LABEL errors (a hand-typed
+phantom trailing line, a stale row, inconsistent span ends); some were RULE differences. The
+conventions below are the adjudicated reading, derived from the labels where the labels agree with
+each other and with the walker's line model, and they are what 1.6b implements. The independence of
+the rules from the labels held for the first run (it found real differences in both directions); it
+does not hold for 1.6b, which implements stated prose conventions and is then checked again.
+
+33. **Lines are the walker's physical lines; there is no phantom trailing line.** The walker's line
+    model yields no empty line after a final terminator (`b"a\r\nb\r\n"` is two lines). A
+    boundary's `prefix_depth` list has one entry per physical line it covers. Eight plain-view
+    catalogue labels counted one phantom line too many (a hand-typing error) and are corrected from
+    the bytes; the catalogue's own checker (`tests/test_quote_catalogue.py::quote_problems`) then
+    found the same error on a ninth, **html-view** row
+    (`thunderbird_moz_forward_container` part 1.2: one line, `[0, 0]` -> `[0]`), corrected with them.
+34. **Span ends.** A span that reaches the end of the part includes the final line terminator; a span
+    that ends before another boundary or before a blank line ends at the last NON-BLANK content line
+    (no terminator, no trailing blank). Two labels typed a run at the end of the part as content-only
+    and are corrected.
+35. **An `On ... wrote:` attribution spans the CONTIGUOUS NON-BLANK block after it** (Q1's "whole quoted
+    block"), whether the block is `>`-prefixed or not: the attribution line(s) plus every following
+    line up to the first blank line, the end of the part, or the start of another boundary of kind
+    forward, signature or list_footer. A blank line directly after the attribution ends the span at
+    the attribution (the quoted lines that follow are then their own `gt_family` run). The Q1 rule for
+    an Outlook flat block is unchanged in kind: the label block plus the content after it up to the next
+    boundary of any kind or the end of the part, ending per decision 34.
+36. **A `>` run lying inside an attribution's or an Outlook flat block's span is part of that boundary,
+    not a second `gt_family` boundary** (one quote, one ordinal). A `>` run elsewhere (after a blank
+    line, after a three-line wrapped attribution, or inside a forward span) is its own `gt_family`
+    boundary. The per-line depths of the absorbing boundary still record the run's depths.
+37. **`resolution_rule_id` is the rule of the FIRST structural quote boundary** (any rule other than
+    `gt_family` with kind `quote`) in document order; if there is none, `gt_family` when the view has a
+    quote run; if the view has no quote boundary at all, the rule of the FIRST boundary of any other kind.
+38. **A view with any recognised boundary has a `body.view_levels` row**, level 0 when every boundary is a
+    forward, signature or list footer (the labels of the signature, list-footer and
+    `-----Original Message-----` rows type exactly that); a view with no boundary and no `>` line has no
+    row (the controls). This supersedes the "no row unless a quote or `>` line" reading of turn 1.6's
+    first run.
+39. **A forward banner does not suppress an Outlook flat block inside it** (Q4, restated): the banner
+    (decision 28: through the end of the part) and the flat block nest; both are recorded. The
+    `forwarded_inline_marker` label predates Q4 and is corrected to carry the nested flat block.
+
+**1.6b's reading of 35/36 (recorded because the prose leaves it open, and implemented as stated).**
+Read together, 35's "up to the next boundary of ANY kind" and 36's "a `>` run lying inside ... is
+part of that boundary" say that a `>` run is content a flat block's extent **absorbs**, not a
+boundary that truncates it, while a blank line **does** end an attribution's span. So: an
+attribution covers the contiguous non-blank block that follows it (a blank line directly after it
+ends the span at the attribution); a flat block covers every following line up to the next forward
+banner, original-message dashes, signature, list footer, other label block or attribution, or the
+end of the part, and a `>` run inside that extent is part of the flat block -- one quote, one
+ordinal. No committed fixture carries both a flat block and a `>` run in one view, so the
+catalogue does not adjudicate the flat-block half; the inline tests of `tests/test_quote_text.py`
+do. **The work-budget hit (item 8c), as the owner ruled 1.6b.** A per-part work-budget hit is
+reported (`ScanResult.truncated`) and tested; it is **not** recorded in the closed cap vocabulary,
+because none of the five `Status.SKIPPED` reasons fits `Limits.max_field_work_units_per_byte`, and
+no id was invented. Asked, the owner ruled: **keep today's behaviour** -- the scanner stops cleanly
+and the stop is reported and tested; no `UnknownSection`/`CapRecord` until an owner names a reason
+id (a later turn's `model.REASON_TABLE` decision).
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

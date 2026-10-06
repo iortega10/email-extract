@@ -161,11 +161,12 @@ def test_the_modules_are_exactly_the_phase_0_set() -> None:
         f"eval modules not in the Phase 0 set: {sorted(evals - EXPECTED_EVALS)}; "
         f"Phase 0 eval modules missing: {sorted(EXPECTED_EVALS - evals)}"
     )
-    # Only the package root and ``evals/`` exist; a new subpackage is a Phase 0 scope change.
+    # The package root, ``evals/`` and the quote stage's own subpackage exist; a new
+    # subpackage is a Phase 0 scope change (Turn 1.6 added ``quote/``).
     subpackages = sorted(
         path.name for path in PACKAGE.iterdir() if path.is_dir() and "__pycache__" not in path.name
     )
-    assert subpackages == ["evals"], subpackages
+    assert subpackages == ["evals", "quote"], subpackages
 
 
 def test_no_library_module_imports_later_phase_machinery() -> None:
