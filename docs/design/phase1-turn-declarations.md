@@ -843,21 +843,90 @@ frozen macro-container row types `macroEnabled.12`, not the walker's lowercased 
 module: emailextract/assemble.py
 module: emailextract/ingest.py
 module: emailextract/store.py
+module: emailextract/model.py
+module: emailextract/ids.py
+module: emailextract/versions.py
+module: emailextract/__init__.py
+module: tests/test_assemble.py
+module: tests/test_ingest.py
+module: tests/test_store.py
+module: tests/ledger/behavior_ledger.json
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-build-spec.md
+module: docs/design/phase1-turn-declarations.md
 test: tests/test_assemble.py::test_every_document_axis_is_not_built_in_phase1
 test: tests/test_assemble.py::test_a_built_axis_is_not_the_not_built_marker
 test: tests/test_assemble.py::test_the_record_round_trips_through_the_strict_codec
 test: tests/test_assemble.py::test_no_record_claims_a_phase2_axis
+test: tests/test_assemble.py::test_a_nested_record_read_from_a_store_carries_its_own_axes
+test: tests/test_assemble.py::test_the_projection_versions_are_the_constants_names_and_values
+test: tests/test_assemble.py::test_part_ids_are_stable_unique_and_content_addressed
+test: tests/test_assemble.py::test_every_committed_fixture_assembles_to_a_parsed_record
+test: tests/test_assemble.py::test_a_hostile_container_records_its_caps_and_does_not_raise
+test: tests/test_assemble.py::test_the_document_key_moves_with_a_projection_version
+test: tests/test_assemble.py::test_the_document_key_moves_with_a_limits_field
+test: tests/test_assemble.py::test_a_path_or_the_environment_never_moves_the_document_key
+test: tests/test_assemble.py::test_the_identity_projection_drops_the_recorded_only_inputs
+test: tests/test_assemble.py::test_the_quote_boundaries_round_trip_through_the_codec
+test: tests/test_assemble.py::test_the_quote_holder_rows_equal_the_resolvers_rows
+test: tests/test_assemble.py::test_resolve_span_maps_a_plain_view_span_to_the_raw_bytes
+test: tests/test_assemble.py::test_resolve_span_refuses_where_there_is_no_within_part_byte_map
+test: tests/test_assemble.py::test_resolve_span_refuses_a_document_because_it_stores_no_body_text
+test: tests/test_assemble.py::test_a_not_built_axis_without_the_marker_is_caught
 test: tests/test_ingest.py::test_ingest_of_a_directory_is_sorted_and_deterministic
 test: tests/test_ingest.py::test_re_ingest_of_unchanged_bytes_is_a_no_op
 test: tests/test_ingest.py::test_the_same_message_id_with_different_bytes_is_not_merged
+test: tests/test_ingest.py::test_the_sort_order_is_bytewise_including_a_non_ascii_name
+test: tests/test_ingest.py::test_the_same_bytes_under_two_paths_are_one_document_and_two_rows
+test: tests/test_ingest.py::test_an_unreadable_file_and_an_over_cap_file_are_recorded_and_the_run_continues
+test: tests/test_ingest.py::test_a_non_message_file_is_a_recorded_skip_from_the_entry_point
+test: tests/test_ingest.py::test_a_symlinked_directory_is_skipped_and_a_symlinked_file_is_read
+test: tests/test_ingest.py::test_a_manifest_row_refuses_an_impossible_outcome
+test: tests/test_ingest.py::test_the_manifest_and_the_store_are_byte_identical_across_seeds_and_interpreters
+test: tests/test_ingest.py::test_a_path_leaking_into_a_document_key_is_caught
+test: tests/test_ingest.py::test_an_unsorted_manifest_is_caught
+test: tests/test_ingest.py::test_an_unsorted_manifest_is_sorted_in_the_unmutated_run
+test: tests/test_ingest.py::test_a_same_message_id_merge_is_caught
 test: tests/test_store.py::test_a_walk_artifact_is_keyed_by_its_versions
-test: tests/test_assemble.py::test_a_nested_record_read_from_a_store_carries_its_own_axes
-stop: after assemble, ingest and store are green end to end
+test: tests/test_store.py::test_the_document_key_is_the_hashed_inputs_and_nothing_else
+test: tests/test_store.py::test_a_document_round_trips_through_the_store
+test: tests/test_store.py::test_two_stores_built_from_the_same_inputs_are_byte_identical
+test: tests/test_store.py::test_the_projection_version_dropped_from_the_key_is_caught
+test: tests/test_contract_phase1.py::test_output_schema_version_is_four
+stop: after assemble, ingest and store are green end to end, both ledgers are checked and the
+stop:   schema bump is recorded -- before Turn 1.10 (the gates over real output, the hostile set,
+stop:   the scope test and the close)
 ```
 
-Allow-list (`turn=1.9`): `emailextract/assemble.py`, `emailextract/ingest.py`, `emailextract/store.py`,
-`tests/test_assemble.py`, `tests/test_ingest.py`, `tests/test_store.py`,
-`docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+Allow-list (`turn=1.9`): `emailextract/assemble.py` (new), `emailextract/ingest.py` (new),
+`emailextract/store.py`, `emailextract/model.py` (the quote holder fields, `RunRecord.projection_versions`
+and the `part_id` docstring), `emailextract/ids.py` (the new closed reason ids only),
+`emailextract/versions.py` (`OUTPUT_SCHEMA_VERSION` and its docstring), `emailextract/__init__.py`
+(exports), `tests/test_assemble.py` (new), `tests/test_ingest.py` (new), `tests/test_store.py`,
+`tests/ledger/behavior_ledger.json` (the appended `contracts` line, via the tool),
+`docs/design/phase1-empirical.md`, `docs/design/phase1-build-spec.md`,
+`docs/design/phase1-turn-declarations.md`, and the narrow forced edits
+`tests/test_contract_phase1.py` (the pinned `OUTPUT_SCHEMA_VERSION`), `tests/test_phase0_scope.py`
+(the two new modules in `EXPECTED_LIBRARY`) and `tests/test_turn_declarations.py`
+(`"1.9"` in `BUILT_TURNS`). Not `fixtures/**`, not `*.expected.json`, not `walk.py`, not
+`parse.py`, not `selection.py`, not `attach.py`, not `text.py`, not `htmltext.py`, not
+`htmltree.py`, not `quote/**`, not `evals/**`.
+
+**The turn's stop point.** Turn 1.9 stops after `assemble` composes every stage into the one
+`EmailDocument`, `ingest_path` records a deterministic manifest, the store keeps the walk artifact
+beside the new document artifact, both ledgers are checked and `OUTPUT_SCHEMA_VERSION` is `"5"` --
+before Turn 1.10 (the gates over real output, the hostile set, the scope test and the close).
+
+**The extras this block declares** (allowed, and said): the pinned-version test the schema bump
+forces, part ids stable/unique, every committed fixture assembling to a `parsed` record, the
+document key moving with a projection version and a `Limits` field, the identity projection, the
+quote-boundary holder rows compared against the resolver's own row functions, `resolve_span`'s
+positive and refusal cases, the hostile-cap record, the ingest order/outcome/symlink/non-message
+cases, the same-bytes-two-paths rule, the manifest row shape, the cross-run/hash-seed/interpreter
+determinism digest, and five mutation cases with the anti-vacuity triple (a path in a document
+key, a not-built axis without its marker, an unsorted manifest, a same-Message-ID merge, a
+projection version dropped from the key). They are declared here and collected, so the turn is
+appended to `BUILT_TURNS`.
 
 ## Turn 1.10 -- gates over real output, the hostile set, the scope test, close
 

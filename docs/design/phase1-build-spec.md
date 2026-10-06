@@ -537,6 +537,73 @@ added for each: the terminator extension re-added to a DOM span, the appendonsen
 marker, and the ``moz-cite-prefix`` requiring ``type=cite``), the html quote rows are live, and L1 is
 now ``matched=1224 mismatched=0``.
 
+### Turn 1.9 -- assemble, ingest, store
+
+The turn's prompt fixes the composition and the ingest policies; the choices it left open, or that
+the code had to fix, are recorded here as decisions 48 to 54. `OUTPUT_SCHEMA_VERSION` moves
+**"4" -> "5"** (the record shapes changed); `EMAIL_PARSER_VERSION`, `DECODE_CHAIN_VERSION` and every
+stage's own version do **not** move -- no stage's bytes changed. The **walk artifact's** key moves
+with it, because the walk artifact names `output_schema_version`; a key moves with every version it
+names, and that is stated in `store.py`'s module docstring.
+
+48. **`times` is not built in Phase 1.** Decision 6 lists the four `EmailDocument` axes; the phase-1
+    exit criteria say no `TimeEvent` emission exists yet (only `dates.py`'s own parser does), so all
+    four are `TriValue(UNKNOWN, not_built_in_phase1)` with an **empty** value list and an **empty**
+    value list is never the encoding of "not built". A built axis is `built_axis()`.
+49. **`assemble` composes and computes nothing new.** It reuses `walk`, `headers.header_region`,
+    `attach.attachments`, `selection.selection_rows`, `selection.display_text`,
+    `quote.resolve.all_views` and `htmltext` through `quote.resolve.html_views`. It adds three pure
+    re-shapings the frozen records need and no stage emits: `HeaderField` rows from the header
+    region, `PartRecord` rows from the walker's parts (with the attachment stage's own
+    classification/hint/verdicts for an occurrence and the walker's cap reason as the part's
+    status), and the D14 `ContentFingerprint` from the selected body view.
+50. **No body text is stored on the document.** A view is derived on demand from the container bytes,
+    so `resolve_span` takes the **container** (an `EmailDocument` is refused with a `TypeError`: a
+    citation must be made against the bytes). The document keeps the per-view evidence
+    (`quote_boundaries`, `view_levels`), never the text.
+51. **`RunRecord.projection_versions`, keyed by the constant's own name**, records what produced each
+    derived view, and is part of the document artifact's key (it is behaviour). `run_id` is
+    deliberately **not** the key: `HTMLTEXT_VERSION` stamps the CPython minor the projection ran
+    under (decision 1), a recorded-only input, so a `run_id` carrying it would make one run two runs
+    across interpreters.
+52. **The document key and the identity projection.** The key is the container hash +
+    `OUTPUT_SCHEMA_VERSION` + `EMAIL_PARSER_VERSION` + all six projection versions + the canonical
+    `Limits` fingerprint (every field, in declaration order: a raised cap is a different run). A path
+    and the interpreter are recorded-only and never enter it. `identity_projection` strips the run
+    record's `environment` and its `projection_versions` -- the two inputs that depend on *who*
+    rendered the record -- and nothing else, so two runs, two hash seeds and two interpreters agree
+    on it byte for byte.
+53. **Ingest policies and the manifest.** Directory order is the POSIX-normalised relative path
+    compared as **UTF-8 bytes**; a symlinked directory is a `skipped(symlinked_directory)` row and is
+    never recursed, while a symlinked file is read as its target; an unreadable file is
+    `skipped(file_unreadable)` and one over `max_input_bytes` is `skipped(file_over_cap)`, and the
+    run continues; a file the **entry point** refuses is `skipped(<named error>)` (the existing
+    `parse.NAMED_ERROR_REASONS`: `not_a_message`, `cfb_msg_unsupported`, ...) -- "check what exists
+    first" -- so the ingest-side skip vocabulary is the three new `ids` ids plus that closed set. The
+    manifest (`path -> container_hash -> outcome`) is deterministic, is itself stored and
+    codec-encoded (its id is the sha256 of its own codec bytes, so a re-ingest writes one), and no
+    path ever enters a document or a cache key.
+54. **`resolve_span` refuses, with one closed reason.** A positive answer is a `RawSpan` into the raw
+    message and is given only where the part has a within-part byte map (an identity-decoded,
+    statically-decodable text part). The `html` view, a `format=flowed` part (its map covers the
+    unstuffing, but RFC 3676 reflow is deferred, so the view's coordinate space is not final), a
+    non-identity transport decode, a non-stateless charset, an unknown part id, an unknown view and a
+    span outside the view all return `Unresolvable(span_not_resolvable, part_id)` -- never a guess.
+
+**Two findings this section records.** (1) `HeaderField.name` must be non-empty, so the walker's
+**malformed paragraph** (a non-blank line that is neither a field nor a fold -- `parse_status !=
+"ok"`, `name == ""`) cannot be a header field and is not in `EmailDocument.headers`. It is not
+silently dropped from the system: the paragraph's bytes are still accounted by the walker's regions
+(the no-silent-drop property, which stays green) and the header stage records
+`headers.malformed_line` on its own gap channel -- but the **frozen record has no home for a
+malformed line**, so a consumer reading only the record cannot see it. Reported, not fixed.
+(2) `QuoteBoundary` carries `rule_id/kind/span/ordinal/prefix_depth` and **no part or view**, so
+`EmailDocument.quote_boundaries` is a flat document-order sequence: its pairing to a part is the
+order of `quote.resolve.all_views` (parts in tree order, boundaries in span order), which the
+drift test checks against the resolver's own row functions. A consumer that needs the part of a
+boundary has to re-derive the order. Reported, not fixed: the type is frozen and 1.9's allow-list
+does not include its shape.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

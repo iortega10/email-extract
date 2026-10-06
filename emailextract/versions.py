@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from typing import Final
 
-OUTPUT_SCHEMA_VERSION: Final[str] = "4"
+OUTPUT_SCHEMA_VERSION: Final[str] = "5"
 """Version of the output record shapes (EmailDocument and everything it carries).
 
 Moves when a record's serialized shape changes in a way that invalidates cached
@@ -42,6 +42,12 @@ their own matcher version, not this constant.
 ``EmailDocument`` axes), turned the three type verdicts into ``TriValue``, added
 the quote-boundary and view-level records, and replaced ``RunRecord``'s single
 cap with a list of ``CapRecord``. The walker's output did not move.
+
+5: Turn 1.9 (assemble, ingest, store) added the document's quote holder -- the
+``EmailDocument.quote_boundaries`` and ``EmailDocument.view_levels`` rows the stage
+already produced -- and the run record's ``projection_versions`` map, so the
+documented record shapes moved and a cached sidecar is invalidated. No stage's
+output moved: the walker, the decode chain and every measured fact are unchanged.
 """
 
 TEXTMODEL_VERSION: Final[str] = "1"

@@ -659,10 +659,12 @@ class HeaderField:
 
 @dataclass(frozen=True)
 class PartRecord:
-    """One node of the parts tree. ``part_id`` is an explicitly non-stable locator.
+    """One node of the parts tree. ``part_id`` is a **stable, content-addressed** id.
 
-    Container and body parts carry a ``role`` and are never attachment
-    occurrences, so they have no status (``status`` is None there).
+    It is ``ids.part_id(container_hash, raw span, content hash)``: identical for
+    identical bytes at the same tree position, unique within the document and
+    independent of the non-stable ``1.2.3`` locator, which renumbers when a sibling
+    is inserted (Turn 1.9; build-spec "part ids are content-addressed").
     """
 
     part_id: str
@@ -939,6 +941,13 @@ class RunRecord:
     ``declared_size_bytes`` triple is now a list of :class:`CapRecord`, each carrying
     those three members' meaning; a run that hit one cap (the only shape Phase 0 could
     produce) is ``caps=[CapRecord(cap_id=..., cap_value_bytes=..., declared_size_bytes=...)]``.
+
+    ``projection_versions`` (Turn 1.9) names the projection that produced each derived
+    view -- keyed by the version constant's own name (``TEXTMODEL_VERSION``,
+    ``TEXTPART_VERSION``, ``HEADERTEXT_VERSION``, ``HTMLTEXT_VERSION``,
+    ``DECODE_CHAIN_VERSION``, ``QUOTE_RULES_VERSION``) -- so a consumer reading a
+    stored record knows what rendered it. They are behaviour, so they are also part
+    of the document artifact's key.
     """
 
     run_id: str
@@ -946,6 +955,7 @@ class RunRecord:
     output_schema_version: str = OUTPUT_SCHEMA_VERSION
     caps: list[CapRecord] = field(default_factory=list)
     environment: dict[str, str] = field(default_factory=dict)
+    projection_versions: dict[str, str] = field(default_factory=dict)
     flags: FlagSection = field(default_factory=FlagSection)
 
     def __post_init__(self) -> None:
@@ -953,6 +963,9 @@ class RunRecord:
         for cap in self.caps:
             if not isinstance(cap, CapRecord):
                 raise CodecError(f"run_record.caps must hold CapRecords, got {cap!r}")
+        for name, value in self.projection_versions.items():
+            _non_empty(name, "run_record.projection_versions key")
+            _non_empty(value, f"run_record.projection_versions[{name!r}]")
 
 
 @dataclass(frozen=True)
@@ -960,7 +973,10 @@ class EmailDocument:
     """One email record: container identity (D14) plus the per-axis evidence.
 
     ``container_hash`` addresses the file; ``content_fingerprint`` is separate and
-    labeled (D14). Neither is "the" identity of the email.
+    labeled (D14). Neither is "the" identity of the email. **No body text is stored
+    here** (Turn 1.9): a view is derived on demand from the container bytes, and
+    what the record keeps is the per-view evidence about it (``quote_boundaries``
+    and ``view_levels``), never the text itself.
     """
 
     container_kind: ContainerKind
@@ -979,6 +995,8 @@ class EmailDocument:
     times_axis: TriValue = field(default_factory=not_built_in_phase1)
     same_message_candidates: list[SameMessageCandidate] = field(default_factory=list)
     same_message_candidates_axis: TriValue = field(default_factory=not_built_in_phase1)
+    quote_boundaries: list[QuoteBoundary] = field(default_factory=list)
+    view_levels: list[ViewLevel] = field(default_factory=list)
     classification_hint: ClassificationClaim | None = None
     run_record: RunRecord | None = None
     output_schema_version: str = OUTPUT_SCHEMA_VERSION
@@ -992,6 +1010,12 @@ class EmailDocument:
             raise CodecError("content_fingerprint must be a ContentFingerprint")
         if not isinstance(self.status, StatusOutcome):
             raise CodecError("status must be a StatusOutcome")
+        for boundary in self.quote_boundaries:
+            if not isinstance(boundary, QuoteBoundary):
+                raise CodecError(f"quote_boundaries must hold QuoteBoundaries, got {boundary!r}")
+        for level in self.view_levels:
+            if not isinstance(level, ViewLevel):
+                raise CodecError(f"view_levels must hold ViewLevels, got {level!r}")
         for value_name, axis_name in (
             ("times", "times_axis"),
             ("thread_edges", "thread_edges_axis"),

@@ -14,9 +14,13 @@ from dataclasses import dataclass
 from typing import Final
 
 __all__ = [
+    "FILE_OVER_CAP",
+    "FILE_UNREADABLE",
     "NOT_BUILT_IN_PHASE0",
     "NOT_BUILT_IN_PHASE1",
     "RawSpan",
+    "SPAN_NOT_RESOLVABLE",
+    "SYMLINKED_DIRECTORY",
     "container_hash",
     "content_hash",
     "part_id",
@@ -36,6 +40,38 @@ single meaning: no such axis, or the input did not exercise the field) nor as an
 empty list (genuinely empty). A union ``X | NotBuilt`` is forbidden, because the
 core codec decodes a union by its first non-``None`` member and would not
 round-trip.
+"""
+
+SPAN_NOT_RESOLVABLE: Final[str] = "span_not_resolvable"
+"""The closed reason a citation is refused (Turn 1.9).
+
+``assemble.resolve_span`` maps a view code-point span back to raw byte offsets
+**only** where the part carries a within-part byte map (an identity-decoded,
+statically-decodable text part). A flowed (``format=flowed``) part, a part whose
+transport decode was not identity and an html-projection part have no such map, so
+the citation returns this reason with the part id -- a recorded refusal, never a
+guessed byte offset. It is not a gap id and not a status reason.
+"""
+
+FILE_UNREADABLE: Final[str] = "file_unreadable"
+"""The closed per-file ingest outcome reason: the file could not be read (Turn 1.9).
+
+A permission error, a vanished path or any other ``OSError`` while reading is a
+recorded manifest row for that path; the run continues with the next file.
+"""
+
+FILE_OVER_CAP: Final[str] = "file_over_cap"
+"""The closed per-file ingest outcome reason: the file is over the input cap (Turn 1.9).
+
+The file's size exceeds the caller's ``Limits.max_input_bytes``, so it is never
+read or assembled; the run continues with the next file.
+"""
+
+SYMLINKED_DIRECTORY: Final[str] = "symlinked_directory"
+"""The closed ingest outcome reason: a symlinked directory is never recursed (Turn 1.9).
+
+Directory ingest records the symlink as a skipped row and does not descend it, so
+no symlink loop is possible; a symlinked **file** is read as its target.
 """
 
 

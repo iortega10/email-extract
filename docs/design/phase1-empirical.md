@@ -650,3 +650,81 @@ projection and every record shape are untouched). The 1.7 mutation catalogue's *
 (one per amended convention: the terminator extension re-added to a DOM span, the appendonsend span
 starting at the marker, and the `moz-cite-prefix` requiring `type=cite`), and the 1.7 tests that encoded
 the old conventions are restated for the new ones. Both ledgers are checked in the turn's report.
+
+## Turn 1.9 -- assemble, ingest, store
+
+The layers met: `assemble` composes the walk, the header stage, the attachment stage, the selection
+rule, the text/HTML projections and the quote resolver into the one `EmailDocument`, `ingest_path`
+walks a file or a directory into a document store and returns a deterministic manifest, and the
+store keeps the walk artifact beside the new document artifact. `OUTPUT_SCHEMA_VERSION` moves
+**"4" -> "5"** (the record shapes changed: `EmailDocument.quote_boundaries`, `EmailDocument.view_levels`
+and `RunRecord.projection_versions`), and the behavior ledger's `contracts` line is appended
+(`71cca1bccd9f9eea75b7217045a1c3baa3c4fb05a0dab9cd4167b1c30fc2e6d6`) while the `walk` and
+`decode_chain` lines do not move: no stage's bytes changed.
+
+**The oracle is untouched and unchanged.** `python -m emailextract.evals` reports
+`matched=1224 mismatched=0 unmeasurable=0 unmodelled=0` with `not_yet: phase 1=115, phase 3=26`,
+`no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass`, identically on CPython 3.14.3
+and 3.11.15. Every one of the **119** committed fixture containers assembles
+(`tests/test_assemble.py::test_every_committed_fixture_assembles_to_a_parsed_record`, which asserts
+`status == parsed` for each, so a swallowed stage failure cannot pass it) and every assembled record
+round-trips the strict codec.
+
+**The cross-interpreter digest.** One self-contained program ingests a fixed four-file tree
+(`b.eml`, `a.eml`, `ünïcode.eml`, `note.txt` -- a hit, a distinct document, a duplicate-by-bytes
+name and a refused content) into two fresh stores, re-ingests one of them, and digests the manifest
+plus every stored document's **identity projection** (the record with the recorded-only
+`environment` and `projection_versions` stripped):
+
+    python -m pytest tests/test_ingest.py::test_the_manifest_and_the_store_are_byte_identical_across_seeds_and_interpreters -q
+
+    identity projection digest  sha256  307fb742264a31b9f7726e79eb4f6831ae9cb29e031543d96cdd0145dbc18cac
+      -- identical under PYTHONHASHSEED 0 and 1 and on CPython 3.14.3 and 3.11.15
+
+**The recorded cross-interpreter difference, stated rather than hidden.** The *full* store bytes are
+**not** identical across interpreters, and the difference is exactly the recorded-only interpreter
+input: `HTMLTEXT_VERSION` embeds the CPython major.minor the projection ran under (decision 1), it
+is stamped in `RunRecord.projection_versions` and it is part of the document artifact's key, so the
+stored file names move with it:
+
+    store snapshot sha256  CPython 3.14.3   16d35a9b9ce2274f58e695af8a84d87cd52b03329cfb70af9295dffb1ef1f4c4
+    store snapshot sha256  CPython 3.11.15  e9590538f870e87e91d4f31bcc30c176b7a9939380c58c134c45564822be80cc
+      -- and on each interpreter two runs from the same inputs are byte-identical (`store_snapshot`
+         equality), and a re-ingest writes no document at all
+
+`run_id` is therefore deliberately *not* the artifact key: a run id carrying `HTMLTEXT_VERSION` would
+turn one run into two runs across interpreters (build-spec decision 51).
+
+**A fixture that could not assemble (a finding, fixed).** `fixtures/raw/malformed_mime.eml` was the
+one container that did not assemble: the walker records a malformed paragraph (a non-blank line that
+is neither a field nor a fold) with `name == ""`, and the frozen `HeaderField` requires a non-empty
+name, so constructing the record raised `header_field.name must be a non-empty str`. The
+malformed paragraph is **not** a header field, so `assemble` copies only the fields the walker parsed
+as `ok`; the paragraph's bytes stay accounted by the walker's regions (the no-silent-drop gate is
+still green) and the header stage still records `headers.malformed_line` on its own gap channel --
+but the frozen record has no home for a malformed line, so a record-only consumer cannot see it.
+Reported as a gap in the build spec (decision 54's section), not fixed: the record shape is frozen.
+
+**The hostile set, at assembly.** The three cap fixtures (`cap_deep_nesting`, `cap_large_part_count`,
+`cap_enormous_header_block`) assemble under tightened limits with every cap in
+`run_record.caps` and no raise; a cap on the message's own part makes the document
+`skipped(<the walker's reason>)`, and any other cap leaves it `parsed`. The record round-trips with
+the caps in it.
+
+**Ingest observations.** A directory is visited in UTF-8-bytewise path order (`A.eml` before
+`a.eml`, a non-ASCII name by its bytes) through the injectable `listing` seam, so the ordering is
+tested without case-differing files on a case-insensitive filesystem; a real non-ASCII name is
+exercised in `tmp_path`. The same bytes under two paths are one document and two manifest rows. An
+unreadable file (`file_unreadable`), an over-cap file (`file_over_cap`) and a content the entry point
+refuses (`not_a_message`, `cfb_msg_unsupported`) are recorded rows and the run continues. The
+symlink policy (never recurse a symlinked directory, read a symlinked file as its target) is tested
+where the OS allows one to be created: this machine refuses (`WinError 1314`, no privilege), so the
+test **skips with that stated reason** rather than faking it.
+
+**Five mutation cases with the anti-vacuity triple** (patched symbol exists, patch reached,
+observation differs): a path mixed into a document key (two identical files stop de-duplicating), a
+not-built axis returned as a bare `TriValue()` (`assemble` records a `failed(extractor_error)`
+document instead of a parsed one, because the contract refuses the pair), an unsorted manifest (the
+manifest refuses to exist unsorted), a same-Message-ID merge (the two files collapse to one document
+and one row loses its writer), and a projection version dropped from the key (bumping
+`QUOTE_RULES_VERSION` no longer moves it).

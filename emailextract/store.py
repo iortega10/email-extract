@@ -15,6 +15,22 @@ hit and writes nothing (``docextract_core.Collection.save`` is idempotent by
 key), which :func:`reingest_is_noop` proves over a throwaway store. The store is
 built on the core ``Collection`` -- the same substrate word-extract and
 form-extract use -- and nothing here reads a file the caller did not hand it.
+
+Turn 1.9 adds the **document** artifact beside the walk artifact:
+
+* the walk artifact is unchanged in shape and still keyed by the versions it names
+  (``EMAIL_PARSER_VERSION``, ``DECODE_CHAIN_VERSION``, ``OUTPUT_SCHEMA_VERSION``).
+  ``OUTPUT_SCHEMA_VERSION`` moved to ``5`` this turn, so the walk key **does** move:
+  the walk artifact names that constant, and a key must move with a version it names;
+* :class:`DocumentArtifact` is keyed by ``assemble.document_key`` -- the container
+  hash, ``OUTPUT_SCHEMA_VERSION``, ``EMAIL_PARSER_VERSION``, every projection version
+  the record stamps and the ``Limits`` fingerprint. A raised cap is a different run
+  and a different key; a path and the interpreter are recorded-only and never enter
+  one.
+
+The store layout is ``<root>/walks/``, ``<root>/documents/`` and (Turn 1.9's
+ingest) ``<root>/manifests/``, each a core ``Collection`` with its own
+``index.json``.
 """
 
 from __future__ import annotations
@@ -27,20 +43,29 @@ from pathlib import Path
 from docextract_core import Collection
 
 from . import versions
+from .assemble import assemble, document_key, limits_fingerprint, projection_versions
 from .container import Container
 from .ids import sha256_hex, walk_key
+from .model import EmailDocument
+from .parse import Limits
 from .walk import WalkResult, walk
 
 __all__ = [
     "ArtifactOutcome",
+    "DocumentArtifact",
     "IngestRun",
     "RunInputs",
     "WalkArtifact",
     "artifact_key",
+    "document_artifact",
+    "document_store",
     "hashed_inputs",
     "ingest",
-    "reingest_is_noop",
+    "read_document",
     "recorded_only_inputs",
+    "reingest_document_is_noop",
+    "reingest_is_noop",
+    "store_document",
     "store_snapshot",
     "walk_artifact",
     "walk_store",
@@ -196,3 +221,91 @@ def reingest_is_noop(container: Container, store: Collection[WalkArtifact]) -> b
         and all(outcome.hit for outcome in second.artifacts)
         and before == after
     )
+
+
+# --------------------------------------------------------------- the document (1.9)
+
+
+@dataclass(frozen=True)
+class DocumentArtifact:
+    """The assembled :class:`EmailDocument`, keyed by exactly its hashed inputs.
+
+    ``key`` is ``assemble.document_key``: container hash, the two record versions,
+    every projection version and the ``Limits`` fingerprint. ``projection_versions``
+    and ``limits_fingerprint`` are restated beside the document so a reader can see
+    what the key was made of without decoding the record. A record read back from a
+    store equals the record assembled, with its own axes intact.
+    """
+
+    key: str
+    container_hash: str
+    email_parser_version: str
+    output_schema_version: str
+    projection_versions: dict[str, str]
+    limits_fingerprint: str
+    document: EmailDocument
+
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("document_artifact.key must be non-empty")
+        if not self.container_hash:
+            raise ValueError("document_artifact.container_hash must be non-empty")
+        if not isinstance(self.document, EmailDocument):
+            raise ValueError("document_artifact.document must be an EmailDocument")
+        if not self.projection_versions:
+            raise ValueError("document_artifact.projection_versions must not be empty")
+
+
+def document_artifact(container: Container, *, limits: Limits) -> DocumentArtifact:
+    """Assemble the container and package the result under its hashed inputs."""
+    document = assemble(container, limits=limits)
+    return DocumentArtifact(
+        key=document_key(container.container_hash(), limits=limits),
+        container_hash=container.container_hash(),
+        email_parser_version=versions.EMAIL_PARSER_VERSION,
+        output_schema_version=versions.OUTPUT_SCHEMA_VERSION,
+        projection_versions=projection_versions(),
+        limits_fingerprint=limits_fingerprint(limits),
+        document=document,
+    )
+
+
+def document_store(root: str | Path, *, read_only: bool = False) -> Collection[DocumentArtifact]:
+    """The document collection of a store: ``<root>/documents``, keyed by its id."""
+    return Collection(
+        Path(root) / "documents",
+        DocumentArtifact,
+        id_of=lambda artifact: artifact.key,
+        key_of=lambda artifact: artifact.key,
+        read_only=read_only,
+    )
+
+
+def store_document(
+    container: Container, store: Collection[DocumentArtifact], *, limits: Limits
+) -> tuple[DocumentArtifact, bool]:
+    """Store this container's document; ``(artifact, created)``.
+
+    A hit is an artifact the store already held under the same key: nothing is
+    written and the stored record wins, so a re-ingest of unchanged bytes cannot
+    rewrite, reorder or re-encode a store.
+    """
+    artifact = document_artifact(container, limits=limits)
+    _saved, created = store.save(artifact)
+    return artifact, created
+
+
+def read_document(store: Collection[DocumentArtifact], key: str) -> EmailDocument | None:
+    """The document stored under ``key``, or ``None`` -- with its own axes intact."""
+    artifact = store.find(key)
+    return None if artifact is None else artifact.document
+
+
+def reingest_document_is_noop(
+    container: Container, store: Collection[DocumentArtifact], *, limits: Limits
+) -> bool:
+    """The document-level no-op harness: the second ingest writes nothing at all."""
+    before = store_snapshot(store.root.parent)
+    _artifact, created = store_document(container, store, limits=limits)
+    after = store_snapshot(store.root.parent)
+    return created is False and before == after
