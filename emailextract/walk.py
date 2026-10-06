@@ -609,6 +609,16 @@ def _split_params(value: str) -> tuple[str, dict[str, str]]:
 # ----------------------------------------------------------------- the walk
 
 
+#: The explicit stack's work items (Turn 1.11). ``_walk_part`` used to call itself to descend into
+#: a nested multipart child; now it drains a list instead, so the walk over the parts tree is
+#: iterative. ``_VISIT`` runs one part's own measurements and pushes the items its subtree owes; the
+#: other three append exactly what the recursion appended at the same point.
+_VISIT: Final[str] = "visit"
+_REGION: Final[str] = "region"
+_PART: Final[str] = "part"
+_CAP: Final[str] = "cap"
+
+
 def _walk_part(
     raw: bytes,
     container_id: str,
@@ -620,6 +630,40 @@ def _walk_part(
     state: _WalkState,
     depth: int,
 ) -> None:
+    """Walk one part and its subtree -- the recursion, drained as an explicit stack.
+
+    The behaviour is the recursive walker's byte for byte: an item pushed *later* is emitted
+    *earlier*, so a multipart node pushes its trailing delimiter and epilogue, then each child's
+    ``(delimiter, child)`` pair in reverse, and the loop pops them back into the recursion's append
+    order. ``tests/test_walk_iterative.py`` proves the equivalence against the frozen recursive
+    reference in ``tests/support/legacy_walk.py`` over every committed fixture and a seeded tree
+    corpus.
+    """
+    stack: list[tuple[str, object]] = [(_VISIT, (span, path, parent_path, depth))]
+    while stack:
+        action, item = stack.pop()
+        if action == _VISIT:
+            _walk_visit(raw, container_id, item, parts, regions, state, stack)
+        elif action == _REGION:
+            regions.append(item)  # type: ignore[arg-type]
+        elif action == _PART:
+            parts.append(item)  # type: ignore[arg-type]
+        else:  # _CAP: the reason, the locator and the accounted span
+            reason, locator, cap_span = item  # type: ignore[misc]
+            _cap_hit(regions, state.caps, reason, locator, cap_span)
+
+
+def _walk_visit(
+    raw: bytes,
+    container_id: str,
+    item: object,
+    parts: list[PartShape],
+    regions: list[Region],
+    state: _WalkState,
+    stack: list[tuple[str, object]],
+) -> None:
+    """One part's own measurements, and the items its subtree still owes the stack."""
+    span, path, parent_path, depth = item  # type: ignore[misc]
     limits = state.limits
     WORK.add()
     if not _part_count_allows(limits, len(parts)):
@@ -697,30 +741,25 @@ def _walk_part(
                     gaps=_dedup(gaps),
                 )
             )
-            for index, chunk in enumerate(chunks):
-                regions.append(Region("delimiter", path, delimiters[index]))
+            # The recursion emitted each child's delimiter region and then descended into it; the
+            # stack is LIFO, so push the subtree's tail first and each ``(delimiter, child)`` pair
+            # in reverse. Popping then replays the recursion's append order exactly: delimiter,
+            # child subtree, delimiter, child subtree, ..., trailing delimiter, epilogue.
+            if epilogue.length:
+                stack.append((_REGION, Region("epilogue", path, epilogue)))
+            for tail in reversed(delimiters[len(chunks) :]):
+                stack.append((_REGION, Region("delimiter", path, tail)))
+            for index in range(len(chunks) - 1, -1, -1):
+                chunk = chunks[index]
                 child_span = RawSpan(chunk.offset, chunk.length, f"{path}.{index + 1}")
                 if not _depth_allows(limits, depth + 1):
                     # Deeper than the nesting cap: the child is not descended into at all,
                     # and its bytes (the delimiters around it are accounted separately) are
                     # one unread region.
-                    _cap_hit(regions, state.caps, CAP_REASON_DEPTH, child_span.locator, child_span)
-                    continue
-                _walk_part(
-                    raw,
-                    container_id,
-                    child_span,
-                    child_span.locator,
-                    path,
-                    parts,
-                    regions,
-                    state,
-                    depth + 1,
-                )
-            for tail in delimiters[len(chunks) :]:
-                regions.append(Region("delimiter", path, tail))
-            if epilogue.length:
-                regions.append(Region("epilogue", path, epilogue))
+                    stack.append((_CAP, (CAP_REASON_DEPTH, child_span.locator, child_span)))
+                else:
+                    stack.append((_VISIT, (child_span, child_span.locator, path, depth + 1)))
+                stack.append((_REGION, Region("delimiter", path, delimiters[index])))
             return
 
     if not is_multipart:

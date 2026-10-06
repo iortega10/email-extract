@@ -752,6 +752,47 @@ forces:
     phase 0" (`emailextract/evals/metrics.py:92`) -- a recorded oracle file, and the label ledger is
     additions-only, so the wording is reported in the report's "Not done" rather than edited.
 
+### Turn 1.11 -- the walker is iterative and the first release is prepared (the choices the turn forces)
+
+70. **The walker is iterative, and the recursion is frozen as a test-only reference.** `_walk_part`
+    drains an explicit stack of four item kinds (``visit``/``region``/``part``/``cap``); the output is
+    unchanged (`EMAIL_PARSER_VERSION` stays `2`, the behaviour ledger's `walk` line does not move).
+    The old recursive traversal is kept verbatim in `tests/support/legacy_walk.py` -- imported only
+    by `tests/test_walk_iterative.py`, never by the library -- and the differential proves equality
+    field by field over every committed fixture and 500 seeded random trees, with a child-order
+    mutation that must fail it. `tests/test_phase1_scope.py::KNOWN_SELF_RECURSION` is emptied, so the
+    scan now finds no self-recursive function in the package.
+71. **The deep-nesting proof stops at 1,200 levels, and says why.** A nested multipart is quadratic in
+    the *bytes scanned* (each level's `_segment` re-reads its whole body, and a level's body contains
+    all its descendants), so 20,000 levels take minutes; the fix is proven at 1,200 levels -- past
+    CPython's ~1,000-frame recursion limit, where the frozen recursive walker raises `RecursionError`
+    on the same input -- with an injected traversal step counter that is exactly one per part and
+    linear in the doubling. The `message/rfc822` chain (which the walker never descends into) is
+    exercised at the full 20,000.
+72. **The report's required sections are eight: `## Exit criteria` is added.** Decision 69's count
+    moves from seven to eight. The section walks the build spec's "Exit criteria for Phase 1" bullet
+    by bullet, each with a CLOSED/OPEN status and the test or gate line that fails without it, and
+    states the open items plainly. The checking test now also requires every `tests/...::name`
+    citation the report makes to resolve, by a static AST scan of the cited file (a citation names a
+    test *or* a pinned constant, and a constant is collected by nothing).
+73. **The release is driven by `MANIFEST.in`: the sdist ships no tests.** setuptools' default list
+    pulls in `tests/test*.py` alone, which cannot run without `fixtures/`, `tests/support/` and
+    `tests/ledger/`; the sdist is therefore pruned to the package plus
+    `LICENSE`/`NOTICE`/`README.md`/`CHANGELOG.md`/`pyproject.toml`/`MANIFEST.in`. The wheel is
+    unchanged (`emailextract/**` plus metadata and `LICENSE`/`NOTICE`). No `py.typed` is added: the
+    package makes no typing guarantee a marker would be honest about, so the `Typing :: Typed`
+    classifier is not claimed either.
+74. **The `form` and `word` extras lose their upper pins.** They are siblings this library routes
+    *to* and never imports, on their own release cadence (`form-extract` is at 0.5.0 while the old
+    `<0.2` pin made the extra unsatisfiable). The `form` extra still requests `form-extract` **plain**,
+    so its own `[pdf]` extra's AGPL-3.0 never enters this tree.
+75. **The lxml half of the HTML experiment test is skipped where lxml is absent.** lxml is not a
+    dependency of this package (by design) and not in `[dev]`, so CI has none; the suite had only ever
+    run where the wheel was installed. `tests/test_html_parser_experiment.py` now skips the
+    pinned-wheel assertion with a named reason -- the experiment document already says "the test skips
+    B when it is absent" -- and gates the A-vs-B closed-container comparison on lxml's availability.
+    No A-side assertion is loosened.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

@@ -1,0 +1,28 @@
+name: CI
+
+# The gate for every push and pull request: the full suite on the four supported interpreters.
+# The lockstep sibling `docextract-core` arrives from PyPI through the project's own dependency
+# (there is no local checkout on a runner), and `[dev]` adds pytest. The oracle and the ledgers are
+# not run here on purpose: `python -m emailextract.evals` and the three `--check` tools are the
+# release job's business (`docs/releasing.md`), and a pull request only has to be green.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.11", "3.12", "3.13", "3.14"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python -m pytest -q

@@ -7,11 +7,10 @@ import bans add ``chardet`` (the exit criterion: the package imports with no sib
 
 * no module imports ``threading``/``concurrent``/``multiprocessing``/``socket``/``http`` (or
   ``urllib.request``): the package is single-threaded and never fetches;
-* no function **recurses over the parts tree** -- with one named, committed exception: the walker's
-  ``walk._walk_part`` is recursive today (``KNOWN_SELF_RECURSION``), which the exit criteria's "the
-  walkers are iterative" does not hold for. It is a FINDING (the walker is not in this turn's
-  allow-list), so the scan names it rather than tolerating it silently: a **new** self-recursive
-  function fails, an exempted one must carry a reason, and the list is asserted exact.
+* no function **recurses over the parts tree**. Turn 1.10a recorded the walker's ``walk._walk_part``
+  as a named FINDING (``KNOWN_SELF_RECURSION``); Turn 1.11 rewrote it as an explicit-stack loop, so
+  the allow-list is now **empty** and the scan must find no self-recursive function at all: a *new*
+  recursion fails, and a stale exemption fails too.
 
 The module list, the import bans and the name scan are kept from the Phase 0 file; the report-sections
 test is Turn 1.10b, and the phase-1 report it checks is ``docs/phase1-report.md``.
@@ -115,17 +114,14 @@ FORBIDDEN_NAME_PARTS = (
     "read_msg",
 )
 
-#: The one function that recurses, as ``(module path relative to the repo, function name)``. The
-#: exit criteria say "the walkers are iterative"; ``_walk_part`` is not (it calls itself to descend
-#: into a nested multipart child, ``walk.py:709``). The walker is not in Turn 1.10a's allow-list, so
-#: this is a recorded FINDING: the scan below fails when the set changes, so a *new* recursion is
-#: caught and this one has to keep its name and its reason.
-KNOWN_SELF_RECURSION = {
-    ("emailextract/walk.py", "_walk_part"): (
-        "descends into a nested multipart child by calling itself; the walk-recursion finding of "
-        "Turn 1.10a, reported not fixed (walk.py is outside the turn's allow-list)"
-    ),
-}
+#: The functions that recurse, as ``(module path relative to the repo, function name)``. Turn 1.10a
+#: recorded exactly one -- ``_walk_part``, which called itself to descend into a nested multipart
+#: child -- as a FINDING against the exit criteria's "the walkers are iterative". Turn 1.11 rewrote
+#: it as an explicit-stack loop (``tests/test_walk_iterative.py`` proves it byte for byte against the
+#: frozen recursive reference in ``tests/support/legacy_walk.py``), so the list is now **empty**: the
+#: scan below still asserts it exact in both directions, so a *new* recursion fails here rather than
+#: being tolerated.
+KNOWN_SELF_RECURSION: dict[tuple[str, str], str] = {}
 
 _IMPORT_PROBE = """
 import importlib
@@ -246,11 +242,11 @@ def test_no_module_imports_threading_concurrency_sockets_or_http() -> None:
 
 
 def test_no_msg_cfb_routing_recursion_or_threading_exists() -> None:
-    """No later-phase name exists, and no function self-recurses but the one named finding.
+    """No later-phase name exists, and no function self-recurses at all.
 
-    The self-recursion half is exact in both directions: a function that starts recursing fails, an
-    exemption that stops being real fails, and the one exemption (``walk._walk_part``) carries its
-    reason -- the walk-recursion finding the exit criteria' "the walkers are iterative" misses.
+    The self-recursion half is exact in both directions: a function that starts recursing fails, and
+    an exemption that stops being real fails. Turn 1.11 made the walker iterative, so the allow-list
+    is empty and the exit criteria's "the walkers are iterative" holds.
     """
     offenders: list[str] = []
     recursions: set[tuple[str, str]] = set()
@@ -313,10 +309,11 @@ def test_the_package_imports_with_no_sibling_and_no_chardet() -> None:
 #: ``docs/phase1-report.md``: the phase's closing artifact, committed last (Turn 1.10b).
 REPORT = ROOT / "docs" / "phase1-report.md"
 
-#: The seven sections ``docs/design/phase1-ledgers.md`` (f) requires of the report, in its order.
-#: ``docs/design/phase1-ledgers.md`` names the checking test ``tests/test_phase1_report.py``; the
-#: frozen declaration block names this file instead, and the declaration is the enforced record, so
-#: the test lives here (recorded as the deviation in the report's named resolutions).
+#: The sections ``docs/design/phase1-ledgers.md`` (f) requires of the report, in its order, plus the
+#: **Exit criteria** walk Turn 1.11 added (the build spec's "Exit criteria for Phase 1", bullet by
+#: bullet). ``docs/design/phase1-ledgers.md`` names the checking test ``tests/test_phase1_report.py``;
+#: the frozen declaration block names this file instead, and the declaration is the enforced record,
+#: so the test lives here (recorded as the deviation in the report's named resolutions).
 REQUIRED_REPORT_SECTIONS = (
     "## What was built",
     "## Named resolutions",
@@ -325,7 +322,12 @@ REQUIRED_REPORT_SECTIONS = (
     "## Label-versus-parser findings",
     "## Licences",
     "## Not done",
+    "## Exit criteria",
 )
+
+#: Every ``tests/<file>.py::<name>`` the report cites. A citation is a claim that a test or a pinned
+#: constant exists, so a renamed symbol must leave the report stale rather than wrong-but-plausible.
+_CITATION = re.compile(r"(tests/[A-Za-z0-9_/.]+\.py)::([A-Za-z0-9_]+)")
 
 #: A level-2 heading line, whatever its text: the boundary between one section's body and the next.
 _REPORT_HEADING = re.compile(r"^(## .+)$", re.MULTILINE)
@@ -359,12 +361,51 @@ def _report_problems(text: str) -> list[str]:
     return problems
 
 
+def _module_level_names(path: Path) -> set[str]:
+    """Every name a test module defines at its top level: a function, a class or a pinned constant."""
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    names: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            names.add(node.name)
+        elif isinstance(node, ast.Assign):
+            names.update(target.id for target in node.targets if isinstance(target, ast.Name))
+        elif isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            names.add(node.target.id)
+    return names
+
+
+def _citation_problems(text: str) -> list[str]:
+    """Every ``tests/...py::name`` the report cites that is not a real symbol in that file.
+
+    A static AST scan of the cited file -- not a live collection -- because a report cites both test
+    functions and pinned constants (``FINDING_ROWS``, ``KNOWN_SELF_RECURSION``) and a constant is
+    collected by nothing. A renamed test or a moved constant therefore makes the report stale rather
+    than plausible: the citation stops resolving.
+    """
+    problems: list[str] = []
+    for path, name in sorted(set(_CITATION.findall(text))):
+        source = ROOT / path
+        if not source.is_file():
+            problems.append(f"the report cites {path}::{name}, but {path} does not exist")
+        elif name not in _module_level_names(source):
+            problems.append(f"the report cites {path}::{name}, but {name} is not defined there")
+    return problems
+
+
 def test_the_phase1_report_sections_are_present_and_non_empty() -> None:
-    """The phase-1 report carries its seven sections, each exactly once and each non-empty."""
+    """The report carries its eight sections, each exactly once and non-empty, and cites live ids.
+
+    The citation half can actually rot: a renamed test or a moved constant leaves the report stale
+    rather than wrong-but-plausible, so every ``tests/...py::name`` it names must resolve.
+    """
     assert REPORT.is_file(), f"the phase-1 report is not committed at {REPORT}"
     text = REPORT.read_text(encoding="utf-8")
     problems = _report_problems(text)
     assert not problems, problems
+    cited = sorted(set(_CITATION.findall(text)))
+    assert cited, "the report cites no test id or pinned constant at all"
+    assert _citation_problems(text) == [], _citation_problems(text)
     # The check can fail, in both directions, on a stub: a heading with no body is named ...
     stub = "\n".join(f"{section}\n\nbody\n" for section in REQUIRED_REPORT_SECTIONS[:-1])
     stub += f"\n{REQUIRED_REPORT_SECTIONS[-1]}\n\n"
@@ -377,9 +418,18 @@ def test_the_phase1_report_sections_are_present_and_non_empty() -> None:
     assert _report_problems(repeated) == [
         f"the required section {REQUIRED_REPORT_SECTIONS[2]!r} appears 2 times"
     ]
-    # ... and so is a missing section, which is reported rather than ignored.
+    # ... a missing section is reported rather than ignored ...
     for section in REQUIRED_REPORT_SECTIONS:
         missing = "\n".join(
             f"{other}\n\nbody\n" for other in REQUIRED_REPORT_SECTIONS if other != section
         )
         assert _report_problems(missing) == [f"the required section {section!r} is missing"]
+    # ... and so is a citation to a symbol that is not there, or to a file that is not there.
+    assert _citation_problems(text + "\n`tests/test_phase1_scope.py::test_no_such_case`\n") == [
+        "the report cites tests/test_phase1_scope.py::test_no_such_case, but "
+        "test_no_such_case is not defined there"
+    ]
+    assert _citation_problems(text + "\n`tests/test_no_such_file.py::test_x`\n") == [
+        "the report cites tests/test_no_such_file.py::test_x, but "
+        "tests/test_no_such_file.py does not exist"
+    ]

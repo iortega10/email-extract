@@ -1138,3 +1138,34 @@ Allow-list (`turn=1.10b`): `emailextract/selection.py` (the work-counter seam an
 Not `fixtures/**`, not `*.expected.json`, not any `emailextract/*` module outside `selection.py`,
 not `versions.py`, `model.py`, `ids.py`, `walk.py`, not another `tests/support/**` file, not another
 `emailextract/evals/**` file.
+
+```declaration turn=1.11
+module: emailextract/walk.py
+module: tests/support/legacy_walk.py
+module: tests/test_walk_iterative.py
+module: tests/test_phase1_scope.py
+module: tests/test_turn_declarations.py
+module: tests/test_readme_examples.py
+module: tests/test_html_parser_experiment.py
+module: tests/ledger/label_ledger.json
+module: README.md
+module: CHANGELOG.md
+module: MANIFEST.in
+module: pyproject.toml
+module: .github/workflows/ci.yml
+module: .github/workflows/release.yml
+module: docs/releasing.md
+module: docs/phase1-report.md
+module: docs/design/phase1-build-spec.md
+module: docs/design/phase1-turn-declarations.md
+test: tests/test_walk_iterative.py::test_the_iterative_walker_matches_the_recursive_reference_over_every_fixture
+test: tests/test_walk_iterative.py::test_the_iterative_walker_matches_the_recursive_reference_over_seeded_trees
+test: tests/test_walk_iterative.py::test_the_recursive_reference_really_is_recursive
+test: tests/test_walk_iterative.py::test_a_child_order_mutation_fails_the_differential
+test: tests/test_walk_iterative.py::test_a_raised_depth_cap_walks_deep_multipart_without_recursing
+test: tests/test_walk_iterative.py::test_a_raised_depth_cap_walks_a_deep_rfc822_chain
+test: tests/test_walk_iterative.py::test_the_deep_walk_takes_exact_linear_steps_and_bounded_memory
+test: tests/test_readme_examples.py::test_every_python_block_in_the_readme_is_a_marked_example
+test: tests/test_readme_examples.py::test_every_readme_example_runs
+stop: after the first-release preparation; the reviewer validates, commits and drives the rc release
+```

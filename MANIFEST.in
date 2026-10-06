@@ -1,0 +1,8 @@
+# The release ships the package, its metadata and the changelog -- nothing else.
+#
+# The test suite is deliberately **not** shipped: it needs fixtures/, tests/support/ and
+# tests/ledger/, which are not distribution artifacts, so a downstream copy could not run it, and
+# setuptools' default file list would pull in tests/test*.py alone. Half a test suite is worse than
+# none.
+include CHANGELOG.md
+prune tests

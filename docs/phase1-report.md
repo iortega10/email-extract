@@ -5,7 +5,7 @@ per-part text, the HTML and plain views, the quote boundaries, the attachment ma
 assembled document, the ingest/store path) and the oracle that measures it. This file is committed
 as the **last** artifact of the phase (`docs/design/phase1-turn-declarations.md`, turn 1.10's
 `stop:` line). It is a report, not a gate: `tests/test_phase1_scope.py::
-test_the_phase1_report_sections_are_present_and_non_empty` checks that the seven sections below are
+test_the_phase1_report_sections_are_present_and_non_empty` checks that the eight sections below are
 present and non-empty, and names the missing or empty one; the content is the owner's review.
 
 Inputs the sections cite, so a reader can re-run rather than trust:
@@ -266,11 +266,18 @@ Phase 1 found:
   label the fact sparsely (only the rows they state), so the comparison is over the labelled rows;
   the reading is recorded, not treated as agreement: `docs/design/phase1-empirical.md`
   (Turn 1.2, "the sparse-row rule ... is a FINDING"); `tests/test_addresses.py`.
-* **The walker recurses, against the exit criteria.** `emailextract/walk.py::_walk_part` calls
-  itself to descend into a nested multipart child, so "the walkers are iterative" does not hold.
-  `walk.py` is outside Turn 1.10a's allow-list, so the scan names it with its reason
-  (`tests/test_phase1_scope.py::KNOWN_SELF_RECURSION`) rather than tolerating it silently; a *new*
-  self-recursive function fails `::test_no_msg_cfb_routing_recursion_or_threading_exists`.
+* **The walker recursed, against the exit criteria; Turn 1.11 closed it.** At Turn 1.10a
+  `emailextract/walk.py::_walk_part` called itself to descend into a nested multipart child, so "the
+  walkers are iterative" did not hold, and the scan named it with its reason
+  (`tests/test_phase1_scope.py::KNOWN_SELF_RECURSION`). Turn 1.11 rewrote `_walk_part` as an
+  explicit-stack loop -- byte-for-byte identical output, proven against the frozen recursive
+  reference `tests/support/legacy_walk.py` by
+  `tests/test_walk_iterative.py::test_the_iterative_walker_matches_the_recursive_reference_over_every_fixture`
+  and `::test_the_iterative_walker_matches_the_recursive_reference_over_seeded_trees` -- so the
+  allow-list is empty and `::test_no_msg_cfb_routing_recursion_or_threading_exists` now finds no
+  self-recursive function in the package. A raised `max_depth` no longer blows the interpreter stack:
+  `::test_a_raised_depth_cap_walks_deep_multipart_without_recursing` (the frozen recursive walker
+  raises `RecursionError` on the same input; the iterative one assembles a `parsed` document).
 * **`labels.undetermined=20`: twenty rows, over eighteen sidecars, that the labels leave open** --
   12 distinct fact or gap ids (`decode.chain` 5, `document.axes` 3, `headers.addresses` 2,
   `headers.date` 2, and one each of `attach.decorative`, `attach.types`, `body.boundary_disagreement`,
@@ -318,6 +325,13 @@ distribution appears in the audited files.
 
 What Phase 1 deliberately left to a later phase, and what it found but did not fix.
 
+* **Deep nesting is quadratic in wall time at raised caps (found while validating Turn 1.11).** The walker
+  is now iterative and its step counter is linear, but each nesting level scans its own body for its
+  boundary, so the bytes scanned grow with the square of the depth: measured by the reviewer on one
+  machine, a nested `multipart/mixed` took 1.9 s at 1,000 levels, 8.3 s at 2,000 and 33 s at 4,000. The
+  default `Limits.untrusted()` caps depth at 16, so the default path is bounded; a caller who raises
+  `max_depth` owns the cost. The step counter does not see per-level byte scanning, so the
+  "work-per-input-byte" claim is a claim about steps. A single-pass nested-boundary scan is later work.
 * **Phase 1b: the `.msg`/CFB reader.** `parse` returns `cfb_msg_unsupported` for the CFB magic;
   `olefile` is named in `NOTICE` and is not installed. The walker's `cfb_msg` route is exercised only
   through the in-memory `FakeContainer` (D13).
@@ -351,9 +365,12 @@ What Phase 1 deliberately left to a later phase, and what it found but did not f
 * **The `.msg`-shaped absences in the model are unfilled**: the not-built axis fields
   (`AttachmentOccurrence`'s `.msg` fields, `ContainerFacts`) ship declared and empty, and the
   walker's `UNBUILT_SECTIONS` still records `unknown("not_built_in_phase0")` for them.
-* **The walker recurses.** `_walk_part` calls itself, against "the walkers are iterative"; it is a
-  recorded finding (`KNOWN_SELF_RECURSION`) because `walk.py` was outside the closing turn's
-  allow-list. Fixing it is a `walk.py` turn.
+* **The walker recursed -- closed by Turn 1.11, no longer an open item.** The Turn 1.10a finding that
+  `walk.py::_walk_part` called itself (`KNOWN_SELF_RECURSION`) is fixed: `_walk_part` is an
+  explicit-stack loop, the scope scan's allow-list is empty, and a raised `max_depth` no longer
+  produces a `RecursionError` or a `failed(extractor_error)` document. See **Label-versus-parser
+  findings**; tests `tests/test_walk_iterative.py` (the fixture, seeded-tree, mutation and
+  deep-nesting cases).
 * **The metrics table's headline still says "at phase 0"** (`emailextract/evals/metrics.py:92`). It
   is a recorded oracle file, and the label ledger is additions-only, so the wording is recorded here
   rather than edited; the tables it prints are the phase-1 ones.
@@ -362,3 +379,93 @@ What Phase 1 deliberately left to a later phase, and what it found but did not f
   set yet -- remains: the strongest available common-mode breaker for the quote rules is the owner's
   structure-only probe, and the independent splitter's independence is **code lineage, not a
   different author**.
+
+## Exit criteria
+
+The build spec's "Exit criteria for Phase 1" (`docs/design/phase1-build-spec.md`) is the phase's
+contract. This section walks it **bullet by bullet**, saying whether each is CLOSED or OPEN and
+naming the test or gate line that fails the moment the claim stops being true. Every status and every
+number below was **recomputed this turn** (Turn 1.11); nothing is copied from an earlier draft of the
+report.
+
+### The re-run this turn
+
+`python -m emailextract.evals` (CPython 3.14.3; the counts are identical on CPython 3.11.15):
+
+```
+email-extract: L1 gate metrics at phase 0 (corpus: <repo>/fixtures)
+  L1              matched=1330 mismatched=0 unmeasurable=0 unmodelled=0
+                 not_yet: phase 1=9, phase 3=26
+  labels.undetermined=20 question(s) the labels leave open
+  gates:
+    L1             pass matched=1330 mismatched=0 unmeasurable=0 unmodelled=0 not_yet=35
+    no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass
+    phase-1 gaps   pass checked 30 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s); skipped 0
+    phase1 exit    pass wait=6 (named=6), compared=1330; extra=0 missing=0
+  corpus: 119 fixture(s), 119 sidecar(s)
+    generated      81 fixture(s), 81 sidecar(s)
+    raw            33 fixture(s), 33 sidecar(s)
+    time            5 fixture(s), 5 sidecar(s)
+  falsifiability: 8 gap(s) covered by cases, 6 recorded by sidecars
+  not exercised by any fixture: body.headers_only, body.no_boundary_found
+```
+
+The three ledgers, run `--check` on **both** interpreters (`<repo>` is the corpus path on the
+machine that ran them; the exit codes are the portable part):
+
+```
+tools/update_behavior_ledger.py --check   exit 0   (behaviour fingerprints unmoved)
+tools/update_label_ledger.py --check      exit 0   (additions-only: sidecars + tests/support/** + evals/**)
+tools/make_fixtures.py --check            exit 0   (the generated corpus reproduces byte for byte)
+```
+
+The full suite, `python -m pytest -q`, run sequentially on both pinned interpreters:
+
+```
+CPython 3.14.3:  1920 passed, 2 skipped
+CPython 3.11.15: 1920 passed, 2 skipped
+```
+
+### The bullets
+
+| # | the spec's claim (quoted, abridged) | status | the test or gate line that fails without it |
+|---|---|---|---|
+| 1 | "the declared phase-1 fact-id list is pinned in the ledger ... a closed list in the ledger, empty by default; L1 is 100% over every phase-1 fact with a per-(fact x phase) coverage floor ... the phase-1 gap gate passes and fails when a phase-1 gap is dropped" | **CLOSED** for the pin, the 100%, the ratchet and the gates; **OPEN** for the literal declared floors | `tests/test_facts_ledger.py` (the pin), `tests/test_facts_coverage.py` (the ratchet), `tests/test_phase1_gap_gate.py`, `tests/test_l1_gate.py`; the evals lines `L1 pass matched=1330 mismatched=0` and `phase-1 gaps pass ...`. **Open:** 11 of the 20 declared floors are unmet by the committed corpus (`tests/ledger/facts_ledger.json` `declared_unmet`), recorded as a FINDING and re-based rather than lowered -- see **Open and partly-open items**. |
+| 2 | "`benign` is an additions-only sidecar flag with closed reason ids ... on every benign fixture the stdlib scanner's three comparisons agree and a planted defect makes each fail; stdlib version differences are recorded" | **CLOSED** | `tests/test_benign_flag.py`; `tests/support/stdlib_scanner.py`; `tests/test_stdlib_header_scanner.py`. |
+| 3 | "every Phase 1 gap id has a mutation case (the tightened triple) that fails the gate naming the fixture, the fact and the bytes, and a catalogue test fails on an uncovered id" | **CLOSED** | `tests/test_gap_falsifiability.py`; `tests/test_quote_catalogue.py`; the tightened triple in `emailextract/evals/falsify.py`. |
+| 4 | "no-silent-drop passes on every fixture and mutation; boundary ordinal, prefix depth, rule id and kind are stored per boundary per view; every `exact` span passes the five-part property" | **CLOSED** | `tests/test_no_silent_drop.py`; the five-part property in `tests/test_text.py`; the boundary fields in `tests/test_quote_text.py` / `tests/test_quote_dom.py`; the evals line `no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass`. |
+| 5 | "the identity projection is named and documents are byte-identical ... across two runs, hash seeds, locales, time zones and both interpreters ... re-ingest is a no-op; ledger fingerprints are identical on both interpreters; a behaviour change without a bump makes `--check` exit 1 and names the constant" | **CLOSED** | `tests/test_assemble.py::test_the_identity_projection_drops_the_recorded_only_inputs`; `tests/test_store.py::test_re_ingest_is_a_no_op_over_a_throwaway_store`; `tests/test_behavior_ledger.py::test_the_cli_check_exits_zero_on_unmodified_code` and its refusal cases; this turn's identical fingerprints and identical evals output on both interpreters. |
+| 6 | "the additions-only ledger passes over sidecars, `tests/support/**` and `emailextract/evals/**`; no existing sidecar is modified across the phase; the label-leak test passes; the fixture set is a superset of the design's Phase 1 list (a census test)" | **CLOSED** | `tests/test_label_ledger.py`; `tests/test_label_leak.py`; `tests/test_fixture_census.py`; `tools/update_label_ledger.py --check` exit 0. |
+| 7 | "the seeded fuzz and the independent splitter fuzz pass ... any other `Exception` (and `MemoryError` or `RecursionError` specifically) fails with the seed. The hostile set ... is recorded at the caps with a work-per-input-byte budget asserted non-superlinear ... nothing is fetched ... no attachment is written under its raw filename" | **CLOSED** | `tests/test_seeded_splitter_fuzz.py`; `tests/test_hostile_set.py` (the caps, the socket guard and the raw-filename rule); `tests/test_hostile_set.py::test_work_per_input_byte_is_not_superlinear`; `tests/test_walk_iterative.py` (a raised `max_depth` no longer raises `RecursionError`). |
+| 8 | "the package imports with no sibling, no `olefile`, no `chardet` (a fresh subprocess after a full ingest); no `.msg`, CFB, routing, recursion, matching, threading or `TimeEvent` emission exists; no GPL anywhere" | **CLOSED** | `tests/test_phase1_scope.py` (the import probe and the self-recursion scan, whose allow-list Turn 1.11 emptied); `tests/test_licence_audit.py`. Turn 1.11 closed the one exception -- the walker's recursion. |
+| 9 | "final report: a committed file with required sections (a test checks it non-empty), a list of named resolutions each with a test id, every version bump and why, the licences, and every label-versus-parser disagreement citing the failing test" | **CLOSED** | `tests/test_phase1_scope.py::test_the_phase1_report_sections_are_present_and_non_empty` (the eight required sections, each present, non-empty and unique, and every `tests/...::name` citation resolvable). |
+
+### Open and partly-open items
+
+Stated plainly, so a reader does not have to infer them:
+
+* **The 11 declared coverage floors (bullet 1).** `tests/ledger/facts_ledger.json`'s `declared_unmet`
+  lists eleven phase-1 facts whose floor in `docs/design/phase1-facts.md` the committed corpus does
+  not meet (`attach.cid_use`, `attach.decorative`, `attach.filename`, `attach.manifest`,
+  `attach.types`, `body.cid_refs`, `body.text`, `headers.addresses`, `headers.date`,
+  `headers.decoded`, `headers.projection`). They are recorded, never lowered silently; the re-base to
+  the achieved counts is **owner-signed** (`rebase.status = "signed"`), so the effective floor is the
+  achieved count and is pinned by `tests/test_facts_coverage.py`.
+* **The 6 named `phase1_exit` waits and the 3 rows filed under a later phase.** The evals line
+  `phase1 exit pass wait=6 (named=6), compared=1330; extra=0 missing=0` is a **wait set**, not a
+  comparison: three no-emission rows (`attach.cid_dangling`, `body.mixed_origin_quoting` twice) and
+  three over-emission rows (`view.quote_level_disagreement`, `body.inline_reply_interleaved`,
+  `body.no_boundary_found`) cannot be compared without editing a frozen label another frozen label
+  contradicts, and three further rows carry phase 3. See **Label-versus-parser findings** and
+  `tests/test_phase1_exit_gate.py`.
+* **No real mail was probed.** The owner's decision: `fixtures/real/` stays empty and git-ignored, and
+  user feedback will cover it. The corpus's real-world common-mode breaker is therefore missing (see
+  **Not done**).
+* **The walker recursion (bullet 8) is CLOSED by Turn 1.11.** It was the one exit criterion that did
+  not hold at Turn 1.10b; `_walk_part` is now iterative and the scope scan's allow-list is empty
+  (`tests/test_walk_iterative.py`).
+* **The symlink test skips on Windows.** `tests/test_ingest.py::test_a_symlinked_directory_is_skipped_and_a_symlinked_file_is_read`
+  skips when the OS refuses to create a symlink (the default on a non-elevated Windows box); it runs
+  on Linux, which is where CI proves it.
+* **`.msg`/CFB is unsupported by design.** `parse` returns the named error `cfb_msg_unsupported` for
+  the CFB magic; the `.msg` reader is Phase 1b (`emailextract/parse.py`).

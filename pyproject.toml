@@ -5,18 +5,34 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "email-extract"
 version = "0.1.0"
-description = "Deterministic .eml/.msg extraction: headers, body views, attachment manifest, threading claims"
+description = ".eml extraction: headers, body views, quote boundaries, attachment manifest; deterministic, no LLM"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 license-files = ["LICENSE", "NOTICE"]
 readme = "README.md"
 authors = [{name = "Ivan Ortega"}]
+keywords = [
+    "email",
+    "eml",
+    "rfc5322",
+    "mime",
+    "rfc2046",
+    "rfc2047",
+    "extraction",
+    "deterministic",
+    "no-llm",
+    "quote-detection",
+    "attachments",
+]
 classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Programming Language :: Python :: 3.14",
+    "Topic :: Communications :: Email",
 ]
 # docextract-core is released in lockstep; for local work install it editable from
 # ../word-extract/docextract-core. olefile (BSD) arrives with the .msg reader in Phase 1b --
@@ -29,10 +45,14 @@ Source = "https://github.com/iortega10/email-extract"
 Issues = "https://github.com/iortega10/email-extract/issues"
 
 [project.optional-dependencies]
-# Sibling parsers, routed to as optional extras; never imported by the library itself
-# (the package must import with neither sibling installed).
-word = ["word-extract>=0.1.0,<0.2"]
-form = ["form-extract>=0.1.0,<0.2"]
+# Sibling parsers, routed to as optional extras; never imported by the library itself (the
+# package must import with neither sibling installed). No upper pin: they are separate projects
+# on their own release cadence, and this library never imports either. form-extract's own `pdf`
+# extra pulls PyMuPDF (AGPL-3.0); email-extract's `form` extra deliberately requests
+# form-extract **plain** and never that `[pdf]` extra, so no AGPL is reachable through this
+# tree -- tests/test_licence_audit.py pins it.
+word = ["word-extract>=0.1.0"]
+form = ["form-extract>=0.1.0"]
 dev = ["pytest>=8"]
 
 [tool.setuptools.packages.find]
