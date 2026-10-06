@@ -14,12 +14,13 @@ import bans add ``chardet`` (the exit criterion: the package imports with no sib
   function fails, an exempted one must carry a reason, and the list is asserted exact.
 
 The module list, the import bans and the name scan are kept from the Phase 0 file; the report-sections
-test is Turn 1.10b.
+test is Turn 1.10b, and the phase-1 report it checks is ``docs/phase1-report.md``.
 """
 
 from __future__ import annotations
 
 import ast
+import re
 import subprocess
 import sys
 import tomllib
@@ -305,3 +306,80 @@ def test_the_package_imports_with_no_sibling_and_no_chardet() -> None:
         check=True,
     )
     assert result.stdout.strip() == "clean", result.stdout + result.stderr
+
+
+# ------------------------------------------------------------------ the final report
+
+#: ``docs/phase1-report.md``: the phase's closing artifact, committed last (Turn 1.10b).
+REPORT = ROOT / "docs" / "phase1-report.md"
+
+#: The seven sections ``docs/design/phase1-ledgers.md`` (f) requires of the report, in its order.
+#: ``docs/design/phase1-ledgers.md`` names the checking test ``tests/test_phase1_report.py``; the
+#: frozen declaration block names this file instead, and the declaration is the enforced record, so
+#: the test lives here (recorded as the deviation in the report's named resolutions).
+REQUIRED_REPORT_SECTIONS = (
+    "## What was built",
+    "## Named resolutions",
+    "## Coverage",
+    "## Gap gate",
+    "## Label-versus-parser findings",
+    "## Licences",
+    "## Not done",
+)
+
+#: A level-2 heading line, whatever its text: the boundary between one section's body and the next.
+_REPORT_HEADING = re.compile(r"^(## .+)$", re.MULTILINE)
+
+
+def _report_problems(text: str) -> list[str]:
+    """Every way ``text`` is not a report: a missing or repeated heading, or an empty body.
+
+    A section's body is everything between its heading line and the next level-2 heading (or the
+    end of the file), so a heading with nothing under it -- a stub -- is caught, and the problem
+    names the section. The content is not judged: that is the owner's review.
+    """
+    headings = [match.group(1).strip() for match in _REPORT_HEADING.finditer(text)]
+    problems: list[str] = []
+    for section in REQUIRED_REPORT_SECTIONS:
+        seen = headings.count(section)
+        if seen == 0:
+            problems.append(f"the required section {section!r} is missing")
+        elif seen > 1:
+            problems.append(f"the required section {section!r} appears {seen} times")
+    if problems:
+        return problems
+    matches = list(_REPORT_HEADING.finditer(text))
+    for index, match in enumerate(matches):
+        section = match.group(1).strip()
+        if section not in REQUIRED_REPORT_SECTIONS:
+            continue
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        if not text[match.end():end].strip():
+            problems.append(f"the required section {section!r} has an empty body")
+    return problems
+
+
+def test_the_phase1_report_sections_are_present_and_non_empty() -> None:
+    """The phase-1 report carries its seven sections, each exactly once and each non-empty."""
+    assert REPORT.is_file(), f"the phase-1 report is not committed at {REPORT}"
+    text = REPORT.read_text(encoding="utf-8")
+    problems = _report_problems(text)
+    assert not problems, problems
+    # The check can fail, in both directions, on a stub: a heading with no body is named ...
+    stub = "\n".join(f"{section}\n\nbody\n" for section in REQUIRED_REPORT_SECTIONS[:-1])
+    stub += f"\n{REQUIRED_REPORT_SECTIONS[-1]}\n\n"
+    assert _report_problems(stub) == [
+        f"the required section {REQUIRED_REPORT_SECTIONS[-1]!r} has an empty body"
+    ]
+    # ... a repeated heading is named ...
+    repeated = "\n".join(f"{section}\n\nbody\n" for section in REQUIRED_REPORT_SECTIONS)
+    repeated += f"\n{REQUIRED_REPORT_SECTIONS[2]}\n\nbody\n"
+    assert _report_problems(repeated) == [
+        f"the required section {REQUIRED_REPORT_SECTIONS[2]!r} appears 2 times"
+    ]
+    # ... and so is a missing section, which is reported rather than ignored.
+    for section in REQUIRED_REPORT_SECTIONS:
+        missing = "\n".join(
+            f"{other}\n\nbody\n" for other in REQUIRED_REPORT_SECTIONS if other != section
+        )
+        assert _report_problems(missing) == [f"the required section {section!r} is missing"]

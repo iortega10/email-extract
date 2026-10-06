@@ -44,7 +44,7 @@ from dataclasses import dataclass
 from typing import Final, Iterable, Mapping, Sequence
 
 from . import htmltext, htmltree, text as text_stage
-from .walk import PartShape, WalkResult
+from .walk import PartShape, WalkResult, WorkCounter
 
 __all__ = [
     "ALTERNATIVE_NOT_SELECTED",
@@ -64,6 +64,7 @@ __all__ = [
     "SELECTION_STATES",
     "URL_ATTRIBUTES",
     "WHITESPACE_ONLY_CODE_POINTS",
+    "WORK",
     "alternative_group_rows",
     "body_gaps",
     "cid_ref_rows",
@@ -75,6 +76,14 @@ __all__ = [
     "plain_effectively_empty_rows",
     "selection_rows",
 ]
+
+# --------------------------------------------------------------- the work counter
+
+#: The stage's deterministic work counter -- the :class:`~emailextract.walk.WorkCounter`
+#: pattern the other stages use (a seam a test resets and reads, **never** a clock): one
+#: step per projected element examined and one per :data:`URL_ATTRIBUTES` row compared, so
+#: the count is a pure function of the bytes and a linearity claim is reproducible.
+WORK: Final[WorkCounter] = WorkCounter()
 
 # --------------------------------------------------------------------- vocabularies
 
@@ -347,8 +356,10 @@ def _urls_of(projection: htmltext.HtmlProjection) -> list[str]:
     """
     found: list[str] = []
     for element in projection.tree.elements:
+        WORK.add()
         attributes = _attribute_pairs(element)
         for tag, attribute, required, _capable, _why in URL_ATTRIBUTES:
+            WORK.add()
             if element.tag != tag:
                 continue
             if any(attributes.get(name) != value for name, value in required):
@@ -387,8 +398,10 @@ def external_references(
         remote: list[str] = []
         data_uris: list[str] = []
         for element in projection.tree.elements:
+            WORK.add()
             attributes = _attribute_pairs(element)
             for tag, attribute, required, capable, _why in URL_ATTRIBUTES:
+                WORK.add()
                 if element.tag != tag:
                     continue
                 if any(attributes.get(name) != value for name, value in required):

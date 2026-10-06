@@ -680,6 +680,78 @@ agreement. No stage output changes: `EMAIL_PARSER_VERSION`, `OUTPUT_SCHEMA_VERSI
     them and the exit gate does not count them as phase-1 waits. Nothing is tuned to satisfy a label
     another frozen label contradicts.
 
+### Turn 1.10b -- hostile input, the licence audit and the close (the choices the turn forces)
+
+The plan's split makes 1.10b the second half: does hostile input behave, and what does the phase
+report. No stage output changes: every version constant stays where 1.10a left it, and the
+selection work counter below is an observability seam, not a rule change. The choices the turn
+forces:
+
+64. **The independent splitter fuzz compares four quantities, in four named mutation classes.**
+    `tests/support/boundary_splitter.py` reads a message's framing from RFC 2046 5.1 alone (its own
+    line scan, its own header/body split, its own parameter reader) and is run against the walker by
+    `tests/test_seeded_splitter_fuzz.py` over every fixture the splitter reads as a top-level
+    multipart (49 of 119), mutated in memory at a seeded `Random(10_1002)` -- 614 mutants, no new
+    fixture. The compared quantities are the four the spec names: the ordered part spans, the part
+    count, the preamble/epilogue **length** per multipart, and the boundary-delimiter line spans.
+    The classes are the spec's own reading of RFC ambiguity, and each is named rather than tuned:
+    **gated** (the RFC is decisive -- flip a `--`, insert or delete the CRLF before a delimiter,
+    truncate mid-boundary, duplicate a delimiter, transport padding, append after the close, inject a
+    valid delimiter line into a body); **invariant** (a length-preserving edit inside an encoded
+    body -- a base64 character or a space swapped -- must move *no* quantity, and transport padding
+    must not move the offset-free shape, RFC 2046 5.1.1); **no_close** (removing the closing `--` is
+    gated on `body.boundary_disagreement` and the splitter's `closed is False`, per decision 3, not
+    on the four quantities); **excluded** (run, never gated: rotating a delimiter line's line ending,
+    because the splitter's own line model is CRLF-only -- decision 17's honest limit, restated -- and
+    a delimiter line followed by anything but LWSP, which is RFC-ambiguous). Each excluded mutant
+    carries its reason in `EXCLUDED_REASONS`; the census asserts every declared kind actually fired.
+65. **The fuzz's failure rule is a crash and bounded-resource property, not a correctness one.**
+    Every mutant goes through the **real entry path** -- `parse`'s sniff, then the bounded walk at
+    `Limits.untrusted()` -- and must return or refuse **by name**: a `NamedError` whose `reason_id`
+    is in the closed `NAMED_ERROR_REASONS`. Any other `Exception` fails the test with the seed and
+    the case id; `MemoryError` and `RecursionError` are named separately because they are how a
+    bounded resource would show up; `BaseException` is deliberately **not** caught. A planted crash
+    and a dropped `body.boundary_disagreement` each make the test fail with the seed, so the loop is
+    not vacuous.
+66. **The hostile set is typed in the test, never committed as fixtures, and its numbers are step
+    counts.** Twelve hostile inputs (deep nesting, a part-count bomb, an enormous header block, an
+    encoded-word bomb, a 10 MB single base64 run, ...) are built inline and driven end to end
+    through `assemble` and `ingest_path` at caller-chosen caps; each is recorded as a `CapRecord`
+    with a **closed** reason id, no input raises, and `gates.holes` is empty over the capped walk
+    (D9). Three further assertions the turn owns: a **socket guard** patches every
+    socket/http/urllib/ssl entry point, a full ingest runs under it, and the anti-vacuity triple
+    proves the guard can fail; **no attachment is ever written under its raw filename** (the hostile
+    filenames land only in recorded fields, never on a path); and the superlinearity check reads
+    each stage's **deterministic step count** (doubling the input must grow it by less than the
+    stated factor), never seconds -- single-threaded, which is the assumption the module-level
+    counters need.
+67. **The selection stage gets the work-counter seam the other stages have, and the one wall-clock
+    test goes with it.** `selection.WORK` is a `walk.WorkCounter` (one step per projected element
+    examined, one per `URL_ATTRIBUTES` row compared), so `tests/test_selection.py::test_the_html_stages_are_linear_on_a_megabyte_body`
+    asserts an **exact** operation count on a 1 MB and a 2 MB body instead of a `perf_counter`
+    timing. The operating rules forbid a clock as a gate input; the seam is observability only and
+    moves no stage version.
+68. **The licence audit is a test, not a reading.** `tests/test_licence_audit.py` checks the
+    Apache-2.0 text and the notice holder, that `pyproject.toml` ships `LICENSE` and `NOTICE`,
+    that the runtime dependency set is **exactly** `{docextract-core}` (the exit criterion), that
+    `NOTICE` and the declared dependencies agree **both ways** (so an unattributed new dependency
+    and a stale entry both fail), that the hand-typed `AUDITED_LICENCES` table equals `NOTICE`, and
+    that no GPL/LGPL/AGPL licence text or GPL distribution appears in the audited files. Two
+    findings are recorded, not fixed: the AGPL reachable through `form-extract`'s own `pdf` extra
+    (so this package must request `form-extract` **plain**, and a test pins it) and `olefile`, named
+    in `NOTICE` for the future `.msg` reader while **not** being a dependency of this release.
+69. **The report is seven sections, and the checking test lives where the declaration says.** The
+    report's required sections are the ledgers document's (f) list; `docs/design/phase1-ledgers.md`
+    names the checking test `tests/test_phase1_report.py`, while the frozen declaration block names
+    `tests/test_phase1_scope.py::test_the_phase1_report_sections_are_present_and_non_empty`. The
+    declaration is the enforced record (both directions, `tests/test_turn_declarations.py`), so the
+    test lives in the scope module; the deviation is recorded as a named resolution in the report
+    itself. The test asserts each of the seven headings exactly once with a non-empty body and
+    **fails naming the missing, repeated or empty section**; it does not judge the content. One
+    recorded, unedited observation belongs with it: the metrics table's headline still reads "at
+    phase 0" (`emailextract/evals/metrics.py:92`) -- a recorded oracle file, and the label ledger is
+    additions-only, so the wording is reported in the report's "Not done" rather than edited.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

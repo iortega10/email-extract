@@ -26,7 +26,6 @@ import random
 import socket
 import subprocess
 import sys
-import time
 from collections import Counter
 from dataclasses import replace
 from pathlib import Path
@@ -748,19 +747,35 @@ def test_a_planted_raiser_makes_the_html_fuzz_fail() -> None:
 
 
 def test_the_html_stages_are_linear_on_a_megabyte_body() -> None:
-    """A doubling test: projecting a 1 MB and a 2 MB HTML body stays linear."""
-    timings: dict[int, float] = {}
+    """A doubling test on **operation counts**: scanning the projected tree stays linear.
+
+    The stage is the selection pass that reads every projected element
+    (``selection_stage.external_references``), whose own deterministic counter
+    (``selection_stage.WORK`` -- the ``WorkCounter`` seam ``walk``, ``text_rules`` and
+    ``dom_rules`` already use) replaces the wall-clock check the operating rules forbid.
+    The count is a pure function of the bytes, so the assertion is exact and reproducible,
+    never a clock. The counter is one step per element examined plus one per
+    ``URL_ATTRIBUTES`` row compared, hence the ``1 + len(URL_ATTRIBUTES)`` per element.
+    """
+    steps: dict[int, int] = {}
+    elements: dict[int, int] = {}
     for megabytes in (1, 2):
-        text = "<p>x</p>" * ((megabytes * 1024 * 1024) // 8)
-        start = time.perf_counter()
-        projection = htmltext.project(text, max_depth=8, max_elements=1_000_000)
-        timings[megabytes] = time.perf_counter() - start
-        assert projection.tree.truncation is None, megabytes
-        assert len(projection.tree.elements) == (megabytes * 1024 * 1024) // 8
-    small, large = timings[1], timings[2]
-    # A linear stage doubles; the bound is loose so a slow machine cannot fail the gate, but
-    # it still catches a quadratic pass (which would be ~4x or worse).
-    assert large <= small * 6 + 0.5, (small, large)
+        body = ("<p>x</p>" * ((megabytes * 1024 * 1024) // 8)).encode("ascii")
+        raw = _message(body)
+        result = _walk(raw)
+        assert len(result.parts) == 1, megabytes
+        selection_stage.WORK.reset()
+        selection_stage.external_references(
+            raw, result, max_depth=8, max_elements=1_000_000
+        )
+        steps[megabytes] = selection_stage.WORK.count()
+        elements[megabytes] = (megabytes * 1024 * 1024) // 8
+    per_element = 1 + len(selection_stage.URL_ATTRIBUTES)
+    assert steps[1] == elements[1] * per_element, (steps[1], elements[1], per_element)
+    assert steps[2] == elements[2] * per_element, (steps[2], elements[2], per_element)
+    # A linear stage doubles; the bound is loose so a fault elsewhere cannot fail the gate,
+    # but it still catches a quadratic pass (which would be ~4x or worse).
+    assert steps[2] <= steps[1] * 2.5, (steps[1], steps[2])
 
 
 def test_the_corpus_projection_hash_is_interpreter_stable() -> None:

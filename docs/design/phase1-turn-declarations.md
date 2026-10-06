@@ -1082,3 +1082,59 @@ and `tests/test_metrics_cli.py` (counts only), `tools/runboth.py`, `docs/design/
 `docs/design/phase1-build-spec.md`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`,
 not `*.expected.json`, not any `emailextract/*` module outside `evals/`, not `model.py`, `ids.py`,
 `versions.py`, `walk.py`, `docs/phase1-report.md`.
+
+## Turn 1.10b -- hostile input, the seeded splitter fuzz, the licence audit, close
+
+The plan's split (`email-remaining-plan-debate.md` table row 7) makes this the second half of the 1.10
+block: **1.10b** is the hostile set, the superlinearity gate, the raw-filename rule, the independent
+splitter fuzz, the licence audit and `docs/phase1-report.md` -- which is committed **last**, the
+phase's close. No stage version moves: every constant stays where 1.10a left it, and the selection
+work counter this turn adds is an observability seam (`selection.WORK`), not a rule change. The
+choices the turn forces are build-spec decisions 64-69; the tests declared below are the turn's own,
+and the one existing test it *changes* (`tests/test_selection.py::
+test_the_html_stages_are_linear_on_a_megabyte_body`, the `perf_counter` timing replaced by an exact
+step count) keeps its Turn 1.5 declaration.
+
+```declaration turn=1.10b
+module: emailextract/selection.py
+module: tests/test_selection.py
+module: tests/support/boundary_splitter.py
+module: tests/test_seeded_splitter_fuzz.py
+module: tests/test_hostile_set.py
+module: tests/test_licence_audit.py
+module: tests/test_phase1_scope.py
+module: tests/test_turn_declarations.py
+module: tests/ledger/label_ledger.json
+module: docs/phase1-report.md
+module: docs/design/phase1-build-spec.md
+module: docs/design/phase1-turn-declarations.md
+test: tests/test_hostile_set.py::test_a_socket_guard_fails_loudly_on_any_fetch
+test: tests/test_hostile_set.py::test_the_hostile_set_is_recorded_and_never_raised
+test: tests/test_hostile_set.py::test_work_per_input_byte_is_not_superlinear
+test: tests/test_hostile_set.py::test_no_attachment_is_written_under_its_raw_filename
+test: tests/test_seeded_splitter_fuzz.py::test_boundary_mutations_change_no_four_quantity
+test: tests/test_seeded_splitter_fuzz.py::test_mutants_return_the_declared_failure_type
+test: tests/test_licence_audit.py::test_the_licence_is_the_apache_2_0_text_and_notice_states_the_holder
+test: tests/test_licence_audit.py::test_pyproject_declares_the_same_licence_and_ships_both_files
+test: tests/test_licence_audit.py::test_the_runtime_dependency_is_exactly_docextract_core
+test: tests/test_licence_audit.py::test_olefile_is_not_a_declared_dependency
+test: tests/test_licence_audit.py::test_notice_and_the_declared_dependencies_agree_both_ways
+test: tests/test_licence_audit.py::test_the_audit_records_the_same_licence_ids_as_notice
+test: tests/test_licence_audit.py::test_the_audit_fails_on_an_unattributed_dependency_and_on_a_stale_entry
+test: tests/test_licence_audit.py::test_no_gpl_lgpl_or_agpl_licence_appears_in_the_audited_files
+test: tests/test_licence_audit.py::test_no_declared_dependency_is_a_gpl_distribution
+test: tests/test_licence_audit.py::test_the_form_extra_does_not_request_the_agpl_pdf_extra
+test: tests/test_phase1_scope.py::test_the_phase1_report_sections_are_present_and_non_empty
+stop: at the phase's close; the report is the last artifact committed
+```
+
+Allow-list (`turn=1.10b`): `emailextract/selection.py` (the work-counter seam and nothing else),
+`tests/test_selection.py` (the one assertion the seam replaces), `tests/support/boundary_splitter.py`
+(new), `tests/test_seeded_splitter_fuzz.py` (new), `tests/test_hostile_set.py` (new),
+`tests/test_licence_audit.py` (new), `tests/test_phase1_scope.py` (the report test),
+`tests/test_turn_declarations.py` (`BUILT_TURNS`), `tests/ledger/label_ledger.json` (the new
+`tests/support/` file appended by `tools/update_label_ledger.py`), `docs/phase1-report.md` (new),
+`docs/design/phase1-build-spec.md` (decisions 64-69), `docs/design/phase1-turn-declarations.md`.
+Not `fixtures/**`, not `*.expected.json`, not any `emailextract/*` module outside `selection.py`,
+not `versions.py`, `model.py`, `ids.py`, `walk.py`, not another `tests/support/**` file, not another
+`emailextract/evals/**` file.
