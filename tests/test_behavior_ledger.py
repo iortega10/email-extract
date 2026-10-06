@@ -337,11 +337,12 @@ def test_the_interpreter_is_recorded_but_never_keyed(monkeypatch) -> None:
     identity is verified by running this suite and ``--check`` on **both**
     interpreters and comparing, and any difference is recorded in the ledger
     header. An in-process claim about another interpreter is therefore refused
-    outright unless the process is mono-interpreter
-    (``sys.platform == "win32"`` and not PyPy): it is refused, never skipped,
-    because a silent skip would read as checked.
+    outright unless the process is a CPython one (not PyPy): it is refused, never
+    skipped, because a silent skip would read as checked. (The guard used to also
+    require ``sys.platform == "win32"``; nothing below depends on the platform, and
+    the first Linux CI run showed the platform clause only failed the test there.)
     """
-    if not (sys.platform == "win32" and not hasattr(sys, "pypy_version_info")):
+    if hasattr(sys, "pypy_version_info"):
         raise RuntimeError(
             "refused: this is not a mono-interpreter process; run the suite and "
             "tools/update_behavior_ledger.py --check on each interpreter instead"

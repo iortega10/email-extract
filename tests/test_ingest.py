@@ -467,8 +467,14 @@ def run(store_root):
     collection = document_store(store_root)
     first = ingest_path(mail, collection, limits=LIMITS)
     parts = [to_json(first)]
-    for record_id in sorted(collection.list()):
-        parts.append(to_json(identity_projection(collection.load(record_id).document)))
+    # Sorted by CONTENT, never by store id: the id is the document key, and the key carries
+    # HTMLTEXT_VERSION, which stamps the CPython minor, so the ids (and their order) legitimately
+    # differ between minors while every identity projection is byte-identical.
+    documents = [
+        to_json(identity_projection(collection.load(record_id).document))
+        for record_id in collection.list()
+    ]
+    parts.extend(sorted(documents))
     digest = hashlib.sha256("\n".join(parts).encode("utf-8")).hexdigest()
     return first, collection, digest
 
