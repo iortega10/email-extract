@@ -22,6 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import docextract_core
 import pytest
 from docextract_core import Collection
 
@@ -425,7 +426,7 @@ from pathlib import Path
 
 ROOT = Path(sys.argv[1])
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT.parent / "word-extract" / "docextract-core"))
+sys.path.insert(0, sys.argv[2])  # the parent's own docextract_core: never a sibling checkout
 
 from docextract_core.codec import to_json
 from emailextract.assemble import identity_projection
@@ -501,10 +502,15 @@ def _second_interpreter() -> list[str] | None:
     return None if found is None else list(found[0])
 
 
+#: Where the running interpreter found docextract_core (pure Python), handed to the child so a
+#: fresh clone needs no sibling checkout beside it.
+_CORE_PATH = str(Path(docextract_core.__file__).resolve().parent.parent)
+
+
 def _run_digest_script(prefix: list[str], seed: str) -> dict[str, str]:
     env = {**os.environ, "PYTHONHASHSEED": seed}
     completed = subprocess.run(
-        [*prefix, "-c", DIGEST_SCRIPT, str(ROOT)],
+        [*prefix, "-c", DIGEST_SCRIPT, str(ROOT), _CORE_PATH],
         cwd=str(ROOT),
         capture_output=True,
         text=True,
