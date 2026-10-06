@@ -28,6 +28,7 @@ from support import sidecar_copy  # noqa: E402
 from support.sidecar_copy import ALTERNATIVE, ATTACHMENTS, PLAIN_SIMPLE, payload_of, tamper, write  # noqa: E402
 
 from emailextract.evals import GateResult, l1_gate  # noqa: E402
+from emailextract.evals.l1 import quote_only_mismatches  # noqa: E402
 
 FIXTURES = sidecar_copy.FIXTURES
 
@@ -76,28 +77,34 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     assert gate.data["not_yet"] == {1: 115, 3: 26}
 
 
-#: The stems (and the row count) Turn 1.6's first run disagreed with -- the finding, and the end of
-#: the red state. Each row was a hand-typed ``prefix_depth`` counting one phantom trailing line, on
-#: a body whose plain text is **byte-identical** to a stem the correction did reach
-#: (``mixed_origin_quote``, ``quoted_outlook_flat``) or a forward banner whose span decision 28
-#: fixes, so no rule could satisfy both labels. The reviewer's adjudication (decisions 33-39)
-#: corrected the labels from the bytes, so the set is empty and the corpus is green:
-#: ``test_the_committed_corpus_is_green_with_the_quote_facts_live`` pins that, and this tuple is
-#: emptied rather than deleted so the finding keeps its name.
+#: The stems whose **html** rows Turn 1.7's first (blind) run disagreed with, each on
+#: ``body.quote_boundaries``: 6 ``span_length`` rows (the DOM span carried the projection's final
+#: line terminator) and 2 ``prefix_depth`` rows (the Outlook marker's own line; the bare
+#: ``blockquote`` sibling of a ``moz-cite-prefix``). The reviewer's adjudication (build-spec
+#: decisions 40-42, amended in 1.7b) corrects the three conventions from the bytes, so the set is
+#: empty and the corpus is green: ``test_the_committed_corpus_is_green_with_the_quote_facts_live``
+#: pins that, and this tuple is emptied rather than deleted so the finding keeps its name.
+QUOTE_HTML_MISMATCH_STEMS: tuple[str, ...] = ()
+
+#: The stems Turn 1.6's first run disagreed with, corrected from the bytes in the adjudication.
+#: Kept (emptied rather than deleted) so the earlier finding keeps its name.
 QUOTE_MISMATCH_STEMS: tuple[str, ...] = ()
 
 
 def test_the_committed_corpus_is_green_with_the_quote_facts_live() -> None:
-    """Every fact matches, the quote facts included (the Turn 1.6 adjudication corrected the labels).
+    """Every fact matches, the quote facts included (Turn 1.6 and Turn 1.7b corrected the rules).
 
-    The oracle's quote evidence still names the fixture, the fact, the row, the column and the
-    turn's MEASURED value and never a labelled one (independence rule 3).
+    The oracle's quote evidence names the fixture, the fact, the view, the row, the column and the
+    turn's MEASURED value and never a labelled one (independence rule 3), so this test can assert
+    the green verdict without reading a label. The html rows are live (Turn 1.7), so the 1224
+    matched facts include them (the plain rows alone are 1201).
     """
     gate = l1_gate()
+    assert gate.passed is True, gate.lines()
     assert gate.data["mismatched"] == 0, gate.data["mismatches"]
-    assert gate.passed is True
-    assert gate.data["matched"] > 0
-    assert QUOTE_MISMATCH_STEMS == (), QUOTE_MISMATCH_STEMS  # every label was corrected from the bytes
+    assert gate.data["matched"] == 1224, gate.data["matched"]
+    assert quote_only_mismatches(gate), gate.data["mismatches"]
+    assert QUOTE_MISMATCH_STEMS == () and QUOTE_HTML_MISMATCH_STEMS == ()
 
 
 def test_the_gate_reports_every_phase_the_corpus_waits_on() -> None:

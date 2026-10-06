@@ -586,9 +586,10 @@ test: tests/test_quote_resolve.py::test_the_view_level_is_the_higher_of_the_ordi
 test: tests/test_quote_resolve.py::test_a_view_with_no_quote_boundary_and_no_prefix_line_has_no_level_row
 test: tests/test_quote_resolve.py::test_the_disagreement_predicate_is_false_beside_an_all_zero_depth
 test: tests/test_quote_resolve.py::test_the_label_blind_evidence_names_the_row_and_column_only
-# The two renames this turn forced (their old names stay in the frozen Phase 0 baseline); the
-# label correction that followed renamed them to assert the green corpus, and the ids below are
-# the collected ones (a rename in the same commit as its tests is what this document binds).
+# The two renames this turn forced (their oldest names stay in the frozen Phase 0 baseline); the
+# label correction that followed renamed them to assert the green corpus, Turn 1.7 renamed them
+# again for the red-html state, and Turn 1.7b renamed them **back** once its adjudication made the
+# html rows agree (the 1.7b note below carries the current ids):
 test: tests/test_l1_gate.py::test_the_committed_corpus_is_green_with_the_quote_facts_live
 test: tests/test_metrics_cli.py::test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live
 stop: after the text family and the resolution rule
@@ -660,6 +661,20 @@ and `docs/design/phase1-build-spec.md` (the counts that follow from the correcte
 ```declaration turn=1.7
 module: emailextract/quote/dom_rules.py
 module: emailextract/quote/resolve.py
+module: emailextract/quote/__init__.py
+module: emailextract/versions.py
+module: emailextract/evals/l1.py
+module: tests/test_quote_dom.py
+module: tests/test_quote_resolve.py
+module: tests/test_quote_text.py
+module: tests/test_l1_gate.py
+module: tests/test_metrics_cli.py
+module: tests/test_attach.py
+module: tests/test_turn_declarations.py
+module: tests/ledger/label_ledger.json
+module: docs/design/phase1-turn-declarations.md
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-build-spec.md
 test: tests/test_quote_dom.py::test_gmail_quote_on_a_div_fires_once
 test: tests/test_quote_dom.py::test_gmail_quote_on_a_blockquote_adds_no_second_ordinal
 test: tests/test_quote_dom.py::test_the_attribution_wrapper_adds_no_second_ordinal
@@ -672,11 +687,48 @@ test: tests/test_quote_dom.py::test_structural_and_prefix_ranks_resolve_per_span
 test: tests/test_quote_dom.py::test_an_all_zero_depth_beside_a_structural_rule_is_normal
 test: tests/test_quote_dom.py::test_the_disagreement_predicate_fires_only_when_the_ranks_differ
 test: tests/test_quote_dom.py::test_the_view_level_carries_its_resolution_rule_id
+# Refinement (the turn's own prompt allows extras; every one is stated): the blockquote[type=cite]
+# rule, the mixed-origin nesting, the absence answer, the iterative/capped walk, the step budget, the
+# mutation catalogue with its coverage test, the seeded fuzz with its planted raiser, the
+# cross-interpreter DOM digest and the oracle's label-blind html evidence.
+test: tests/test_quote_dom.py::test_blockquote_type_cite_is_a_boundary_and_its_value_is_case_insensitive
+test: tests/test_quote_dom.py::test_an_inner_container_is_part_of_the_outer_ordinal
+test: tests/test_quote_dom.py::test_the_absence_answer_is_a_bare_html_body
+test: tests/test_quote_dom.py::test_the_dom_walk_is_iterative_and_survives_a_capped_tree
+test: tests/test_quote_dom.py::test_the_dom_walk_step_count_is_exact_and_linear
+test: tests/test_quote_dom.py::test_every_dom_rule_id_has_a_mutation_case
+test: tests/test_quote_dom.py::test_a_careless_dom_mutant_is_caught
+test: tests/test_quote_dom.py::test_the_seeded_fuzz_over_mutated_html_parts_is_bounded
+test: tests/test_quote_dom.py::test_a_planted_raiser_fails_the_fuzz_with_the_seed
+test: tests/test_quote_dom.py::test_the_dom_rows_are_identical_on_both_interpreters
+test: tests/test_quote_dom.py::test_the_oracle_reports_the_html_rows_label_blind
+test: tests/test_quote_dom.py::test_the_html_gaps_are_not_wired_into_the_oracle
+# The two renames this turn forced: the corpus was red for exactly the html quote rows while the
+# reviewer adjudicated, so Turn 1.6's green assertions were restated. Turn 1.7b renamed them back
+# -- the ids below are the collected ones (the 1.6 block's lines are updated in the same edit).
+test: tests/test_l1_gate.py::test_the_committed_corpus_is_green_with_the_quote_facts_live
+test: tests/test_metrics_cli.py::test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live
 stop: after the DOM family and the cross-family resolution
 ```
 
 Allow-list (`turn=1.7`): `emailextract/quote/`, `emailextract/versions.py`, `tests/test_quote_dom.py`,
 `tests/test_quote_resolve.py`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`.
+
+### Turn 1.7b -- the adjudication of the DOM span conventions (a note, not a new block)
+
+Turn 1.7b is the reviewer's adjudication of 1.7's blind run (build-spec decisions 40-42, amended in
+place): a DOM boundary's span is the element's projected extent exactly (no final-terminator extension),
+`appendonsend` is a sentinel whose span starts at its first following element sibling, and a
+`moz-cite-prefix` pulls in a following bare `blockquote` too. It adds **no test function** -- only
+mutation cases (the 1.7 catalogue's `MUTANTS` grows 15 -> 18, one per amended convention) and
+restatements of the five 1.7 tests in `test_quote_dom.py` that encoded the old DOM span conventions --
+so it needs no new
+`declaration` block. It **renames the two 1.7 tests back to the green names**, and their `test:` lines
+in the 1.6 and 1.7 blocks above are updated to the current collected ids:
+`tests/test_l1_gate.py::test_the_committed_corpus_is_green_with_the_quote_facts_live` and
+`tests/test_metrics_cli.py::test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live`.
+`QUOTE_RULES_VERSION` moves "3" -> "4"; the plain-view digest and every other version constant do not
+move.
 
 ## Turn 1.8 -- `attach.py`
 

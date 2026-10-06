@@ -1689,8 +1689,10 @@ def test_the_five_attachment_facts_are_live_and_compared() -> None:
     compared = {outcome.fact_id for outcome in report.outcomes if outcome.status is l1.Status.OK}
     for fact_id in facts:
         assert fact_id in compared, fact_id
-    # After the Turn 1.6 adjudication the corpus is green: no fact is red, the quote facts included.
-    assert not report.mismatches, [outcome.fact_id for outcome in report.mismatches]
+    # Turn 1.7 wired the html view's DOM rows live and Turn 1.7b's adjudication of the three DOM
+    # span conventions (build-spec decisions 40-42) makes them agree, so the corpus is green: the
+    # attachment facts stay matched and no fact mismatches (see test_l1_gate.py).
+    assert report.mismatches == (), report.mismatches
 
 
 def test_the_cid_dangling_row_stays_deferred_for_its_finding() -> None:

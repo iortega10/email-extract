@@ -531,3 +531,122 @@ carries the command that produced it.
   (recorded `7adb326ad1c3...`, rewritten to `d8241ca586d2...`). Proof, the same shape the 1.6
   section used: a script diff of the ledger against `HEAD` reports exactly those 20 keys, and
   `git diff --name-only HEAD -- fixtures` reports exactly those 19 sidecars.
+
+## Turn 1.7 -- the DOM family on the html view, its span conventions and the red rows
+
+The rules are the DOM half of build-spec decision 3 and decisions 2/15/28-39, read on the HTML
+projection; the choices the prompt left open are the new decisions 40-47. The rules were written
+**blind** (no quote-catalogue sidecar, no `body.quote_boundaries`/`body.view_levels` entry was
+read). Every number below carries the command that produced it.
+
+* **Recorded-only run inputs.** The same two interpreters (CPython 3.14.3, Unicode 16.0.0, from
+  which the numbers below come -- `python` on this machine -- and CPython 3.11.15, Unicode 14.0.0,
+  `C:/Users/ivan_/AppData/Local/Temp/wbv311/Scripts/python.exe`). The full suite is
+  green on both (**1664 passed, 1 skipped** on each); `dom_rules` uses no
+  `unicodedata` and no `str.lower()` on the projection, so the two are expected to agree, and the
+  cross-interpreter test pins it: `tests/test_quote_dom.py::test_the_dom_rows_are_identical_on_both_interpreters`
+  is sha256 of `{stem: [all_quote_boundary_rows, all_view_level_rows]}` (both views) over the 119
+  fixtures with `json.dumps(..., sort_keys=True, ensure_ascii=False)` =
+  **c563380b409d0cc51b89c7eb7fce8bd6912638fa0e6c237576eedeb5a23bd99b**, identical on both.
+  (**Turn 1.7b moves this digest** -- the three amended DOM span conventions below -- and this line
+  records 1.7's value.)
+  The plain-view digest of Turn 1.6b (`a171f158888bc927087fc596835e953f9f6749cf24981a2fe40b9902b7d5dbbe`,
+  `tests/test_quote_text.py`) is **unchanged**: the plain rules were not touched.
+  `QUOTE_RULES_VERSION` moves **"2" -> "3"**; `HTMLTEXT_VERSION`, `EMAIL_PARSER_VERSION` and
+  `OUTPUT_SCHEMA_VERSION` do **not** move. (**Turn 1.7b moves it "3" -> "4"**, above.)
+* **The L1 result against the quote catalogue, as measured (label-blind).** `python -m
+  emailextract.evals` reports `matched=1216 mismatched=8 unmeasurable=0 unmodelled=0` with
+  `not_yet: phase 1=115, phase 3=26`, identically on 3.14.3 and 3.11.15, and the CLI exits **1**.
+  (**Turn 1.7b: `matched=1224 mismatched=0` and the CLI exits **0**, below** -- the reviewer's
+  adjudication corrects the three conventions.)
+  All 8 are `body.quote_boundaries` mismatches on **html** rows, one per stem, over
+  `gmail_quote_on_blockquote`, `gmail_reply_quoting_outlook_authored`,
+  `gmail_short_reply_gt_and_on_wrote`, `html_gmail_quote`, `html_outlook_divrplyfwd`,
+  `mixed_origin_quote`, `outlook_com_appendonsend`, `thunderbird_moz_cite_prefix`. `body.view_levels`
+  matches on every stem, and every html ``ordinal``/``rule_id``/``prefix_depth``-count judgment
+  agrees except the two noted below. The evidence carries stem + fact + view + row + column +
+  this turn's **measured** value and never a labelled one. **Finding (the turn's honest red state):**
+  the prompt names decision 34 for the DOM span ends and the code applies it (decision 40), so a
+  boundary whose last covered line is the projection's final line carries that line's terminator;
+  **6** differences are that convention on ``span_length`` -- measured 65 (`gmail_quote_on_blockquote`),
+  112 (`gmail_reply_quoting_outlook_authored`), 64 (`gmail_short_reply_gt_and_on_wrote`),
+  67 (`html_gmail_quote`), 95 (`html_outlook_divrplyfwd`) and 71 (`mixed_origin_quote`) -- and **2**
+  are ``prefix_depth`` on the Outlook span convention of decision 41
+  (`outlook_com_appendonsend` measured `[0, 0]`) and on the bare-``blockquote`` sibling of
+  decision 42 (`thunderbird_moz_cite_prefix` measured `[0]`). No rule, threshold or span convention
+  was adjusted to move one; the plain rows all still match, so the pre-existing 1224 matches do not
+  regress (1216 matched + 8 mismatched = 1224 compared).
+* **The step budget (item 7a).** `dom_rules.WORK` is the same `WorkCounter` pattern (one step per
+  element, one per class token, one per projection line read), measured by
+  `tests/test_quote_dom.py::test_the_dom_walk_step_count_is_exact_and_linear`: the single
+  1,000,000-character class attribute costs exactly **3** steps; 1,000 / 2,000 sibling
+  `blockquote.gmail_quote` elements cost **2001 / 4001** (ratio 1.9995, below the stated 2.2
+  factor); 500 / 250 elements each with a 1,000-token class cost **500501 / 250251**; 1,000 bare
+  `blockquote` elements cost **1000** (no tokens, no projection text); 1,000 `moz-cite-prefix`
+  elements cost **2001**; and 1,000 **nested** `div`s cost **64**, because the tree's recorded depth
+  cap (64) stops the tree and the walk with it -- the walk itself is a loop over the element tuple,
+  never recursion (mutant `recursive_walk` fails a 2,000-deep nest with `RecursionError`).
+* **The mutation catalogue (item 7a).** `tests/test_quote_dom.py`'s `MUTANTS` holds **15** careless
+  readings (**Turn 1.7b makes it 18**: one per amended convention), keyed by the rule each breaks.
+  All **7** rule ids the DOM stage can emit
+  (`dom_rules.DOM_RULES`) have at least one case
+  (`test_every_dom_rule_id_has_a_mutation_case` asserts the coverage); the extras cover the nesting,
+  the raw-HTML span source, the recursion hazard and the resolution/view-row rules. Each case names
+  an inline label-blind observation that must move, and the **anti-vacuity triple** is asserted: the
+  patched symbol exists (`monkeypatch.setattr`), the patch was **reached** (a counter), and the
+  observation differs from the baseline.
+* **The seeded fuzz (item 7b).** `tests/test_quote_dom.py::_fuzz_html_parts`, seed **20250304**,
+  **9** mutations per ``text/html`` part over the **26** fixtures that carry one = **234** cases,
+  **0** failures in **0.12 s** on 3.14.3 (mutation kinds: byte flips, truncation, a repeated chunk,
+  swapped chunks, an injected ``<div class=`` fragment, an unclosed container, NULs + an injected
+  ``id=``, a giant attribute value, non-ASCII digits). The invariants: no exception, every span
+  inside the projection, and quote ordinals that strictly increase from 1.
+  `test_a_planted_raiser_fails_the_fuzz_with_the_seed` patches the html view's scanner to raise and
+  asserts the fuzz reports the failure **with its seed**.
+* **The two ledgers.** `python tools/update_behavior_ledger.py --check` exits **0** on both
+  interpreters, before and after, with no new lines: `walk`, `decode_chain` and `contracts` do not
+  move (a `QUOTE_RULES_VERSION` bump is not one of the fingerprinted components, and no record
+  shape changed). `python tools/update_label_ledger.py --check` exits **0** after an explicit one-off
+  rewrite of exactly **one** entry -- `emailextract/evals/l1.py` `8f530e48bfdc...` ->
+  `0153da3a94f3...` (this turn's html-row measurers and per-view evidence) -- with **all 119**
+  `fixtures/**/*.expected.json` entries byte-identical: no fixture, no `*.expected.json` and no
+  other oracle file moved.
+
+**Not done this turn (reported).** The html gaps are implemented and reported but not wired into the
+oracle's `gaps.later` (decision 32); the reviewer's adjudication of the 8 rows is Turn 1.7b, and
+nothing here was tuned to avoid a mismatch.
+
+## Turn 1.7b -- the adjudicated DOM span conventions
+
+The reviewer read the 8 html `body.quote_boundaries` mismatches above against the fixture bytes and the
+signed labels and found the three span conventions of decisions 40-42 wrong (all three typed by the 1.7
+prompt's prose, not read from a label). The three edits and the numbers **after** them:
+
+* **Decision 40 amended** -- a DOM boundary's span is the element's projected extent exactly, with **no**
+  final-terminator extension; decision 34's terminator clause is the line-based families' only (the
+  plain view's rules and the html view's `gt_family`). This fixes the 6 `span_length` differences above:
+  the label equals the element's own `body.html_spans` rectangle (`html_gmail_quote` part 1.2's
+  `div.gmail_quote` is `span_offset=9 span_length=65`, its own extent, before the projection's final
+  terminator). The **forward container** keeps decision 28's through-the-end-of-the-part span -- its span
+  still reaches the final terminator, as the plain `forward_banner` label does -- which is why it was
+  never one of the 8.
+* **Decision 41 amended** -- `divRplyFwdMsg` is its own projected extent; `appendonsend`/`x_appendonsend`
+  is a sentinel carrying no quoted words, so its span **starts** at its first following **element**
+  sibling and **ends** at the end of its parent's projected extent (`outlook_com_appendonsend`: the
+  marker is an empty `div` at offset 9, the span `span_offset=11 span_length=63 depth=[0]`). A marker with
+  no following element sibling spans its own extent (zero length kept).
+* **Decision 42 amended** -- a `moz-cite-prefix` pulls in its immediately following element sibling when
+  that sibling is a `blockquote`, **with or without** `type=cite` (`thunderbird_moz_cite_prefix`:
+  `span_offset=9 span_length=57 depth=[0, 0]`), adding no second boundary and no second ordinal; a
+  following sibling that is not a `blockquote` leaves the boundary at the prefix alone.
+
+Numbers after: `python -m emailextract.evals` reports `matched=1224 mismatched=0 unmeasurable=0
+unmodelled=0` with `not_yet: phase 1=115, phase 3=26` (the html gaps stay unwired, decision 32),
+identically on CPython 3.14.3 and 3.11.15. The cross-interpreter DOM digest moves
+`c563380b409d0cc51b89c7eb7fce8bd6912638fa0e6c237576eedeb5a23bd99b` ->
+`7e4c417a64fb6563b33200c010d43180c7f79ebdeb7d7e71183f0c75889e72f7` (identical on both), so
+`QUOTE_RULES_VERSION` moves **"3" -> "4"**; `HTMLTEXT_VERSION` and the contract line do **not** move (the
+projection and every record shape are untouched). The 1.7 mutation catalogue's **15** cases become **18**
+(one per amended convention: the terminator extension re-added to a DOM span, the appendonsend span
+starting at the marker, and the `moz-cite-prefix` requiring `type=cite`), and the 1.7 tests that encoded
+the old conventions are restated for the new ones. Both ledgers are checked in the turn's report.

@@ -45,22 +45,32 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Final, Sequence
 
+from .. import htmltext
 from .. import text as text_stage
 from ..model import BoundaryKind, QuoteBoundary, ViewLevel
 from ..timeevent import Span
 from ..walk import PartShape, WalkResult
-from . import text_rules
+from . import dom_rules, text_rules
 
 __all__ = [
     "GAP_VIEW_QUOTE_LEVEL_DISAGREEMENT",
     "VIEW_HTML",
     "VIEW_PLAIN",
+    "HtmlViewScan",
+    "ViewRecord",
     "ViewScan",
+    "all_quote_boundary_rows",
+    "all_view_level_rows",
+    "all_views",
     "disagreement",
     "gap_pairs",
+    "html_gap_pairs",
+    "html_views",
     "plain_views",
     "quote_boundary_rows",
     "quote_records",
+    "scan_html_view",
+    "scan_html_views",
     "scan_views",
     "view_level_rows",
     "view_records",
@@ -217,6 +227,194 @@ def view_records(raw: bytes, result: WalkResult) -> tuple[tuple[str, str, ViewLe
         for view in scan_views(raw, result)
         if view.level is not None
     )
+
+
+# --------------------------------------------------------------- the HTML (DOM) view
+
+#: The view id of a ``text/html`` part (``model.BodyView``). The DOM family measures it.
+#: ``VIEW_HTML`` is re-exported from the top of this module (the plain half names it too).
+
+
+@dataclass(frozen=True)
+class HtmlViewScan:
+    """One HTML view: its part, its projection, its DOM hits and the derived level."""
+
+    part: PartShape
+    projection: htmltext.HtmlProjection
+    scan: dom_rules.DomScan
+    boundaries: tuple[QuoteBoundary, ...]
+    level: ViewLevel | None
+    disagreement: bool
+
+    @property
+    def view(self) -> str:
+        return VIEW_HTML
+
+
+@dataclass(frozen=True)
+class ViewRecord:
+    """One view of either family, in one shape, so the rows can be built in part order."""
+
+    path: str
+    view: str
+    boundaries: tuple[QuoteBoundary, ...]
+    level: ViewLevel | None
+    disagreement: bool
+    gaps: tuple[str, ...] = ()
+
+
+def html_views(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> tuple[tuple[PartShape, htmltext.HtmlProjection], ...]:
+    """Every ``text/html`` view of the message, in part order.
+
+    The walker's own text decision is reused (:func:`emailextract.text.analyse_part`), and
+    the projection is built by :func:`emailextract.htmltext.project` under the caller's
+    caps (decision 9: no default here). A part the walker read no text for has nothing to
+    project and is skipped.
+    """
+    views: list[tuple[PartShape, htmltext.HtmlProjection]] = []
+    for part in result.parts:
+        if _media(part) != "text/html":
+            continue
+        record = text_stage.analyse_part(raw, part)
+        if record is None:
+            continue
+        projection = htmltext.project(record.text, max_depth=max_depth, max_elements=max_elements)
+        views.append((part, projection))
+    return tuple(views)
+
+
+def scan_html_view(part: PartShape, projection: htmltext.HtmlProjection) -> HtmlViewScan:
+    """Scan one HTML view: DOM hits, ordinals, the derived level and the disagreement."""
+    scan = dom_rules.scan_projection(projection)
+    ordinals = _ordinals(scan.boundaries)
+    boundaries = tuple(
+        QuoteBoundary(
+            rule_id=boundary.rule_id,
+            kind=BoundaryKind(boundary.kind),
+            span=Span(boundary.start, boundary.end),
+            ordinal=ordinal,
+            prefix_depth=list(boundary.prefix_depth),
+        )
+        for boundary, ordinal in zip(scan.boundaries, ordinals)
+    )
+    max_quote = max((boundary.ordinal or 0 for boundary in boundaries), default=0)
+    max_depth = scan.max_depth
+    level: ViewLevel | None = None
+    if boundaries or max_quote >= 1 or max_depth >= 1:
+        level = ViewLevel(
+            view_id=VIEW_HTML,
+            span=Span(0, len(projection.text)),
+            quote_level=max(max_quote, max_depth),
+            resolution_rule_id=_resolution_rule(boundaries),
+            disagreement=disagreement(max_quote, max_depth),
+        )
+    return HtmlViewScan(
+        part=part,
+        projection=projection,
+        scan=scan,
+        boundaries=boundaries,
+        level=level,
+        disagreement=disagreement(max_quote, max_depth),
+    )
+
+
+def scan_html_views(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> tuple[HtmlViewScan, ...]:
+    """Every HTML view of the message, scanned once, in part order."""
+    return tuple(
+        scan_html_view(part, projection)
+        for part, projection in html_views(
+            raw, result, max_depth=max_depth, max_elements=max_elements
+        )
+    )
+
+
+def all_views(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> tuple[ViewRecord, ...]:
+    """Every view of the message -- plain and html -- in **part order**.
+
+    A part is one view (its media type decides which family owns it), so the merged
+    sequence is the document order of the views.
+    """
+    records: dict[str, ViewRecord] = {}
+    for view in scan_views(raw, result):
+        records[view.part.path] = ViewRecord(
+            path=view.part.path,
+            view=view.view,
+            boundaries=view.boundaries,
+            level=view.level,
+            disagreement=view.disagreement,
+        )
+    for view in scan_html_views(raw, result, max_depth=max_depth, max_elements=max_elements):
+        records[view.part.path] = ViewRecord(
+            path=view.part.path,
+            view=VIEW_HTML,
+            boundaries=view.boundaries,
+            level=view.level,
+            disagreement=view.disagreement,
+            gaps=view.scan.gaps,
+        )
+    return tuple(records[part.path] for part in result.parts if part.path in records)
+
+
+def all_quote_boundary_rows(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> list[list[object]]:
+    """The ``body.quote_boundaries`` rows for **both** views, in part order.
+
+    ``[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, span_length]``
+    -- the same frozen eight columns; the html rows carry the DOM family's rule ids.
+    """
+    return [
+        [
+            record.path,
+            record.view,
+            boundary.rule_id,
+            boundary.kind.value,
+            boundary.ordinal,
+            list(boundary.prefix_depth),
+            boundary.span.start,
+            boundary.span.end - boundary.span.start,
+        ]
+        for record in all_views(raw, result, max_depth=max_depth, max_elements=max_elements)
+        for boundary in record.boundaries
+    ]
+
+
+def all_view_level_rows(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> list[list[object]]:
+    """The ``body.view_levels`` rows for **both** views: ``[part, view, level, rule_id]``."""
+    return [
+        [record.path, record.view, record.level.quote_level, record.level.resolution_rule_id]
+        for record in all_views(raw, result, max_depth=max_depth, max_elements=max_elements)
+        if record.level is not None
+    ]
+
+
+def html_gap_pairs(
+    raw: bytes, result: WalkResult, *, max_depth: int, max_elements: int
+) -> list[tuple[str, str]]:
+    """The HTML family's ``(gap_id, locator)`` pairs, in part order.
+
+    The registry's answers for the html view: ``body.html_quote_rule_gap`` (a vendor
+    prefix with no row, or the tree's unclosed container), ``body.no_boundary_found`` (no
+    DOM rule, no vendor family, no ``>`` line) and ``view.quote_level_disagreement`` (the
+    decision-2 predicate per view). Kept apart from :func:`gap_pairs`, whose output the
+    plain-view digest pins.
+    """
+    pairs: list[tuple[str, str]] = []
+    for view in scan_html_views(raw, result, max_depth=max_depth, max_elements=max_elements):
+        locator = view.part.path
+        for gap in view.scan.gaps:
+            pairs.append((gap, locator))
+        if view.disagreement:
+            pairs.append((GAP_VIEW_QUOTE_LEVEL_DISAGREEMENT, locator))
+    return pairs
 
 
 def quote_boundary_rows(raw: bytes, result: WalkResult) -> list[list[object]]:

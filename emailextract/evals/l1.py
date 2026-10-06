@@ -388,69 +388,94 @@ QUOTE_ROW_COLUMNS: Final[Mapping[str, tuple[str, ...]]] = MappingProxyType(
     }
 )
 
-#: The view this turn measures. Every other view (``html``) belongs to Turn 1.7's DOM family; a
-#: labelled row naming one is reported **by name**, never silently dropped and never measured
-#: with a rule this turn does not own.
-QUOTE_MEASURED_VIEW: Final[str] = quote_stage.VIEW_PLAIN
+#: The views this turn's measurers own (Turn 1.7 adds the html view's DOM rows). Every
+#: other view is reported **by name**, never silently dropped and never measured with a
+#: rule this turn does not own.
+QUOTE_MEASURED_VIEWS: Final[tuple[str, ...]] = (quote_stage.VIEW_PLAIN, quote_stage.VIEW_HTML)
 
 
 def _quote_boundaries(measured: Measured) -> list[list[Any]]:
-    """``body.quote_boundaries`` rows: the TEXT family's boundaries on the plain view (Turn 1.6).
+    """``body.quote_boundaries`` rows: the TEXT family on ``plain``, the DOM family on ``html``.
 
-    ``[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, span_length]`` --
-    one row per boundary per view, only ``kind = quote`` advancing the ordinal, the depth kept
-    per line and the span in the view's code points.
+    ``[part, view, rule_id, kind, ordinal, [prefix_depth, ...], span_offset, span_length]``
+    -- one row per boundary per view, only ``kind = quote`` advancing the ordinal, the depth
+    kept per line and the span in the view's code points.
     """
-    return quote_stage.quote_boundary_rows(measured.raw, measured.walked())
+    return quote_stage.all_quote_boundary_rows(
+        measured.raw,
+        measured.walked(),
+        max_depth=HTML_MAX_DEPTH,
+        max_elements=HTML_MAX_ELEMENTS,
+    )
 
 
 def _quote_view_levels(measured: Measured) -> list[list[Any]]:
-    """``body.view_levels`` rows: ``[part, view, level, resolution_rule_id]`` per plain view.
+    """``body.view_levels`` rows: ``[part, view, level, resolution_rule_id]`` per view.
 
     One row per view (not per span), the level a derived rank that carries the rule that
     resolved it; a view with **no** boundary at all -- nothing fired and no ``>`` line -- has no
     row (so the frozen four columns stay four and nothing is averaged).
     """
-    return quote_stage.view_level_rows(measured.raw, measured.walked())
+    return quote_stage.all_view_level_rows(
+        measured.raw,
+        measured.walked(),
+        max_depth=HTML_MAX_DEPTH,
+        max_elements=HTML_MAX_ELEMENTS,
+    )
 
 
 def _quote_rows_compare(fact_id: str):
-    """The quote facts' comparison: the measured view's rows, row by row, **label-blind**.
+    """The quote facts' comparison: **per view**, row by row, **label-blind**.
 
-    Rows are compared on every column, and the first disagreement is reported as the row index
-    plus the **name** of the differing column plus the **measured** value -- never the labelled
-    one (independence rule 3: running L1 must not reveal a label). A labelled row naming a view
-    this turn does not measure (``html``) is reported as a count by name, not compared; that is
-    a row of a later turn and the report says so.
+    Rows are partitioned by their ``view`` column and each view's labelled rows are compared
+    against that view's measured rows on every column, in order. The first disagreement is
+    reported as the view, the row index plus the **name** of the differing column plus the
+    **measured** value -- never the labelled one (independence rule 3: running L1 must not
+    reveal a label). A labelled row naming a view this turn does not measure is reported as a
+    count by name, not compared.
     """
     columns = QUOTE_ROW_COLUMNS[fact_id]
+
+    def grouped(rows: Any) -> dict[str, list[list[Any]]]:
+        result: dict[str, list[list[Any]]] = {}
+        for row in rows:
+            result.setdefault(row[1], []).append(row)
+        return result
 
     def compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
         if not isinstance(expected, list) or not isinstance(actual, list):
             return False, f"the label is not a list of rows ({type(expected).__name__})"
-        labelled = [
-            row
-            for row in expected
-            if isinstance(row, list) and len(row) >= 2 and row[1] == QUOTE_MEASURED_VIEW
-        ]
-        deferred = len(expected) - len(labelled)
-        if len(labelled) != len(actual):
-            return False, (
-                f"row count: {len(labelled)} labelled {QUOTE_MEASURED_VIEW} row(s), "
-                f"{len(actual)} measured"
-            )
-        for index, (label_row, measured_row) in enumerate(zip(labelled, actual)):
-            if len(label_row) != len(columns):
-                return False, f"row {index}: the label row is not {len(columns)} columns"
-            for position, name in enumerate(columns):
-                if label_row[position] != measured_row[position]:
-                    return False, (
-                        f"row {index}: column {name!r} -- measured {measured_row[position]!r} "
-                        "(the labelled value is never printed: independence rule 3)"
-                    )
-        if deferred:
+        if any(not isinstance(row, list) or len(row) < 2 for row in expected):
+            return False, "a label row is not a list carrying its view column"
+        labelled_views = grouped(expected)
+        measured_views = grouped(actual)
+        for view in QUOTE_MEASURED_VIEWS:
+            labelled = labelled_views.get(view, [])
+            measured = measured_views.get(view, [])
+            if len(labelled) != len(measured):
+                return False, (
+                    f"view {view!r}: row count: {len(labelled)} labelled row(s), "
+                    f"{len(measured)} measured"
+                )
+            for index, (label_row, measured_row) in enumerate(zip(labelled, measured)):
+                if len(label_row) != len(columns):
+                    return False, f"view {view!r} row {index}: the label row is not {len(columns)} columns"
+                for position, name in enumerate(columns):
+                    if label_row[position] != measured_row[position]:
+                        return False, (
+                            f"view {view!r} row {index}: column {name!r} -- measured "
+                            f"{measured_row[position]!r} "
+                            "(the labelled value is never printed: independence rule 3)"
+                        )
+        unknown = sorted(set(labelled_views) - set(QUOTE_MEASURED_VIEWS))
+        measured_unknown = sorted(set(measured_views) - set(QUOTE_MEASURED_VIEWS))
+        if measured_unknown:
+            return False, f"measured row(s) name an unmeasured view: {measured_unknown}"
+        if unknown:
+            total = sum(len(labelled_views[view]) for view in unknown)
             return True, (
-                f"{deferred} labelled row(s) name a view of a later turn (Turn 1.7, not compared)"
+                f"{total} labelled row(s) name a view of a later turn "
+                f"({', '.join(unknown)}, not compared)"
             )
         return True, None
 
@@ -840,8 +865,9 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             "span_length], ...] one row per boundary per view; kind is quote|forward|signature|"
             "list_footer|unknown and only kind=quote advances ordinal (the rank within the view); "
             "prefix_depth is per line; span is in the view's code points. Live from Turn 1.6 for "
-            "the TEXT family on the plain view (the DOM family and the html view are Turn 1.7; a "
-            "labelled html row is reported by name, not compared), and the comparison prints the "
+            "the TEXT family on the plain view and from Turn 1.7 for the DOM family on the html "
+            "view (the rows are compared per view, so a labelled row naming a view neither family "
+            "measures is reported by name, not compared), and the comparison prints the view, the "
             "row index, the differing column's name and the MEASURED value only (independence "
             "rule 3: a run must not reveal a label)",
         ),
@@ -855,7 +881,8 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             "stored, never averaged; a view with any recognised boundary has a row (level 0 when "
             "every boundary is a forward, signature or list footer) and a view with no boundary "
             "at all has none (the frozen four columns stay four). Live from Turn 1.6 for the "
-            "plain view, with the same label-blind evidence as body.quote_boundaries",
+            "plain view and from Turn 1.7 for the html view, with the same label-blind evidence "
+            "as body.quote_boundaries",
         ),
         "attach.types": Measure(
             1,

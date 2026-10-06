@@ -71,7 +71,7 @@ keys on it. It ships so a later turn that *does* stamp a citation with the proje
 constant already owned by the module that defines the projection.
 """
 
-QUOTE_RULES_VERSION: Final[str] = "2"
+QUOTE_RULES_VERSION: Final[str] = "4"
 """Version of the quote stage's rules (``emailextract/quote``, Turn 1.6).
 
 Moves when the rule tables, a span convention, or the level rule changes: the closed
@@ -91,9 +91,33 @@ Outlook flat block's extent ends before the next boundary of any kind; the resol
 the first structural quote boundary's, else ``gt_family``, else the first boundary of any kind;
 and a view with **any** recognised boundary has a ``body.view_levels`` row.
 
+**"3" (Turn 1.7)** moves it for the **DOM family and the html view** (``quote/dom_rules.py``):
+the DOM rule table (``gmail_quote`` on a ``div`` or a ``blockquote`` by class token,
+``blockquote[type=cite]``, Outlook ``divRplyFwdMsg``/``appendonsend`` with the ``x_`` form,
+Thunderbird ``moz-cite-prefix``/``moz-forward-container``), the nesting/absorption rule (a quote
+container inside another quote boundary's span is one ordinal; a forward container does not
+suppress one), the Outlook span convention (the marker plus its following siblings to its
+parent's projected end; **amended in "4"**), the Thunderbird prefix-plus-blockquote span, the
+vendor-family gap
+trigger and the absence answer, and the html view's own per-view level, resolution rule and
+disagreement over the projection's physical lines.
+
+**"4" (Turn 1.7b)** moves it for the reviewer's adjudication of the eight html
+``body.quote_boundaries`` mismatches against the bytes (build-spec decisions 40-42, amended in
+place): a DOM boundary's span is the element's projected extent **exactly**, with no
+final-terminator extension (the clause is the line-based families', the plain view's rules and
+the html view's ``gt_family``); ``divRplyFwdMsg`` is its own extent while ``appendonsend`` is a
+**sentinel** whose span starts at its first following element sibling and ends at its parent's
+projected extent (its own extent when there is no following element sibling); and a
+``moz-cite-prefix`` pulls in its following element sibling when that sibling is a ``blockquote``,
+**with or without** ``type=cite``. The forward container's span is decision 28's, unchanged. The
+projection's own constant does not move: only these DOM span conventions changed.
+
 The walker's parser and decode-chain constants do **not** move with it: this stage reads
 the decoded text the body stage already produced and adds no decode rule, so a quote-rule
-change cannot move a corpus fingerprint keyed by the walker.
+change cannot move a corpus fingerprint keyed by the walker. The html-text projection's own
+constant does not move either: the DOM rules read the tree's node-to-span map and change no
+projection.
 """
 
 HTMLTEXT_SCHEMA: Final[str] = "1"

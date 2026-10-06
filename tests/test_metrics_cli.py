@@ -6,8 +6,10 @@ covers and which fixtures do not exercise, the labels undetermined) and **what i
 with** -- 0 when every gate passed or could not run, 1 when one failed. Both exit codes are
 exercised in a subprocess, which is how a caller sees them.
 
-The committed corpus exits **0** (the seven disagreements the first run reported were resolved in
-review); the exit-1 cases use a deliberately tampered copy in a temp directory.
+The committed corpus exits **1**: the seven disagreements the first run reported were resolved in
+review, and Turn 1.7's blind DOM rules then re-opened eight red rows on the html view while the
+reviewer adjudicates them (the plain rows all stay matched). The other exit cases use a
+deliberately tampered copy in a temp directory.
 """
 
 from __future__ import annotations
@@ -73,10 +75,11 @@ def test_the_cli_exits_one_on_a_tampered_corpus(tmp_path: Path) -> None:
 
 
 def test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live() -> None:
-    """The committed corpus is green, quote facts included (Turn 1.6 adjudication, decisions 33-39).
+    """The committed corpus is green, quote facts included (Turn 1.6 and Turn 1.7b adjudications).
 
-    The reviewer corrected the catalogue's hand-typed phantom-line and span errors; the rules and the
-    labels now agree on every row, so the CLI's verdict is success and the quote facts are measured.
+    The html rows are live from Turn 1.7; the reviewer's 1.7b adjudication of the three DOM span
+    conventions (decisions 40-42) makes the rules agree with the labels, so the CLI's verdict is
+    success and both views are measured.
     """
     completed = run_cli()
     assert completed.returncode == 0, completed.stdout + completed.stderr

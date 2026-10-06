@@ -449,6 +449,94 @@ no id was invented. Asked, the owner ruled: **keep today's behaviour** -- the sc
 and the stop is reported and tested; no `UnknownSection`/`CapRecord` until an owner names a reason
 id (a later turn's `model.REASON_TABLE` decision).
 
+### Turn 1.7 -- the DOM family, the html view and the cross-family resolution
+
+The turn's prompt states the DOM rule table and the nesting/level rules; the choices it left open,
+or that the code had to fix, are recorded here as decisions 40 to 47. ``QUOTE_RULES_VERSION`` moves
+**"2" -> "3"** for the DOM table, the nesting/absorption rule, the html view's span conventions and
+its own level/resolution/disagreement.
+
+40. **The DOM boundary's span is the element's projected extent, exactly** -- the element's
+    ``body.html_spans`` rectangle verbatim from the tree's node-to-span map, with **no**
+    final-terminator adjustment. Decision 34's clause is the **line-based** families' (the plain
+    view's rules and the html view's ``gt_family``); a DOM boundary is an element extent, not a
+    run, so it is **not** applied here. This is what every DOM quote span does (``gmail_quote``,
+    ``blockquote_type_cite``, the Thunderbird prefix, the ``divRplyFwdMsg`` marker and the two
+    composites of 41/42). **Amended in 1.7b** (was: "... with decision 34's clause applied 'where
+    it applies to projection lines': when the boundary's last covered line is the **final**
+    projection line, the span reaches the end of the projection and includes that line's
+    terminator"): the reviewer adjudicated the first blind run's 6 ``span_length`` differences
+    against the bytes, and in every one the labelled span equals the element's own ``body.html_spans``
+    rectangle exactly -- e.g. ``html_gmail_quote`` part 1.2's ``div.gmail_quote`` is offset 9 length
+    65 and the labelled span ends there, **before** the projection's final line terminator. The
+    one DOM span that still reaches the final terminator is the **forward container**, and not by
+    this clause: decision 28 gives a forward banner the banner line **through the end of the
+    part**, which the plain ``forward_banner`` label does too, so change 1 does not touch it.
+41. **The Outlook span.** ``divRplyFwdMsg`` / ``x_divRplyFwdMsg`` is the marker element's own
+    projected extent (decision 40). ``appendonsend`` / ``x_appendonsend`` is a **sentinel** that
+    carries no quoted words: its span **starts** at the projected offset of the marker's first
+    following **element** sibling (the quoted history is the marker's following siblings) and
+    **ends** at the end of the marker's parent's projected extent -- the parent element's own
+    extent, or, the marker being a top-level ``body`` child, the block of top-level **elements**
+    (the trailing text outside every element, the part's last newline, is not part of the quoted
+    block). A marker with **no** following element sibling spans its own extent (possibly zero
+    length, recorded and never invented away). Decision 40 applies on top. **Amended in 1.7b**
+    (was: both Outlook ids spanned "from the marker element's projected offset to the end of its
+    parent element's projected span -- the marker plus its following siblings ... or to the end of
+    the projection when the marker has no parent element"): the reviewer adjudicated the first
+    blind run's 2 ``prefix_depth`` differences against the bytes -- in ``outlook_com_appendonsend``
+    the marker is an empty ``div`` at offset 9, the quoted ``div`` starts at 11, and the labelled
+    boundary starts at 11 (depth ``[0]``), so the empty marker is not quoted words; and
+    ``divRplyFwdMsg`` is unchanged, its own extent already covering the header block
+    (``html_outlook_divrplyfwd``: the ``div`` at offset 9 length 93).
+42. **A ``moz-cite-prefix`` covers the prefix element and its immediately following element
+    sibling when that sibling is a ``blockquote``, with or without ``type=cite``** (one boundary,
+    one ordinal). The pulled-in blockquote adds no second boundary and no second ordinal (rule 43
+    keeps a standalone bare ``blockquote`` out of the table). A following sibling that is **not** a
+    ``blockquote`` leaves the boundary at the prefix element alone. **Amended in 1.7b** (was:
+    "... its following ``blockquote[type=cite]`` sibling ... a bare ``blockquote`` is not a table
+    row either (rule 43), so it is not pulled into the boundary"): real Thunderbird emits
+    ``type=cite``; the committed ``thunderbird_moz_cite_prefix`` fixture's blockquote is bare, and
+    the reviewer adjudicated its html row against the bytes -- the labelled span (offset 9 length
+    57) and depth ``[0, 0]`` cover the prefix **and** the bare blockquote (offset 49 length 17), so
+    the ``type=cite`` requirement was the code's error, not the label's.
+43. **A bare ``blockquote`` (no ``type=cite``, no ``gmail_quote`` token) is not a table row.** It
+    raises no boundary and no gap; the tree's unclosed-container gap still fires for an *unclosed*
+    one. The closed container list in ``htmltree`` (``blockquote``, ``div.gmail_quote``,
+    ``div#divRplyFwdMsg``) is the **unclosed** rule's, not the table's.
+44. **The html view's line model is the walker's one line model over the projection's UTF-8
+    bytes.** No second splitter: ``dom_rules.projection_lines`` feeds ``walk.iter_lines`` the
+    projection encoded as UTF-8 (no code point's UTF-8 bytes are CR/LF, so the lines are the
+    text's) and maps the byte offsets back with an incremental UTF-8 reader. The projection itself
+    is unchanged, so ``HTMLTEXT_VERSION`` does **not** move.
+45. **A ``>`` run inside a DOM quote boundary's span is part of that boundary** (one quote, one
+    ordinal), the html-side reading of decisions 35/36: the boundary's ``prefix_depth`` still
+    records the run's per-line depths. A ``>`` run with no enclosing boundary is its own
+    ``gt_family`` boundary.
+46. **The vendor-family trigger and the one named helper.** A class **token** starting with
+    ``gmail_``/``moz-``/``yahoo_``, or an id/class containing ``RplyFwdMsg``, on an element that is
+    **not** a table row is ``body.html_quote_rule_gap``. ``gmail_attr`` is the single named helper
+    that is part of a row (rule ``gmail_quote`` names it): it is never a gap even though its token
+    starts with ``gmail_``. This reading is reported because the prompt's rule (e) says only "not
+    one of the table rows above".
+47. **The html rows are wired LIVE into the two quote facts, so the committed corpus is red for
+    exactly the html rows of 8 stems while the reviewer adjudicates** (the same convention Turn 1.6
+    used for its blind run): the measurers return both views, the comparison partitions by view and
+    the gate's named red set is asserted in ``tests/test_l1_gate.py``. The **plain** rows all stay
+    matched, so no pre-existing match regresses. The html gaps (``body.html_quote_rule_gap`` from
+    the vendor-family trigger, ``body.no_boundary_found``, ``view.quote_level_disagreement``) stay
+    **unwired** into ``gaps.later`` (decision 32's reading).
+
+**Turn 1.7b -- the adjudication of the first blind run.** The reviewer read the 8 html
+``body.quote_boundaries`` mismatches against the fixture bytes and the labels and found three DOM span
+conventions wrong (all three from the 1.7 prompt, not from its reading); decisions 40, 41 and 42 are
+**amended in place** above, each marked "amended in 1.7b". ``QUOTE_RULES_VERSION`` moves **"3" ->
+"4"** for the three amended span conventions (the DOM spans changed); ``HTMLTEXT_VERSION`` and the
+contract line do **not** move. The 1.7 tests and mutation cases are restated for them (a mutant is
+added for each: the terminator extension re-added to a DOM span, the appendonsend span starting at the
+marker, and the ``moz-cite-prefix`` requiring ``type=cite``), the html quote rows are live, and L1 is
+now ``matched=1224 mismatched=0``.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

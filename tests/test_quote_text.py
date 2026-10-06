@@ -998,8 +998,15 @@ def test_a_careless_quote_mutant_is_caught(
     copy: Path | None = None
     if mutant.sidecar is not None:
         copy = sidecar_copy.tamper(tmp_path, mutant.sidecar, lambda payload: None)
-        assert l1.check_path(copy).ok, f"{mutant_id}: the baseline fixture is not green"
-        baseline: Any = None
+        baseline_report = l1.check_path(copy)
+        # Turn 1.7 wired the html view's DOM rows live, so a fixture that carries an html part is
+        # already red on the quote facts while the reviewer adjudicates (see test_l1_gate.py). The
+        # baseline is therefore that named state -- **quote facts only** -- never a red elsewhere,
+        # and the mutant must move the label-blind evidence *beyond* it.
+        assert all(
+            outcome.fact_id in l1.QUOTE_FACT_IDS for outcome in baseline_report.failures
+        ), f"{mutant_id}: the baseline is red outside the quote facts"
+        baseline: Any = [outcome.detail for outcome in baseline_report.failures]
     else:
         baseline = mutant.observe()
 
@@ -1007,10 +1014,13 @@ def test_a_careless_quote_mutant_is_caught(
 
     if copy is not None:
         mutated = l1.check_path(copy)
-        assert not mutated.ok, f"{mutant_id}: {mutant.description} was not caught"
+        assert mutated.failures, f"{mutant_id}: {mutant.description} was not caught"
         assert any(
             outcome.fact_id in l1.QUOTE_FACT_IDS for outcome in mutated.failures
         ), f"{mutant_id}: the gate did not name a quote fact: {mutated.lines()}"
+        assert [outcome.detail for outcome in mutated.failures] != baseline, (
+            f"{mutant_id}: {mutant.description} did not move the label-blind evidence"
+        )
     else:
         mutated = mutant.observe()
         assert mutated != baseline, (

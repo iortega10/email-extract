@@ -9,8 +9,8 @@ depth beside a fired structural rule is a **normal state**. A view with nothing 
 no boundary of any kind and no prefix line -- has no ``body.view_levels`` row at all.
 
 The last test pins the **label-blind** evidence format: the comparison names the fixture, the
-fact, the row, the column and the MEASURED value, and never the labelled one (independence
-rule 3 of the turn: running L1 must not reveal a label).
+fact, the view, the row, the column and the MEASURED value, and never the labelled one
+(independence rule 3 of the turn: running L1 must not reveal a label).
 """
 
 from __future__ import annotations
@@ -119,14 +119,14 @@ def test_the_disagreement_predicate_is_false_beside_an_all_zero_depth() -> None:
 
 
 def test_the_label_blind_evidence_names_the_row_and_column_only() -> None:
-    """A mismatch names the row index, the column's NAME and the measured value -- no label."""
+    """A mismatch names the view, the row index, the column's NAME and the measured value."""
     compare = _quote_rows_compare("body.view_levels")
     labelled = [["1", "plain", 1, "on_wrote_en"]]
     measured = [["1", "plain", 2, "gt_family"]]
     agrees, detail = compare(labelled, measured)
     assert agrees is False
     assert detail == (
-        "row 0: column 'level' -- measured 2 "
+        "view 'plain' row 0: column 'level' -- measured 2 "
         "(the labelled value is never printed: independence rule 3)"
     ), detail
     assert "on_wrote_en" not in detail, "the labelled value must never appear in the evidence"
@@ -135,10 +135,22 @@ def test_the_label_blind_evidence_names_the_row_and_column_only() -> None:
     agrees, detail = compare(labelled, labelled)
     assert agrees is True and detail is None
 
-    html_only_label = [["1", "plain", 1, "on_wrote_en"], ["1.1", "html", 1, "gmail_quote"]]
-    agrees, detail = compare(html_only_label, [["1", "plain", 1, "on_wrote_en"]])
-    assert agrees is True, "the labelled html row is a later turn's, reported by name"
-    assert detail == "1 labelled row(s) name a view of a later turn (Turn 1.7, not compared)"
+    # Turn 1.7 measures the html view too, so a labelled html row is compared like any other:
+    # with no measured html row the count differs, and with a matching one it agrees.
+    with_html = [["1", "plain", 1, "on_wrote_en"], ["1.1", "html", 1, "gmail_quote"]]
+    agrees, detail = compare(with_html, [["1", "plain", 1, "on_wrote_en"]])
+    assert agrees is False and "row count" in detail, detail
+    assert "'html'" in detail, detail
+    agrees, detail = compare(
+        with_html, [["1", "plain", 1, "on_wrote_en"], ["1.1", "html", 1, "gmail_quote"]]
+    )
+    assert agrees is True and detail is None
+
+    # A view neither family measures is still reported by name, never silently dropped.
+    later = [["1.2", "calendar", 1, "gmail_quote"]]
+    agrees, detail = compare(later, [])
+    assert agrees is True, "an unmeasured view's row is a later turn's, reported by name"
+    assert detail == "1 labelled row(s) name a view of a later turn (calendar, not compared)"
 
     agrees, detail = compare(labelled, [])
     assert agrees is False and "row count" in detail, detail
