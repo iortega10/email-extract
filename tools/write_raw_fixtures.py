@@ -450,6 +450,126 @@ CAP_VERY_LONG_BASE64_RUN = (
     + b"Qg==\r\n"
 )
 
+# ------------------------------------------------ the quote catalogue (raw rows)
+# (docs/design/phase1-fixtures.md, "The quote catalogue"). These four are byte
+# literals because the bytes ARE the fact: a U+00A0 before each French label's
+# colon, a lone ``-- `` line whose trailing space a formatter would eat, a run of
+# exactly sixty underscores, and a headers-only message that ends with no blank
+# line at all (the generator's renderer always writes one).
+
+OUTLOOK_LABELS_FR = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: outlook labels fr\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <outlook-labels-fr-5023@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=utf-8\r\n"
+    b"\r\n"
+    b"Bonjour Ben.\r\n"
+    b"\r\n"
+    b"De\xc2\xa0: Ada Sender <ada@example.test>\r\n"
+    b"Envoy\xc3\xa9\xc2\xa0: mardi 4 mars 2025 09:00\r\n"
+    b"\xc3\x80\xc2\xa0: Ben Receiver <ben@example.test>\r\n"
+    b"Objet\xc2\xa0: la note precedente\r\n"
+    b"\r\n"
+    b"Le texte precedent.\r\n"
+)
+
+SIGNATURE_DASH_DASH_SPACE = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: signature dash dash space\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <signature-dash-dash-space-5024@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=utf-8\r\n"
+    b"\r\n"
+    b"Hi Ben.\r\n"
+    b"\r\n"
+    b"Thanks for your note.\r\n"
+    b"\r\n"
+    b"-- \r\n"
+    b"Ada Sender\r\n"
+    b"ada@example.test\r\n"
+)
+
+LIST_FOOTER_UNDERSCORES = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: list footer underscores\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <list-footer-underscores-5025@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=utf-8\r\n"
+    b"\r\n"
+    b"Hi Ben.\r\n"
+    b"\r\n"
+    b"Thanks for the update.\r\n"
+    b"\r\n"
+    + b"_" * 60
+    + b"\r\n"
+    b"You received this message because you are subscribed to the list.\r\n"
+)
+
+HEADERS_ONLY = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: headers only\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <headers-only-5026@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=us-ascii\r\n"
+    b"\r\n"
+)
+
+# The two quote rows whose bytes a formatter would eat: a soft-break trailing space
+# and a space-stuffed quoted line (row 28), and a TAB / U+00A0 inside a `>` prefix
+# (row 29). Raw so the bytes ARE the fact.
+FLOWED_QUOTE_DEPTH = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: flowed quote depth\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <flowed-quote-depth-5028@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=utf-8; format=flowed\r\n"
+    b"\r\n"
+    b"Hi Ben.\r\n"
+    b"\r\n"
+    b"My reply flows over \r\n"
+    b"two physical lines.\r\n"
+    b"\r\n"
+    b"A second paragraph.\r\n"
+    b"\r\n"
+    b">  the earlier note, which \r\n"
+    b">  also flows over two lines\r\n"
+    b"\r\n"
+    b"That is all.\r\n"
+)
+
+GT_SPACING_VARIANTS = (
+    b"From: Ada Sender <ada@example.test>\r\n"
+    b"To: Ben Receiver <ben@example.test>\r\n"
+    b"Subject: gt spacing variants\r\n"
+    b"Date: Tue, 4 Mar 2025 08:05:00 +0000\r\n"
+    b"Message-ID: <gt-spacing-variants-5029@example.test>\r\n"
+    b"MIME-Version: 1.0\r\n"
+    b"Content-Type: text/plain; charset=utf-8\r\n"
+    b"\r\n"
+    b"Hi Ben.\r\n"
+    b"\r\n"
+    b"> a\r\n"
+    b">> b\r\n"
+    b"> > c\r\n"
+    b">\t> d\r\n"
+    b">>> e\r\n"
+    b">\xc2\xa0> f\r\n"
+    b"\r\n"
+    b"That is all.\r\n"
+)
+
+
 FIXTURES = {
     "bad_charset": BAD_CHARSET,
     "truncated_base64": TRUNCATED_BASE64,
@@ -480,6 +600,13 @@ FIXTURES = {
     "attach_macro_docm": ATTACH_MACRO_DOCM,
     "cap_encoded_word_bomb": CAP_ENCODED_WORD_BOMB,
     "cap_very_long_base64_run": CAP_VERY_LONG_BASE64_RUN,
+    # The quote catalogue (raw rows; typed after Turn 1.5)
+    "outlook_labels_fr": OUTLOOK_LABELS_FR,
+    "signature_dash_dash_space": SIGNATURE_DASH_DASH_SPACE,
+    "list_footer_underscores": LIST_FOOTER_UNDERSCORES,
+    "headers_only": HEADERS_ONLY,
+    "flowed_quote_depth": FLOWED_QUOTE_DEPTH,
+    "gt_spacing_variants": GT_SPACING_VARIANTS,
 }
 
 

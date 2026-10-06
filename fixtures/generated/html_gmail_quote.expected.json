@@ -1,0 +1,518 @@
+{
+  "fixture": "html_gmail_quote.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: a plain part with an 'On ... wrote:' line and an HTML part with div.gmail_quote on a div and on a nested blockquote",
+    "generator": "tools/make_fixtures.py _fixture_html_gmail_quote (Message-ID <html-gmail-quote-5005@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "plain: on_wrote_en (quote, ordinal 1). html: gmail_quote on the div and on the blockquote; the attribution wrapper adds no second ordinal (decision 3), so one boundary, ordinal 1.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "9a26a475f1f4d8bf2af7d5b5c1c0620f5adfc5cf15c91fc166a36fbdbba63595"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 699
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " html gmail quote",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            17
+          ],
+          [
+            74,
+            27
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            101,
+            4
+          ],
+          [
+            106,
+            31
+          ],
+          [
+            101,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <html-gmail-quote-5005@example.test>",
+          "ok",
+          [
+            139,
+            10
+          ],
+          [
+            150,
+            37
+          ],
+          [
+            139,
+            50
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            189,
+            12
+          ],
+          [
+            202,
+            4
+          ],
+          [
+            189,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            208,
+            12
+          ],
+          [
+            221,
+            52
+          ],
+          [
+            208,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            699
+          ],
+          [
+            0,
+            277
+          ],
+          [
+            277,
+            422
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            298,
+            140
+          ],
+          [
+            298,
+            43
+          ],
+          [
+            341,
+            97
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            461,
+            213
+          ],
+          [
+            461,
+            42
+          ],
+          [
+            503,
+            171
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            277
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            277,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            298,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            341,
+            97
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            438,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            461,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            503,
+            171
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            674,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "abedae9f7c21b178efc73f22cf0c8406799b079fcd19c63aa0f81403859fe24d"
+        ],
+        [
+          "1.2",
+          "5d2cf59718339b5a136635586a53dd735818eca83860c578e8bc933bdfc81a57"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hi Ben.\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\nThe earlier line.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div>Hi Ben.<br></div>\r\n<div class=\"gmail_quote\">On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:\r\n<br><blockquote class=\"gmail_quote\">The earlier line.</blockquote></div>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          7
+        ],
+        [
+          "1.2",
+          1,
+          "br",
+          7,
+          0
+        ],
+        [
+          "1.2",
+          2,
+          "div",
+          9,
+          65
+        ],
+        [
+          "1.2",
+          3,
+          "br",
+          57,
+          0
+        ],
+        [
+          "1.2",
+          4,
+          "blockquote",
+          57,
+          17
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "on_wrote_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0
+          ],
+          11,
+          86
+        ],
+        [
+          "1.2",
+          "html",
+          "gmail_quote",
+          "quote",
+          1,
+          [
+            0,
+            0
+          ],
+          9,
+          65
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          1,
+          "on_wrote_en"
+        ],
+        [
+          "1.2",
+          "html",
+          1,
+          "gmail_quote"
+        ]
+      ]
+    }
+  }
+}

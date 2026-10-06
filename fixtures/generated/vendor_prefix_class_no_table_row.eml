@@ -1,0 +1,23 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: vendor prefix class no table row
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <vendor-prefix-class-5022@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b0-quote-20250304"
+
+--b0-quote-20250304
+Content-Type: text/plain; charset=utf-8
+
+Hi Ben.
+
+On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:
+The earlier line.
+
+--b0-quote-20250304
+Content-Type: text/html; charset=utf-8
+
+<div>Hi Ben.</div>
+<div class="moz-custom-quote">The earlier line.</div>
+
+--b0-quote-20250304--

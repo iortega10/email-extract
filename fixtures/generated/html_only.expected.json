@@ -1,0 +1,291 @@
+{
+  "fixture": "html_only.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/html utf-8 message (no plain alternative) with a single paragraph and no quoting construct",
+    "generator": "tools/make_fixtures.py _fixture_html_only (Message-ID <html-only-5004@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "no DOM quote container is present (a bare <p>), so no quote rule fires.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "no_quote_expected": "no quote rule may fire in this fixture: it is a control. body.quote_boundaries and body.view_levels are typed as empty lists (the loader allows an empty list), and the annotation here names why the fixture is expected to be clean."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "c49b8fbf8a49c80d08199d1636925daddb3faa9de9d11ca3dc13b62115a8f57c"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 279
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " html-only-5004",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            15
+          ],
+          [
+            74,
+            25
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            99,
+            4
+          ],
+          [
+            104,
+            31
+          ],
+          [
+            99,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <html only@example.test>",
+          "ok",
+          [
+            137,
+            10
+          ],
+          [
+            148,
+            25
+          ],
+          [
+            137,
+            38
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            175,
+            12
+          ],
+          [
+            188,
+            4
+          ],
+          [
+            175,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/html; charset=utf-8",
+          "ok",
+          [
+            194,
+            12
+          ],
+          [
+            207,
+            25
+          ],
+          [
+            194,
+            40
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/html",
+          [
+            0,
+            279
+          ],
+          [
+            0,
+            236
+          ],
+          [
+            236,
+            43
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            236
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            236,
+            43
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "71fd1560b0ad377a6b4af9c221efde887cf3872c83344c5d64f8263fe9aa88d1"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "<p>Hello Ben. No quoting here at all.</p>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          0,
+          "p",
+          0,
+          34
+        ]
+      ]
+    }
+  },
+  "benign": {
+    "reason_id": "no_quote_expected"
+  }
+}

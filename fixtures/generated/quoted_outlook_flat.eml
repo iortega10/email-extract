@@ -1,0 +1,16 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: quoted outlook flat
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <quoted-outlook-flat-5001@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hi Ben.
+
+From: Ada Sender <ada@example.test>
+Sent: Tue, 4 Mar 2025 09:00:00 +0000
+To: Ben Receiver <ben@example.test>
+Subject: the earlier note
+
+The earlier note body.

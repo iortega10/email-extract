@@ -48,7 +48,7 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     gate = l1_gate()
     assert isinstance(gate, GateResult)
     assert gate.skipped is False
-    assert gate.data["sidecars"] == 90
+    assert gate.data["sidecars"] == 119
     assert gate.data["matched"] > 0
     # not_yet is by phase, never a single total: phase 1 (parser) and phase 3 (time/thread).
     # Turn 1.1 made headers.projection, headers.decoded, headers.parameters and its live
@@ -62,7 +62,9 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # and body.plain_effectively_empty measurable and turned the four new gap ids
     # (body.digest_default_not_applied, body.no_text_part, security.remote_content_present,
     # body.inline_data_uri) live, moving 23 more phase-1 facts to compared.
-    assert gate.data["not_yet"] == {1: 108, 3: 26}
+    # The quote-catalogue follow-up (rows 27-29) adds three sidecars whose quote facts
+    # are still not_yet, moving 9 more phase-1 facts to not_yet.
+    assert gate.data["not_yet"] == {1: 192, 3: 26}
 
 
 def test_the_committed_corpus_is_green_with_no_label_walker_disagreement() -> None:
@@ -190,6 +192,6 @@ def test_every_committed_sidecar_is_discovered_by_the_gate() -> None:
         for path in FIXTURES.rglob("*.expected.json")
         if "real" not in path.relative_to(FIXTURES).parts
     )
-    assert len(corpus) == 90
+    assert len(corpus) == 119
     assert [path for path in corpus if path == ATTACHMENTS] == [ATTACHMENTS]
     assert ALTERNATIVE.is_file()

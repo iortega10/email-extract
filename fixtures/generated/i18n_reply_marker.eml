@@ -1,0 +1,16 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: i18n reply marker
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <i18n-reply-marker-5008@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hello Ben.
+
+Am 4. Marz 2025 schrieb Ada Sender:
+Name: Ada Sender
+Datum: 4. Marz 2025
+Betreff: die fruhere Notiz
+
+Der fruhere Text.

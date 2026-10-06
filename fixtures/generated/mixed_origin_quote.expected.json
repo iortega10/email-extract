@@ -1,0 +1,536 @@
+{
+  "fixture": "mixed_origin_quote.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: the plain part has an 'On ... wrote:' line; the HTML part has a div.gmail_quote wrapping a div#divRplyFwdMsg and a blockquote[type=cite]",
+    "generator": "tools/make_fixtures.py _fixture_mixed_origin_quote (Message-ID <mixed-origin-quote-5012@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "mixed origin: the Gmail container wraps an Outlook block; the view keeps one ordinal sequence with a per-boundary rule id (design D3), one ordinal per view.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "owner_signoff": "decided by owner sign-off, question 3: a Gmail container wrapping an Outlook block is level 1 (one ordinal per view)"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "3dbde79164b1e6b7953a7f9ba4049f4a6494ce3ecbd14b7494c15793b1f63f65"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 719
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " mixed origin quote",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            19
+          ],
+          [
+            74,
+            29
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            103,
+            4
+          ],
+          [
+            108,
+            31
+          ],
+          [
+            103,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <mixed-origin-quote-5012@example.test>",
+          "ok",
+          [
+            141,
+            10
+          ],
+          [
+            152,
+            39
+          ],
+          [
+            141,
+            52
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            193,
+            12
+          ],
+          [
+            206,
+            4
+          ],
+          [
+            193,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            212,
+            12
+          ],
+          [
+            225,
+            52
+          ],
+          [
+            212,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            719
+          ],
+          [
+            0,
+            281
+          ],
+          [
+            281,
+            438
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            302,
+            140
+          ],
+          [
+            302,
+            43
+          ],
+          [
+            345,
+            97
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            465,
+            229
+          ],
+          [
+            465,
+            42
+          ],
+          [
+            507,
+            187
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            281
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            281,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            302,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            345,
+            97
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            442,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            465,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            507,
+            187
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            694,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "abedae9f7c21b178efc73f22cf0c8406799b079fcd19c63aa0f81403859fe24d"
+        ],
+        [
+          "1.2",
+          "7728f581e1d76418d2c9e376a0677ca64c218d165f6277976f209a099a8cc12d"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hi Ben.\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\nThe earlier line.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div class=\"gmail_quote\"><div id=\"divRplyFwdMsg\"><b>From:</b> Ada Sender<br><b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000</div><blockquote type=\"cite\">The earlier line.</blockquote></div>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          69
+        ],
+        [
+          "1.2",
+          1,
+          "div",
+          0,
+          52
+        ],
+        [
+          "1.2",
+          2,
+          "b",
+          0,
+          5
+        ],
+        [
+          "1.2",
+          3,
+          "br",
+          16,
+          0
+        ],
+        [
+          "1.2",
+          4,
+          "b",
+          16,
+          5
+        ],
+        [
+          "1.2",
+          5,
+          "blockquote",
+          52,
+          17
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "on_wrote_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0
+          ],
+          11,
+          86
+        ],
+        [
+          "1.2",
+          "html",
+          "gmail_quote",
+          "quote",
+          1,
+          [
+            0
+          ],
+          0,
+          69
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          1,
+          "on_wrote_en"
+        ],
+        [
+          "1.2",
+          "html",
+          1,
+          "gmail_quote"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.mixed_origin_quoting",
+          "1.2",
+          1,
+          "a Gmail container wraps an Outlook block; the origin is mixed, one ordinal sequence per view with a per-boundary rule id (design D3)"
+        ]
+      ]
+    }
+  }
+}

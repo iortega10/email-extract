@@ -1,0 +1,306 @@
+{
+  "fixture": "quoted_prefix_gt_deep.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message with a new top line then a three-line quoted run of increasing '>' depth, then a new bottom line",
+    "generator": "tools/make_fixtures.py _fixture_quoted_prefix_gt_deep (Message-ID <quoted-prefix-gt-deep-5002@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "gt_family: one boundary per contiguous run of '>'-prefixed lines, kind quote, ordinal 1, with per-line prefix depth [1, 2, 3] (decision 2/3; prefix_depth is per line).",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "owner_signoff": "decided by owner sign-off, question 2: a view's level is the highest ordinal and the deepest per-line '>' depth"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "3e72f294e1d3691c9dba324d28a8fc95d12e59d1488365f1b94628417f558fc9"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 355
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " quoted prefix gt deep",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            22
+          ],
+          [
+            74,
+            32
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            106,
+            4
+          ],
+          [
+            111,
+            31
+          ],
+          [
+            106,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <quoted-prefix-gt-deep-5002@example.test>",
+          "ok",
+          [
+            144,
+            10
+          ],
+          [
+            155,
+            42
+          ],
+          [
+            144,
+            55
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            199,
+            12
+          ],
+          [
+            212,
+            4
+          ],
+          [
+            199,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8",
+          "ok",
+          [
+            218,
+            12
+          ],
+          [
+            231,
+            26
+          ],
+          [
+            218,
+            41
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            355
+          ],
+          [
+            0,
+            261
+          ],
+          [
+            261,
+            94
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            261
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            261,
+            94
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "70ab708faeb538341cbb3ff81c0252c9195c9500d083874d4648600ea497eb84"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Thanks for the update.\r\n\r\n> level one\r\n>> level two\r\n>>> level three\r\n\r\nThe new bottom line.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          "gt_family",
+          "quote",
+          1,
+          [
+            1,
+            2,
+            3
+          ],
+          26,
+          42
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          3,
+          "gt_family"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,287 @@
+{
+  "fixture": "i18n_reply_marker.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message: a boundary-looking line then a run of short invented 'Label:' lines in a language the named tables do not cover",
+    "generator": "tools/make_fixtures.py _fixture_i18n_reply_marker (Message-ID <i18n-reply-marker-5008@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "the label-shaped unknown-language block is the gap body.i18n_reply_marker; no quote rule fires and it is never body.no_boundary_found (decision 3).",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "no_quote_expected": "no quote rule may fire in this fixture: it is a control. body.quote_boundaries and body.view_levels are typed as empty lists (the loader allows an empty list), and the annotation here names why the fixture is expected to be clean."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "cb585a18e295280b5e8dc20476462c0591ed8edd82a5ac2a74c5e42700d99f00"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 392
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " i18n reply marker",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            18
+          ],
+          [
+            74,
+            28
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            102,
+            4
+          ],
+          [
+            107,
+            31
+          ],
+          [
+            102,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <i18n-reply-marker-5008@example.test>",
+          "ok",
+          [
+            140,
+            10
+          ],
+          [
+            151,
+            38
+          ],
+          [
+            140,
+            51
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            191,
+            12
+          ],
+          [
+            204,
+            4
+          ],
+          [
+            191,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8",
+          "ok",
+          [
+            210,
+            12
+          ],
+          [
+            223,
+            26
+          ],
+          [
+            210,
+            41
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            392
+          ],
+          [
+            0,
+            253
+          ],
+          [
+            253,
+            139
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            253
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            253,
+            139
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "ad40a0fd171c743bc54cdc1e598a4094b1acd057031260803312f9b6daf0d511"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Hello Ben.\r\n\r\nAm 4. Marz 2025 schrieb Ada Sender:\r\nName: Ada Sender\r\nDatum: 4. Marz 2025\r\nBetreff: die fruhere Notiz\r\n\r\nDer fruhere Text.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.i18n_reply_marker",
+          "1",
+          1,
+          "a header-like run of short Label: lines follows a boundary-looking line in a language outside the English/German/French tables, so the marker is recorded and not classified (decision 3; never 'no boundary found')"
+        ]
+      ]
+    }
+  }
+}

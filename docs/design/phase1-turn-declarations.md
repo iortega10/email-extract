@@ -465,11 +465,18 @@ Allow-list (`turn=1.5`): `emailextract/htmltree.py`, `emailextract/htmltext.py`,
 
 ```declaration turn=quote-catalogue
 module: fixtures/generated/
+module: fixtures/raw/
 module: docs/design/quote-catalogue-review.md
 test: tests/test_quote_catalogue.py::test_every_catalogue_row_is_reviewable
 test: tests/test_quote_catalogue.py::test_the_catalogue_labels_load_and_are_ledgered
 test: tests/test_quote_catalogue.py::test_the_not_v1_rows_are_absent_from_the_rules
-stop: after the owner's row-by-row review, before any quote rule is written
+test: tests/test_quote_catalogue.py::test_the_reviewability_check_fails_on_a_missing_quotation
+test: tests/test_quote_catalogue.py::test_the_quote_span_check_fails_on_a_planted_wrong_span
+test: tests/test_quote_catalogue.py::test_every_quote_html_span_is_rederived_by_an_independent_projection
+test: tests/test_quote_catalogue.py::test_the_html_projection_check_fails_on_a_planted_wrong_span
+test: tests/test_quote_catalogue.py::test_the_quote_catalogue_fixtures_regenerate_byte_identically
+test: tests/test_quote_catalogue.py::test_the_three_hole_rows_exist_and_type_the_decided_rules
+stop: after the owner's row-by-row review (delegated 2026-10-05) and the three hole rows (27-29), before any quote rule is written
 ```
 
 Allow-list (`turn=quote-catalogue`): `fixtures/generated/`, `tests/ledger/label_ledger.json`,

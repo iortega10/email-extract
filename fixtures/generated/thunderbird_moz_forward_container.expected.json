@@ -1,0 +1,497 @@
+{
+  "fixture": "thunderbird_moz_forward_container.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: the plain part has a 'Begin forwarded message:' banner, the HTML part has a div.moz-forward-container",
+    "generator": "tools/make_fixtures.py _fixture_thunderbird_moz_forward_container (Message-ID <thunderbird-moz-forward-5018@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "thunderbird_moz_forward_container is a FORWARD container, so kind forward at level 0 (owner decision 15); the plain view's forward_banner is likewise forward at level 0.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "e8b023202a34ba69d894715df0168824195362008419f69ecf9cc2e5f9f266c5"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 595
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " thunderbird moz forward container",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            34
+          ],
+          [
+            74,
+            44
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            118,
+            4
+          ],
+          [
+            123,
+            31
+          ],
+          [
+            118,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <thunderbird-moz-forward-5018@example.test>",
+          "ok",
+          [
+            156,
+            10
+          ],
+          [
+            167,
+            44
+          ],
+          [
+            156,
+            57
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            213,
+            12
+          ],
+          [
+            226,
+            4
+          ],
+          [
+            213,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            232,
+            12
+          ],
+          [
+            245,
+            52
+          ],
+          [
+            232,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            595
+          ],
+          [
+            0,
+            301
+          ],
+          [
+            301,
+            294
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            322,
+            101
+          ],
+          [
+            322,
+            43
+          ],
+          [
+            365,
+            58
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            446,
+            124
+          ],
+          [
+            446,
+            42
+          ],
+          [
+            488,
+            82
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            301
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            301,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            322,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            365,
+            58
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            423,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            446,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            488,
+            82
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            570,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "9741c47e7e1171093f7d86a711390eb65ddd966eb7bd7bb5284da59040d226ea"
+        ],
+        [
+          "1.2",
+          "9b70ba34a6be0d808b4c656a95d5e4572e96777224c28a5fa81383065ab17fed"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hi Ben.\r\n\r\nBegin forwarded message:\r\nThe forwarded note.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div>Hi Ben.</div>\r\n<div class=\"moz-forward-container\">The forwarded note.</div>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          7
+        ],
+        [
+          "1.2",
+          1,
+          "div",
+          9,
+          19
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "forward_banner",
+          "forward",
+          0,
+          [
+            0,
+            0,
+            0
+          ],
+          11,
+          47
+        ],
+        [
+          "1.2",
+          "html",
+          "thunderbird_moz_forward_container",
+          "forward",
+          0,
+          [
+            0,
+            0
+          ],
+          9,
+          21
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          0,
+          "forward_banner"
+        ],
+        [
+          "1.2",
+          "html",
+          0,
+          "thunderbird_moz_forward_container"
+        ]
+      ]
+    }
+  }
+}

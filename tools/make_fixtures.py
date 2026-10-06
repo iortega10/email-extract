@@ -1803,6 +1803,364 @@ TIME_FIXTURES = {
 TIME_FIXTURE_NAMES: tuple[str, ...] = tuple(TIME_FIXTURES)
 
 
+# =========================================== the quote catalogue (typed after 1.5)
+# (docs/design/phase1-fixtures.md, "The quote catalogue"). These fixtures exist
+# only so a hand-typed label can mark a quote boundary; the renderer here writes
+# ordinary text/plain and multipart/alternative messages and never interprets the
+# quoting constructs. The four whose bytes are the whole point (a NBSP before a
+# French label's colon, a lone ``-- `` line with its trailing space, a run of
+# underscores, a headers-only message with no blank line) are raw literals in
+# tools/write_raw_fixtures.py instead.
+
+
+def _q_headers(subject: str, message_id: str, content_type: str) -> list[tuple[str, str]]:
+    return [
+        ("From", "Ada Sender <ada@example.test>"),
+        ("To", "Ben Receiver <ben@example.test>"),
+        ("Subject", subject),
+        ("Date", PINNED_DATE_0805),
+        ("Message-ID", f"<{message_id}@example.test>"),
+        ("MIME-Version", "1.0"),
+        ("Content-Type", content_type),
+    ]
+
+
+def _q_plain(name: str, subject: str, payload: bytes) -> bytes:
+    return render_message(
+        Leaf(_q_headers(subject, name, "text/plain; charset=utf-8"), payload)
+    )
+
+
+def _q_html_leaf(html: bytes) -> Leaf:
+    return Leaf([("Content-Type", "text/html; charset=utf-8")], html)
+
+
+def _q_alternative(name: str, subject: str, plain: bytes, html: bytes) -> bytes:
+    return render_message(
+        Multi(
+            _q_headers(subject, name, 'multipart/alternative; boundary="b0-quote-20250304"'),
+            "b0-quote-20250304",
+            [
+                _plain_leaf("text/plain; charset=utf-8", plain),
+                _q_html_leaf(html),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_quoted_outlook_flat() -> bytes:
+    return _q_plain(
+        "quoted-outlook-flat-5001",
+        "quoted outlook flat",
+        b"Hi Ben.\r\n\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"Sent: Tue, 4 Mar 2025 09:00:00 +0000\r\n"
+        b"To: Ben Receiver <ben@example.test>\r\n"
+        b"Subject: the earlier note\r\n"
+        b"\r\n"
+        b"The earlier note body.\r\n",
+    )
+
+
+def _fixture_quoted_prefix_gt_deep() -> bytes:
+    return _q_plain(
+        "quoted-prefix-gt-deep-5002",
+        "quoted prefix gt deep",
+        b"Thanks for the update.\r\n\r\n"
+        b"> level one\r\n"
+        b">> level two\r\n"
+        b">>> level three\r\n"
+        b"\r\n"
+        b"The new bottom line.\r\n",
+    )
+
+
+def _fixture_inline_reply_interleaved() -> bytes:
+    return _q_plain(
+        "inline-reply-interleaved-5003",
+        "inline reply interleaved",
+        b"My answers are inline.\r\n\r\n"
+        b"> first question\r\n\r\n"
+        b"My first answer.\r\n\r\n"
+        b"> second question\r\n\r\n"
+        b"My second answer.\r\n",
+    )
+
+
+def _fixture_html_only() -> bytes:
+    return render_message(
+        Leaf(
+            _q_headers("html-only-5004", "html only", "text/html; charset=utf-8"),
+            b"<p>Hello Ben. No quoting here at all.</p>\r\n",
+        )
+    )
+
+
+def _fixture_html_gmail_quote() -> bytes:
+    return _q_alternative(
+        "html-gmail-quote-5005",
+        "html gmail quote",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"The earlier line.\r\n",
+        b'<div>Hi Ben.<br></div>\r\n'
+        b'<div class="gmail_quote">On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:\r\n'
+        b'<br><blockquote class="gmail_quote">The earlier line.</blockquote></div>\r\n',
+    )
+
+
+def _fixture_html_outlook_divrplyfwd() -> bytes:
+    return _q_alternative(
+        "html-outlook-divrplyfwd-5006",
+        "html outlook divrplyfwd",
+        b"Hi Ben.\r\n\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"Sent: Tue, 4 Mar 2025 09:00:00 +0000\r\n"
+        b"To: Ben Receiver <ben@example.test>\r\n"
+        b"Subject: the earlier note\r\n"
+        b"\r\n"
+        b"The earlier note body.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div id="divRplyFwdMsg"><b>From:</b> Ada Sender<br>'
+        b"<b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000<br>"
+        b"<b>To:</b> Ben Receiver<br><b>Subject:</b> the earlier note</div>\r\n",
+    )
+
+
+def _fixture_no_boundary_found() -> bytes:
+    return _q_plain(
+        "no-boundary-found-5007",
+        "no boundary found",
+        b"Just a plain note.\r\n\r\nNo quoting anywhere in this message.\r\n",
+    )
+
+
+def _fixture_i18n_reply_marker() -> bytes:
+    return _q_plain(
+        "i18n-reply-marker-5008",
+        "i18n reply marker",
+        b"Hello Ben.\r\n\r\n"
+        b"Am 4. Marz 2025 schrieb Ada Sender:\r\n"
+        b"Name: Ada Sender\r\n"
+        b"Datum: 4. Marz 2025\r\n"
+        b"Betreff: die fruhere Notiz\r\n"
+        b"\r\n"
+        b"Der fruhere Text.\r\n",
+    )
+
+
+def _fixture_forwarded_inline_marker() -> bytes:
+    return _q_plain(
+        "forwarded-inline-marker-5009",
+        "forwarded inline marker",
+        b"Hello Ben.\r\n\r\n"
+        b"Begin forwarded message:\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"Date: Tue, 4 Mar 2025 09:00:00 +0000\r\n"
+        b"Subject: FYI\r\n"
+        b"\r\n"
+        b"The forwarded note.\r\n",
+    )
+
+
+def _fixture_gmail_reply_quoting_outlook_authored() -> bytes:
+    return _q_alternative(
+        "gmail-reply-outlook-authored-5010",
+        "gmail reply quoting outlook authored",
+        b"Thanks!\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"Sent: Tue, 4 Mar 2025 09:00:00 +0000\r\n"
+        b"To: Ben Receiver <ben@example.test>\r\n"
+        b"Subject: the earlier note\r\n"
+        b"\r\n"
+        b"Begin forwarded message:\r\n"
+        b"\r\n"
+        b"A forwarded note.\r\n",
+        b"<div>Thanks!</div>\r\n"
+        b'<div class="gmail_quote"><div id="divRplyFwdMsg">'
+        b"<b>From:</b> Ada Sender<br><b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000<br>"
+        b"<b>To:</b> Ben Receiver<br><b>Subject:</b> the earlier note</div>"
+        b'<blockquote class="gmail_quote">The earlier line.</blockquote></div>\r\n',
+    )
+
+
+def _fixture_gmail_short_reply_gt_and_on_wrote() -> bytes:
+    return _q_alternative(
+        "gmail-short-reply-5011",
+        "gmail short reply gt and on wrote",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b">> the earlier line\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div class="gmail_quote">On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:'
+        b"<br><blockquote class=\"gmail_quote\">the earlier line</blockquote></div>\r\n",
+    )
+
+
+def _fixture_mixed_origin_quote() -> bytes:
+    return _q_alternative(
+        "mixed-origin-quote-5012",
+        "mixed origin quote",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"The earlier line.\r\n",
+        b'<div class="gmail_quote">'
+        b'<div id="divRplyFwdMsg"><b>From:</b> Ada Sender<br>'
+        b"<b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000</div>"
+        b"<blockquote type=\"cite\">The earlier line.</blockquote></div>\r\n",
+    )
+
+
+def _fixture_outlook_labels_de() -> bytes:
+    return _q_plain(
+        "outlook-labels-de-5013",
+        "outlook labels de",
+        b"Hallo Ben.\r\n\r\n"
+        b"Von: Ada Sender <ada@example.test>\r\n"
+        b"Gesendet: Dienstag, 4. Marz 2025 09:00\r\n"
+        b"An: Ben Receiver <ben@example.test>\r\n"
+        b"Betreff: die fruhere Notiz\r\n"
+        b"\r\n"
+        b"Der fruhere Text.\r\n",
+    )
+
+
+def _fixture_unknown_language_label_block() -> bytes:
+    return _q_plain(
+        "unknown-language-label-block-5014",
+        "unknown language label block",
+        b"Hi Ben.\r\n\r\n"
+        b"Dne 4.3.2025 napsal Ada Sender:\r\n"
+        b"Od: Ada Sender\r\n"
+        b"Komu: Ben Receiver\r\n"
+        b"Predmet: the earlier note\r\n"
+        b"\r\n"
+        b"The earlier text.\r\n",
+    )
+
+
+def _fixture_gmail_quote_on_blockquote() -> bytes:
+    return _q_alternative(
+        "gmail-quote-on-blockquote-5015",
+        "gmail quote on blockquote",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"The earlier line.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<blockquote class="gmail_quote">On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:'
+        b"<br>The earlier line.</blockquote>\r\n",
+    )
+
+
+def _fixture_outlook_com_appendonsend() -> bytes:
+    return _q_alternative(
+        "outlook-appendonsend-5016",
+        "outlook com appendonsend",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"The earlier line.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div id="x_appendonsend"></div>\r\n'
+        b"<div>On Tue, 4 Mar 2025 at 09:00, Ada Sender wrote:<br>The earlier line.</div>\r\n",
+    )
+
+
+def _fixture_thunderbird_moz_cite_prefix() -> bytes:
+    return _q_alternative(
+        "thunderbird-moz-cite-prefix-5017",
+        "thunderbird moz cite prefix",
+        b"Hi Ben.\r\n\r\n"
+        b"On 2025-03-04 09:00, Ada Sender wrote:\r\n"
+        b"The earlier line.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div class="moz-cite-prefix">On 2025-03-04 09:00, Ada Sender wrote:</div>\r\n'
+        b"<blockquote>The earlier line.</blockquote>\r\n",
+    )
+
+
+def _fixture_thunderbird_moz_forward_container() -> bytes:
+    return _q_alternative(
+        "thunderbird-moz-forward-5018",
+        "thunderbird moz forward container",
+        b"Hi Ben.\r\n\r\n"
+        b"Begin forwarded message:\r\n"
+        b"The forwarded note.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div class="moz-forward-container">The forwarded note.</div>\r\n',
+    )
+
+
+def _fixture_begin_forwarded_message() -> bytes:
+    return _q_plain(
+        "begin-forwarded-message-5019",
+        "begin forwarded message",
+        b"Hello Ben.\r\n\r\n"
+        b"Begin forwarded message:\r\n"
+        b"\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"Date: Tue, 4 Mar 2025 09:00:00 +0000\r\n"
+        b"Subject: FYI\r\n"
+        b"\r\n"
+        b"The forwarded note.\r\n",
+    )
+
+
+def _fixture_original_message_dashes() -> bytes:
+    return _q_plain(
+        "original-message-dashes-5020",
+        "original message dashes",
+        b"Hi Ben.\r\n\r\n"
+        b"-----Original Message-----\r\n"
+        b"From: Ada Sender <ada@example.test>\r\n"
+        b"\r\n"
+        b"The earlier text.\r\n",
+    )
+
+
+def _fixture_bottom_posted_reply() -> bytes:
+    return _q_plain(
+        "bottom-posted-reply-5021",
+        "bottom posted reply",
+        b"> The earlier question.\r\n"
+        b"\r\n"
+        b"My answer to it.\r\n",
+    )
+
+
+def _fixture_vendor_prefix_class_no_table_row() -> bytes:
+    return _q_alternative(
+        "vendor-prefix-class-5022",
+        "vendor prefix class no table row",
+        b"Hi Ben.\r\n\r\n"
+        b"On Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\n"
+        b"The earlier line.\r\n",
+        b"<div>Hi Ben.</div>\r\n"
+        b'<div class="moz-custom-quote">The earlier line.</div>\r\n',
+    )
+
+
+def _fixture_on_wrote_hard_wrapped() -> bytes:
+    # The hole the plan debate found (section 3, item 1): a hard-wrapped attribution.
+    # The first attribution is wrapped over TWO physical lines and fires; the second is
+    # wrapped over THREE and must NOT fire (the N = 2 window does not join three).
+    return _q_plain(
+        "on-wrote-hard-wrapped-5027",
+        "on wrote hard wrapped",
+        b"Hi Ben.\r\n"
+        b"\r\n"
+        b"On Mon, 3 Mar 2025 at 09:15, Ada Sender\r\n"
+        b"<ada@example.test> wrote:\r\n"
+        b"> the earlier line\r\n"
+        b"\r\n"
+        b"On Tue, 4 Mar 2025 at 11:30, Zoe Sender\r\n"
+        b"<zoe@example.test>\r\n"
+        b"wrote:\r\n"
+        b"> the third line\r\n",
+    )
+
+
 FIXTURES = {
     "plain_simple": _fixture_plain_simple,
     "alternative_text_html": _fixture_alternative_text_html,
@@ -1864,6 +2222,30 @@ FIXTURES = {
     "cap_deep_nesting": _fixture_cap_deep_nesting,
     "cap_large_part_count": _fixture_cap_large_part_count,
     "cap_enormous_header_block": _fixture_cap_enormous_header_block,
+    # The quote catalogue (typed after Turn 1.5; owner-reviewed before any quote rule)
+    "quoted_outlook_flat": _fixture_quoted_outlook_flat,
+    "quoted_prefix_gt_deep": _fixture_quoted_prefix_gt_deep,
+    "inline_reply_interleaved": _fixture_inline_reply_interleaved,
+    "html_only": _fixture_html_only,
+    "html_gmail_quote": _fixture_html_gmail_quote,
+    "html_outlook_divrplyfwd": _fixture_html_outlook_divrplyfwd,
+    "no_boundary_found": _fixture_no_boundary_found,
+    "i18n_reply_marker": _fixture_i18n_reply_marker,
+    "forwarded_inline_marker": _fixture_forwarded_inline_marker,
+    "gmail_reply_quoting_outlook_authored": _fixture_gmail_reply_quoting_outlook_authored,
+    "gmail_short_reply_gt_and_on_wrote": _fixture_gmail_short_reply_gt_and_on_wrote,
+    "mixed_origin_quote": _fixture_mixed_origin_quote,
+    "outlook_labels_de": _fixture_outlook_labels_de,
+    "unknown_language_label_block": _fixture_unknown_language_label_block,
+    "gmail_quote_on_blockquote": _fixture_gmail_quote_on_blockquote,
+    "outlook_com_appendonsend": _fixture_outlook_com_appendonsend,
+    "thunderbird_moz_cite_prefix": _fixture_thunderbird_moz_cite_prefix,
+    "thunderbird_moz_forward_container": _fixture_thunderbird_moz_forward_container,
+    "begin_forwarded_message": _fixture_begin_forwarded_message,
+    "original_message_dashes": _fixture_original_message_dashes,
+    "bottom_posted_reply": _fixture_bottom_posted_reply,
+    "vendor_prefix_class_no_table_row": _fixture_vendor_prefix_class_no_table_row,
+    "on_wrote_hard_wrapped": _fixture_on_wrote_hard_wrapped,
 }
 
 FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)

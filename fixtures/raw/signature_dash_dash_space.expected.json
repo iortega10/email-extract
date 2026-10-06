@@ -1,0 +1,307 @@
+{
+  "fixture": "signature_dash_dash_space.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message: new text then a '-- ' signature line (dash dash space) and two signature lines",
+    "generator": "tools/write_raw_fixtures.py SIGNATURE_DASH_DASH_SPACE, a raw byte literal (Message-ID <signature-dash-dash-space-5024@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "dash_dash_space: exactly dash dash space plus the line end (RFC 3676 4.3), kind signature, a CANDIDATE only (decision 3); recorded at level 0 and never stripped, so it does not advance the ordinal.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "owner_signoff": "decided by owner sign-off, question 7: a signature span runs from the '-- ' line through the end of the part"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "869fa70cd308c029d5c1b542e58bc98a0063195a8238433e1e645d85b11c2459"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 340
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " signature dash dash space",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            26
+          ],
+          [
+            74,
+            36
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            110,
+            4
+          ],
+          [
+            115,
+            31
+          ],
+          [
+            110,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <signature-dash-dash-space-5024@example.test>",
+          "ok",
+          [
+            148,
+            10
+          ],
+          [
+            159,
+            46
+          ],
+          [
+            148,
+            59
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            207,
+            12
+          ],
+          [
+            220,
+            4
+          ],
+          [
+            207,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8",
+          "ok",
+          [
+            226,
+            12
+          ],
+          [
+            239,
+            26
+          ],
+          [
+            226,
+            41
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            340
+          ],
+          [
+            0,
+            269
+          ],
+          [
+            269,
+            71
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            269
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            269,
+            71
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "f04a359df719c4250a58e1454a02af612a140c3fa70c87e3759658319ad4184d"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Hi Ben.\r\n\r\nThanks for your note.\r\n\r\n-- \r\nAda Sender\r\nada@example.test\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          "dash_dash_space",
+          "signature",
+          0,
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          36,
+          35
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          0,
+          "dash_dash_space"
+        ]
+      ]
+    }
+  }
+}

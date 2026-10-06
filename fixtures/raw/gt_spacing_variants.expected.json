@@ -1,0 +1,309 @@
+{
+  "fixture": "gt_spacing_variants.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message whose body is new text then six consecutive quoted lines that vary the separator: SP, '>>', '> >', TAB, '>>>', and U+00A0 (NBSP)",
+    "generator": "tools/write_raw_fixtures.py GT_SPACING_VARIANTS, a raw byte literal (Message-ID <gt-spacing-variants-5029@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "gt_family: a '>'-family prefix is a run of '>' characters optionally separated by SP or TAB only; U+00A0 (NBSP) is NOT a separator and is NOT counted, so the NBSP line has prefix depth 1 and the rest of that line (the NBSP, '>', space, 'f') is TEXT. Per-line depths [1, 2, 2, 2, 3, 1].",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "owner_review": "added after the delegated owner sign-off of 2026-10-05; to be reviewed by the owner",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "caea5288dada1e3f979419b2ed083b950a5bbdbb56b10967aadd20da1e81e576"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 324
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " gt spacing variants",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            20
+          ],
+          [
+            74,
+            30
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            104,
+            4
+          ],
+          [
+            109,
+            31
+          ],
+          [
+            104,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <gt-spacing-variants-5029@example.test>",
+          "ok",
+          [
+            142,
+            10
+          ],
+          [
+            153,
+            40
+          ],
+          [
+            142,
+            53
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            195,
+            12
+          ],
+          [
+            208,
+            4
+          ],
+          [
+            195,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8",
+          "ok",
+          [
+            214,
+            12
+          ],
+          [
+            227,
+            26
+          ],
+          [
+            214,
+            41
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            324
+          ],
+          [
+            0,
+            257
+          ],
+          [
+            257,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            257
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            257,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "c946df5c85860cea8a17fb85aeac8ca500ae5ce36a0c86422fa87001b6f01daf"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Hi Ben.\r\n\r\n> a\r\n>> b\r\n> > c\r\n>\t> d\r\n>>> e\r\n> > f\r\n\r\nThat is all.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          "gt_family",
+          "quote",
+          1,
+          [
+            1,
+            2,
+            2,
+            2,
+            3,
+            1
+          ],
+          11,
+          37
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          3,
+          "gt_family"
+        ]
+      ]
+    }
+  }
+}

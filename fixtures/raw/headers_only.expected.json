@@ -1,0 +1,279 @@
+{
+  "fixture": "headers_only.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one headers-only utf-8 message: a header block followed by a blank line and an empty body (no body content at all)",
+    "generator": "tools/write_raw_fixtures.py HEADERS_ONLY, a raw byte literal (Message-ID <headers-only-5026@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "there is no body content, so no quote rule fires. The blank line means the walker reads an empty body region and records no body.headers_only gap (that gap is the headers-to-EOF shape, proven against inline bytes in tests/test_gap_falsifiability.py).",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "no_quote_expected": "no quote rule may fire in this fixture: it is a control. body.quote_boundaries and body.view_levels are typed as empty lists (the loader allows an empty list), and the annotation here names why the fixture is expected to be clean."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "445cd6eb96dcc2b3a5be587be89258bb2d74fc767eb1ba31717a740981abcd78"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 246
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " headers only",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            13
+          ],
+          [
+            74,
+            23
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            97,
+            4
+          ],
+          [
+            102,
+            31
+          ],
+          [
+            97,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <headers-only-5026@example.test>",
+          "ok",
+          [
+            135,
+            10
+          ],
+          [
+            146,
+            33
+          ],
+          [
+            135,
+            46
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            181,
+            12
+          ],
+          [
+            194,
+            4
+          ],
+          [
+            181,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=us-ascii",
+          "ok",
+          [
+            200,
+            12
+          ],
+          [
+            213,
+            29
+          ],
+          [
+            200,
+            44
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            246
+          ],
+          [
+            0,
+            246
+          ],
+          [
+            246,
+            0
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            246
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            246,
+            0
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "us-ascii",
+          "7bit",
+          "us-ascii",
+          false,
+          "ascii"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "",
+          "exact",
+          null
+        ]
+      ]
+    }
+  },
+  "benign": {
+    "reason_id": "headers_only_by_design"
+  }
+}

@@ -87,15 +87,15 @@ def test_the_table_names_every_gate_it_reports() -> None:
 
 def test_the_corpus_size_is_counted_by_directory() -> None:
     size = corpus_size()
-    assert sum(size["fixtures"].values()) == 90
-    assert sum(size["sidecars"].values()) == 90
+    assert sum(size["fixtures"].values()) == 119
+    assert sum(size["sidecars"].values()) == 119
     assert set(size["fixtures"]) == {"generated", "raw", "time"}
-    assert size["fixtures"]["generated"] == 58
+    assert size["fixtures"]["generated"] == 81
     assert size["fixtures"]["time"] == 5
 
 
 def test_the_undetermined_count_is_read_from_the_labels() -> None:
-    assert undetermined() == 19
+    assert undetermined() == 20
 
 
 def test_the_falsifiability_line_names_the_uncovered_gaps() -> None:

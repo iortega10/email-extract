@@ -1,0 +1,488 @@
+{
+  "fixture": "vendor_prefix_class_no_table_row.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: the plain part has an 'On ... wrote:' line, the HTML part has a class matching the moz- vendor prefix family with no table row on an (unclosed) blockquote",
+    "generator": "tools/make_fixtures.py _fixture_vendor_prefix_class_no_table_row (Message-ID <vendor-prefix-class-5022@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "a class matching a vendor prefix family (moz-) with no table row is body.html_quote_rule_gap, never body.no_boundary_found (decision 3). The Turn-1.5 tree records that gap only for an UNCLOSED quote container, so the expected gap id is recorded in labels.undetermined and NOT asserted in gaps.later (see the review document): asserting it would make the live gap channel report a mismatch that is really the not-yet-built Turn 1.7 vendor-prefix trigger.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "c6cd83d739c7ed20cce06e2581f86b3fd577b21379445abface054191f1e8455"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 622
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " vendor prefix class no table row",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            33
+          ],
+          [
+            74,
+            43
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            117,
+            4
+          ],
+          [
+            122,
+            31
+          ],
+          [
+            117,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <vendor-prefix-class-5022@example.test>",
+          "ok",
+          [
+            155,
+            10
+          ],
+          [
+            166,
+            40
+          ],
+          [
+            155,
+            53
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            208,
+            12
+          ],
+          [
+            221,
+            4
+          ],
+          [
+            208,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            227,
+            12
+          ],
+          [
+            240,
+            52
+          ],
+          [
+            227,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            622
+          ],
+          [
+            0,
+            296
+          ],
+          [
+            296,
+            326
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            317,
+            140
+          ],
+          [
+            317,
+            43
+          ],
+          [
+            360,
+            97
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            480,
+            117
+          ],
+          [
+            480,
+            42
+          ],
+          [
+            522,
+            75
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            296
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            296,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            317,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            360,
+            97
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            457,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            480,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            522,
+            75
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            597,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "abedae9f7c21b178efc73f22cf0c8406799b079fcd19c63aa0f81403859fe24d"
+        ],
+        [
+          "1.2",
+          "f83da136ae12c952810275326dfc29979aac82d6c40fcf480799bfb4c2c8c6a5"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hi Ben.\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\nThe earlier line.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div>Hi Ben.</div>\r\n<div class=\"moz-custom-quote\">The earlier line.</div>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          7
+        ],
+        [
+          "1.2",
+          1,
+          "div",
+          9,
+          17
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "on_wrote_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0
+          ],
+          11,
+          86
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          1,
+          "on_wrote_en"
+        ]
+      ]
+    },
+    "labels.undetermined": {
+      "phase": 0,
+      "value": [
+        [
+          "gaps.later",
+          "1.2",
+          "the fixture's named gap body.html_quote_rule_gap is expected but not asserted: the Turn-1.5 htmltree records that id only for an unclosed quote container, while the design's trigger here is a class matching a vendor prefix family (moz-) with no table row, which is a Turn 1.7 DOM rule. Typing it in gaps.later would be a live-gap mismatch, so it is an open question for the rule turn."
+        ]
+      ]
+    }
+  }
+}

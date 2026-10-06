@@ -1,0 +1,316 @@
+{
+  "fixture": "flowed_quote_depth.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message declaring format=flowed: a reply of two flowed paragraphs (a soft-break trailing space) then two quoted lines, each with a stuffed space after the '>' run and a soft-break trailing space",
+    "generator": "tools/write_raw_fixtures.py FLOWED_QUOTE_DEPTH, a raw byte literal (Message-ID <flowed-quote-depth-5028@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "gt_family: depth counted PER PHYSICAL LINE on the unjoined body.text, after space-unstuffing for the depth analysis only (a stuffed space right after the '>' run). Both quoted lines are depth 1; the soft-break join is deferred (body.flowed_reflow_unresolved).",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "owner_review": "added after the delegated owner sign-off of 2026-10-05; to be reviewed by the owner",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "601124faac3dfa958a0f9add72d3af2e8cd5fde73af4ee87f026b2fe42a224e0"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 424
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " flowed quote depth",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            19
+          ],
+          [
+            74,
+            29
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            103,
+            4
+          ],
+          [
+            108,
+            31
+          ],
+          [
+            103,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <flowed-quote-depth-5028@example.test>",
+          "ok",
+          [
+            141,
+            10
+          ],
+          [
+            152,
+            39
+          ],
+          [
+            141,
+            52
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            193,
+            12
+          ],
+          [
+            206,
+            4
+          ],
+          [
+            193,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8; format=flowed",
+          "ok",
+          [
+            212,
+            12
+          ],
+          [
+            225,
+            41
+          ],
+          [
+            212,
+            56
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            424
+          ],
+          [
+            0,
+            270
+          ],
+          [
+            270,
+            154
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            270
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            270,
+            154
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "40497a2128bdeb5edcbe0255270eeabf399c79b64929268c0514ea44a5e58e55"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "Hi Ben.\r\n\r\nMy reply flows over \r\ntwo physical lines.\r\n\r\nA second paragraph.\r\n\r\n>  the earlier note, which \r\n>  also flows over two lines\r\n\r\nThat is all.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          "gt_family",
+          "quote",
+          1,
+          [
+            1,
+            1
+          ],
+          79,
+          57
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          1,
+          "gt_family"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.flowed_reflow_unresolved",
+          "1",
+          1,
+          "the part declares format=flowed; Phase 1 performs space-unstuffing only and does not join the soft line break, so the recorded text still carries the transport-added break (RFC 3676, design D3)"
+        ]
+      ]
+    }
+  }
+}

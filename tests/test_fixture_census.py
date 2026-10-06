@@ -62,38 +62,11 @@ PHASE0_STEMS = frozenset(
 PENDING = frozenset()
 
 #: The quote catalogue rows (`docs/design/phase1-fixtures.md`, "The quote catalogue"): typed
-#: after Turn 1.5 and owner-reviewed before any quote rule is written, so they stay pending
-#: through their own list until that increment lands.
-PENDING_QUOTE = frozenset(
-    {
-        "quoted_outlook_flat",
-        "quoted_prefix_gt_deep",
-        "inline_reply_interleaved",
-        "html_only",
-        "html_gmail_quote",
-        "html_outlook_divrplyfwd",
-        "no_boundary_found",
-        "i18n_reply_marker",
-        "forwarded_inline_marker",
-        "headers_only",
-        "gmail_reply_quoting_outlook_authored",
-        "gmail_short_reply_gt_and_on_wrote",
-        "mixed_origin_quote",
-        "outlook_labels_de",
-        "outlook_labels_fr",
-        "unknown_language_label_block",
-        "gmail_quote_on_blockquote",
-        "outlook_com_appendonsend",
-        "thunderbird_moz_cite_prefix",
-        "thunderbird_moz_forward_container",
-        "begin_forwarded_message",
-        "original_message_dashes",
-        "signature_dash_dash_space",
-        "list_footer_underscores",
-        "bottom_posted_reply",
-        "vendor_prefix_class_no_table_row",
-    }
-)
+#: after Turn 1.5 and owner-reviewed before any quote rule is written. They landed in their own
+#: increment, so this list is now **empty**: every one of the 29 rows has a committed fixture
+#: and a sidecar (the increment that empties it is the quote catalogue; the owner review is the
+#: hard gate before Turn 1.6).
+PENDING_QUOTE = frozenset()
 
 
 def design_phase1_names(text: str) -> list[str]:
@@ -218,15 +191,23 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert not (family_c & pending), sorted(family_c & pending)
     assert family_c <= committed and family_c <= sidecars
     assert PENDING == frozenset(), "the family-pending list is empty: all three families landed"
-    # The same check must fail when a committed fixture is missing, by name.
-    problems = census_problems(catalogued, pending, committed - {sorted(family_a)[0]}, sidecars, design_names)
-    assert any(sorted(family_a)[0] in problem for problem in problems), problems
-    # ... and for the later families too.
-    problems = census_problems(catalogued, pending, committed - {sorted(family_b)[0]}, sidecars, design_names)
-    assert any(sorted(family_b)[0] in problem for problem in problems), problems
-    problems = census_problems(catalogued, pending, committed - {sorted(family_c)[0]}, sidecars, design_names)
-    assert any(sorted(family_c)[0] in problem for problem in problems), problems
-    # ... and when a pending (quote catalogue) row's fixture file has landed early.
-    early = sorted(pending)[0]
-    problems = census_problems(catalogued, pending, committed | {early}, sidecars, design_names)
+    # The quote catalogue landed in its own increment (after Turn 1.5), so PENDING_QUOTE is now
+    # empty too and all 29 of its rows are committed with sidecars.
+    assert PENDING_QUOTE == frozenset(), "the quote catalogue landed in its own increment"
+    family_quote = {name for name, family in catalogued.items() if family == "quote"}
+    assert len(family_quote) == 29, sorted(family_quote)
+    assert not (family_quote & pending), sorted(family_quote & pending)
+    assert family_quote <= committed and family_quote <= sidecars
+    # The same check must fail when a committed fixture is missing, by name -- for every family.
+    for family in (family_a, family_b, family_c, family_quote):
+        missing = sorted(family)[0]
+        problems = census_problems(catalogued, pending, committed - {missing}, sidecars, design_names)
+        assert any(missing in problem for problem in problems), (missing, problems)
+    # ... and a pending row whose fixture file has already landed: a doctored pending set names a
+    # quote-catalogue row that is committed, which the census refuses by name.
+    early = sorted(family_quote)[0]
+    problems = census_problems(catalogued, frozenset({early}), committed, sidecars, design_names)
     assert any(early in problem for problem in problems), problems
+    # ... and a committed fixture that is not a catalogue row fails by name.
+    problems = census_problems(catalogued, pending, committed | {"not_a_catalogue_row"}, sidecars, design_names)
+    assert any("not_a_catalogue_row" in problem for problem in problems), problems

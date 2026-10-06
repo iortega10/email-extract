@@ -1,0 +1,504 @@
+{
+  "fixture": "thunderbird_moz_cite_prefix.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: the plain part has an 'On ... wrote:' line, the HTML part has a div.moz-cite-prefix followed by a blockquote",
+    "generator": "tools/make_fixtures.py _fixture_thunderbird_moz_cite_prefix (Message-ID <thunderbird-moz-cite-prefix-5017@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "thunderbird_moz_cite_prefix (decision 3); kind quote, ordinal 1. The following bare blockquote carries no type=cite, so blockquote_type_cite does not fire.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "2d60f47ce6c84bc005da2ef7edd49d91ffbcbf7ce23064d4cdd60143a354eaee"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 662
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " thunderbird moz cite prefix",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            28
+          ],
+          [
+            74,
+            38
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            112,
+            4
+          ],
+          [
+            117,
+            31
+          ],
+          [
+            112,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <thunderbird-moz-cite-prefix-5017@example.test>",
+          "ok",
+          [
+            150,
+            10
+          ],
+          [
+            161,
+            48
+          ],
+          [
+            150,
+            61
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            211,
+            12
+          ],
+          [
+            224,
+            4
+          ],
+          [
+            211,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            230,
+            12
+          ],
+          [
+            243,
+            52
+          ],
+          [
+            230,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            662
+          ],
+          [
+            0,
+            299
+          ],
+          [
+            299,
+            363
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            320,
+            113
+          ],
+          [
+            320,
+            43
+          ],
+          [
+            363,
+            70
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            456,
+            181
+          ],
+          [
+            456,
+            42
+          ],
+          [
+            498,
+            139
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            299
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            299,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            320,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            363,
+            70
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            433,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            456,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            498,
+            139
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            637,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "3df17fa425e3126bb6b47f9665a0e7c58e05ede1c1b6e941b358fcf05ca92773"
+        ],
+        [
+          "1.2",
+          "74cdb30b76738969eccc1e335bb252c76cf42d642b992ba8829c2e46b75c6c3f"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Hi Ben.\r\n\r\nOn 2025-03-04 09:00, Ada Sender wrote:\r\nThe earlier line.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div>Hi Ben.</div>\r\n<div class=\"moz-cite-prefix\">On 2025-03-04 09:00, Ada Sender wrote:</div>\r\n<blockquote>The earlier line.</blockquote>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          7
+        ],
+        [
+          "1.2",
+          1,
+          "div",
+          9,
+          38
+        ],
+        [
+          "1.2",
+          2,
+          "blockquote",
+          49,
+          17
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "on_wrote_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0
+          ],
+          11,
+          59
+        ],
+        [
+          "1.2",
+          "html",
+          "thunderbird_moz_cite_prefix",
+          "quote",
+          1,
+          [
+            0,
+            0
+          ],
+          9,
+          57
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          1,
+          "on_wrote_en"
+        ],
+        [
+          "1.2",
+          "html",
+          1,
+          "thunderbird_moz_cite_prefix"
+        ]
+      ]
+    }
+  }
+}

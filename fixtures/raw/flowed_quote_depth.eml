@@ -1,0 +1,19 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: flowed quote depth
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <flowed-quote-depth-5028@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8; format=flowed
+
+Hi Ben.
+
+My reply flows over 
+two physical lines.
+
+A second paragraph.
+
+>  the earlier note, which 
+>  also flows over two lines
+
+That is all.

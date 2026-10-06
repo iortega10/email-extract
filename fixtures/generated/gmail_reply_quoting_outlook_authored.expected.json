@@ -1,0 +1,603 @@
+{
+  "fixture": "gmail_reply_quoting_outlook_authored.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative utf-8 message: the plain part has an 'On ... wrote:' line, an Outlook flat block and a forward banner and NO '>' prefix; the HTML part has a Gmail container plus a div#divRplyFwdMsg plus a blockquote.gmail_quote",
+    "generator": "tools/make_fixtures.py _fixture_gmail_reply_quoting_outlook_authored (Message-ID <gmail-reply-outlook-authored-5010@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text, body.alternative_group, body.selection, body.html_spans and document.axes (live), plus the quote facts",
+    "quote_rule_note": "the measured real case of design D3: the plain view's all-zero '>' depth beside fired structural rules is a normal state, not an error. plain: on_wrote_en (ordinal 1), outlook_flat_en (ordinal 2), forward_banner (forward, 0). html: gmail_quote wraps an outlook_divrplyfwd block (mixed origin) with one ordinal per view.",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it.",
+    "owner_signoff": "decided by owner sign-off, question 1: an 'On ... wrote:' boundary spans the whole quoted block"
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "1e9f1b734e508c5467e5342d6fd08e40b30526a030c49c6bbeee38c122474f16"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 1007
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " gmail reply quoting outlook authored",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            37
+          ],
+          [
+            74,
+            47
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            121,
+            4
+          ],
+          [
+            126,
+            31
+          ],
+          [
+            121,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <gmail-reply-outlook-authored-5010@example.test>",
+          "ok",
+          [
+            159,
+            10
+          ],
+          [
+            170,
+            49
+          ],
+          [
+            159,
+            62
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            221,
+            12
+          ],
+          [
+            234,
+            4
+          ],
+          [
+            221,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " multipart/alternative; boundary=\"b0-quote-20250304\"",
+          "ok",
+          [
+            240,
+            12
+          ],
+          [
+            253,
+            52
+          ],
+          [
+            240,
+            67
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "multipart/alternative",
+          [
+            0,
+            1007
+          ],
+          [
+            0,
+            309
+          ],
+          [
+            309,
+            698
+          ]
+        ],
+        [
+          "1.1",
+          "1",
+          "text/plain",
+          [
+            330,
+            309
+          ],
+          [
+            330,
+            43
+          ],
+          [
+            373,
+            266
+          ]
+        ],
+        [
+          "1.2",
+          "1",
+          "text/html",
+          [
+            662,
+            320
+          ],
+          [
+            662,
+            42
+          ],
+          [
+            704,
+            278
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            309
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            309,
+            21
+          ]
+        ],
+        [
+          "headers",
+          "1.1",
+          [
+            330,
+            43
+          ]
+        ],
+        [
+          "body",
+          "1.1",
+          [
+            373,
+            266
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            639,
+            23
+          ]
+        ],
+        [
+          "headers",
+          "1.2",
+          [
+            662,
+            42
+          ]
+        ],
+        [
+          "body",
+          "1.2",
+          [
+            704,
+            278
+          ]
+        ],
+        [
+          "delimiter",
+          "1",
+          [
+            982,
+            25
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ],
+        [
+          "1.1",
+          0,
+          0
+        ],
+        [
+          "1.2",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          null,
+          null,
+          null,
+          false,
+          null
+        ],
+        [
+          "1.1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ],
+        [
+          "1.2",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1.1",
+          "1dbdd927824f81cbcf56fcd77d32eb0abafc25439b9656b9bf806f0bce588504"
+        ],
+        [
+          "1.2",
+          "1c2559b8cc428eb48f6c5313dec55efba7bf4718ddf1589728591d86c71dbca5"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "Thanks!\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada Sender <ada@example.test> wrote:\r\nFrom: Ada Sender <ada@example.test>\r\nSent: Tue, 4 Mar 2025 09:00:00 +0000\r\nTo: Ben Receiver <ben@example.test>\r\nSubject: the earlier note\r\n\r\nBegin forwarded message:\r\n\r\nA forwarded note.\r\n",
+          "exact",
+          null
+        ],
+        [
+          "1.2",
+          "<div>Thanks!</div>\r\n<div class=\"gmail_quote\"><div id=\"divRplyFwdMsg\"><b>From:</b> Ada Sender<br><b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000<br><b>To:</b> Ben Receiver<br><b>Subject:</b> the earlier note</div><blockquote class=\"gmail_quote\">The earlier line.</blockquote></div>\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "1"
+        ],
+        [
+          "1.2",
+          "1"
+        ]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "selected"
+        ],
+        [
+          "1.2",
+          "alternative_not_selected"
+        ]
+      ]
+    },
+    "body.html_spans": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          0,
+          "div",
+          0,
+          7
+        ],
+        [
+          "1.2",
+          1,
+          "div",
+          9,
+          110
+        ],
+        [
+          "1.2",
+          2,
+          "div",
+          9,
+          93
+        ],
+        [
+          "1.2",
+          3,
+          "b",
+          9,
+          5
+        ],
+        [
+          "1.2",
+          4,
+          "br",
+          25,
+          0
+        ],
+        [
+          "1.2",
+          5,
+          "b",
+          25,
+          5
+        ],
+        [
+          "1.2",
+          6,
+          "br",
+          61,
+          0
+        ],
+        [
+          "1.2",
+          7,
+          "b",
+          61,
+          3
+        ],
+        [
+          "1.2",
+          8,
+          "br",
+          77,
+          0
+        ],
+        [
+          "1.2",
+          9,
+          "b",
+          77,
+          8
+        ],
+        [
+          "1.2",
+          10,
+          "blockquote",
+          102,
+          17
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          "on_wrote_en",
+          "quote",
+          1,
+          [
+            0,
+            0,
+            0,
+            0,
+            0
+          ],
+          11,
+          204
+        ],
+        [
+          "1.1",
+          "plain",
+          "outlook_flat_en",
+          "quote",
+          2,
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          78,
+          137
+        ],
+        [
+          "1.1",
+          "plain",
+          "forward_banner",
+          "forward",
+          0,
+          [
+            0,
+            0,
+            0,
+            0
+          ],
+          219,
+          47
+        ],
+        [
+          "1.2",
+          "html",
+          "gmail_quote",
+          "quote",
+          1,
+          [
+            0
+          ],
+          9,
+          110
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1.1",
+          "plain",
+          2,
+          "on_wrote_en"
+        ],
+        [
+          "1.2",
+          "html",
+          1,
+          "gmail_quote"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "body.mixed_origin_quoting",
+          "1.2",
+          1,
+          "the HTML view's boundary is a Gmail container wrapping an Outlook block; the origin is mixed and the view keeps one ordinal sequence with a per-boundary rule id (design D3)"
+        ]
+      ]
+    }
+  }
+}

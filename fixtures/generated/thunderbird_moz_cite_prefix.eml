@@ -1,0 +1,24 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: thunderbird moz cite prefix
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <thunderbird-moz-cite-prefix-5017@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b0-quote-20250304"
+
+--b0-quote-20250304
+Content-Type: text/plain; charset=utf-8
+
+Hi Ben.
+
+On 2025-03-04 09:00, Ada Sender wrote:
+The earlier line.
+
+--b0-quote-20250304
+Content-Type: text/html; charset=utf-8
+
+<div>Hi Ben.</div>
+<div class="moz-cite-prefix">On 2025-03-04 09:00, Ada Sender wrote:</div>
+<blockquote>The earlier line.</blockquote>
+
+--b0-quote-20250304--

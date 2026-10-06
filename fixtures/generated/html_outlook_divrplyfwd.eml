@@ -1,0 +1,27 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: html outlook divrplyfwd
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <html-outlook-divrplyfwd-5006@example.test>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b0-quote-20250304"
+
+--b0-quote-20250304
+Content-Type: text/plain; charset=utf-8
+
+Hi Ben.
+
+From: Ada Sender <ada@example.test>
+Sent: Tue, 4 Mar 2025 09:00:00 +0000
+To: Ben Receiver <ben@example.test>
+Subject: the earlier note
+
+The earlier note body.
+
+--b0-quote-20250304
+Content-Type: text/html; charset=utf-8
+
+<div>Hi Ben.</div>
+<div id="divRplyFwdMsg"><b>From:</b> Ada Sender<br><b>Sent:</b> Tue, 4 Mar 2025 09:00:00 +0000<br><b>To:</b> Ben Receiver<br><b>Subject:</b> the earlier note</div>
+
+--b0-quote-20250304--

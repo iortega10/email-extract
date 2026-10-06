@@ -1,0 +1,303 @@
+{
+  "fixture": "bottom_posted_reply.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one text/plain utf-8 message: a quoted block FIRST, then a later level-0 new span (a bottom-posted reply)",
+    "generator": "tools/make_fixtures.py _fixture_bottom_posted_reply (Message-ID <bottom-posted-reply-5021@example.test>)",
+    "phase_0_facts": "container.*, headers.fields, part.tree, part.regions, part.gaps, body.preamble_epilogue, decode.chain and body.content_sha256 -- what the skeleton walker measures today.",
+    "phase_1_facts": "body.text and document.axes (live), plus the quote facts",
+    "quote_rule_note": "gt_family (kind quote, ordinal 1) over the quoted-first block; the later new span is level 0 and this is LEGAL, not a gap (decision 3: only a non-contiguous alternation is body.inline_reply_interleaved).",
+    "labels_are_typed": "every value was typed by a model from the design rules and read out of the fixture bytes (a byte/offset listing); never copied out of the walker, the HTML tree, a decoder or any library. labels_provenance is spec because a model wrote them, not a person.",
+    "not_yet_labelled": "quote facts (body.quote_boundaries, body.view_levels) have no measurer until Turn 1.6/1.7; this sidecar is the label the rule turns are checked against and the agent that writes those rules must not see it before the owner reviews it."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "f72b8dcf8e4e380084ab90c8c9bdda89d0febf537bb5c131ee5f439fd5033139"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 302
+    },
+    "headers.fields": {
+      "phase": 0,
+      "value": [
+        [
+          0,
+          "From",
+          " Ada Sender <ada@example.test>",
+          "ok",
+          [
+            0,
+            4
+          ],
+          [
+            5,
+            30
+          ],
+          [
+            0,
+            37
+          ]
+        ],
+        [
+          1,
+          "To",
+          " Ben Receiver <ben@example.test>",
+          "ok",
+          [
+            37,
+            2
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            37,
+            37
+          ]
+        ],
+        [
+          2,
+          "Subject",
+          " bottom posted reply",
+          "ok",
+          [
+            74,
+            7
+          ],
+          [
+            82,
+            20
+          ],
+          [
+            74,
+            30
+          ]
+        ],
+        [
+          3,
+          "Date",
+          " Tue, 4 Mar 2025 08:05:00 +0000",
+          "ok",
+          [
+            104,
+            4
+          ],
+          [
+            109,
+            31
+          ],
+          [
+            104,
+            38
+          ]
+        ],
+        [
+          4,
+          "Message-ID",
+          " <bottom-posted-reply-5021@example.test>",
+          "ok",
+          [
+            142,
+            10
+          ],
+          [
+            153,
+            40
+          ],
+          [
+            142,
+            53
+          ]
+        ],
+        [
+          5,
+          "MIME-Version",
+          " 1.0",
+          "ok",
+          [
+            195,
+            12
+          ],
+          [
+            208,
+            4
+          ],
+          [
+            195,
+            19
+          ]
+        ],
+        [
+          6,
+          "Content-Type",
+          " text/plain; charset=utf-8",
+          "ok",
+          [
+            214,
+            12
+          ],
+          [
+            227,
+            26
+          ],
+          [
+            214,
+            41
+          ]
+        ]
+      ]
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "text/plain",
+          [
+            0,
+            302
+          ],
+          [
+            0,
+            257
+          ],
+          [
+            257,
+            45
+          ]
+        ]
+      ]
+    },
+    "part.regions": {
+      "phase": 0,
+      "value": [
+        [
+          "headers",
+          "1",
+          [
+            0,
+            257
+          ]
+        ],
+        [
+          "body",
+          "1",
+          [
+            257,
+            45
+          ]
+        ]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "body.preamble_epilogue": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          0,
+          0
+        ]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          null,
+          "utf-8",
+          "7bit",
+          "utf-8",
+          false,
+          "declared_charset"
+        ]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          "a5ddeba6efde3afde72de63672544e5a4e04874d3abf32455e40ce41ea75f2f4"
+        ]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        [
+          "document.times",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.thread_edges",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.children",
+          "unknown",
+          "not_built_in_phase1"
+        ],
+        [
+          "document.same_message_candidates",
+          "unknown",
+          "not_built_in_phase1"
+        ]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "> The earlier question.\r\n\r\nMy answer to it.\r\n",
+          "exact",
+          null
+        ]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          "gt_family",
+          "quote",
+          1,
+          [
+            1
+          ],
+          0,
+          23
+        ]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        [
+          "1",
+          "plain",
+          1,
+          "gt_family"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,14 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: list footer underscores
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <list-footer-underscores-5025@example.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hi Ben.
+
+Thanks for the update.
+
+____________________________________________________________
+You received this message because you are subscribed to the list.

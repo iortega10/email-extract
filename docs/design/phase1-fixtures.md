@@ -142,34 +142,38 @@ does not see the labels it typed.
 
 | fixture | consuming turn | the raw line or element the fact hinges on | expected (rule_id, kind, ordinal) and level | why (typed after 1.5) |
 |---|---|---|---|---|
-| `quoted_outlook_flat` | 1.6 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `quoted_prefix_gt_deep` | 1.6 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `inline_reply_interleaved` | 1.6 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `html_only` | 1.5 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `html_gmail_quote` | 1.7 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `html_outlook_divrplyfwd` | 1.7 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `no_boundary_found` | 1.5 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `i18n_reply_marker` | 1.6 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `forwarded_inline_marker` | 1.6 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `headers_only` | 1.5 | typed after 1.5 | typed after 1.5 | typed after 1.5 |
-| `gmail_reply_quoting_outlook_authored` | 1.7 | Gmail `div.gmail_quote` + `blockquote` + `divRplyFwdMsg` in the HTML; in the plain alternative an `On ... wrote:` line, Outlook `From:`/`Sent:` blocks and a forward banner, **no `>` prefix at all** | typed after 1.5 | typed after 1.5 |
-| `gmail_short_reply_gt_and_on_wrote` | 1.6 | both `>` prefixes and an `On ... wrote:` line in the plain part | typed after 1.5 | typed after 1.5 |
-| `mixed_origin_quote` | 1.7 | a Gmail container wrapping an Outlook block (one ordinal per view) | typed after 1.5 | typed after 1.5 |
-| `outlook_labels_de` | 1.6 | `Von:`/`Gesendet:`/`An:`/`Betreff:` run | typed after 1.5 | typed after 1.5 |
-| `outlook_labels_fr` | 1.6 | `De :`/`Envoyé :`/`À :`/`Objet :` run (NBSP before `:`) | typed after 1.5 | typed after 1.5 |
-| `unknown_language_label_block` | 1.6 | a header-like run of short `Label:` lines after a boundary-looking line | typed after 1.5; gap `body.i18n_reply_marker` | typed after 1.5 |
-| `gmail_quote_on_blockquote` | 1.7 | `class="gmail_quote"` on a `blockquote` | typed after 1.5 | typed after 1.5 |
-| `outlook_com_appendonsend` | 1.7 | `#appendonsend` / `#x_appendonsend` | typed after 1.5 | typed after 1.5 |
-| `thunderbird_moz_cite_prefix` | 1.7 | `div.moz-cite-prefix` | typed after 1.5 | typed after 1.5 |
-| `thunderbird_moz_forward_container` | 1.7 | `div.moz-forward-container` | typed after 1.5 | typed after 1.5 |
-| `begin_forwarded_message` | 1.6 | `Begin forwarded message:` plus a From/Date/Subject block | typed after 1.5 | typed after 1.5 |
-| `original_message_dashes` | 1.6 | `-----Original Message-----` | typed after 1.5 | typed after 1.5 |
-| `signature_dash_dash_space` | 1.6 | the `-- ` line (exactly dash dash space) | typed after 1.5 | typed after 1.5 |
-| `list_footer_underscores` | 1.6 | a line of at least 30 `_` | typed after 1.5 | typed after 1.5 |
-| `bottom_posted_reply` | 1.6 | a quoted-first message with a later level-0 span (**legal, not a gap**) | typed after 1.5 | typed after 1.5 |
-| `vendor_prefix_class_no_table_row` | 1.7 | a class matching a known vendor prefix with no table row | typed after 1.5; gap `body.html_quote_rule_gap` | typed after 1.5 |
+| `quoted_outlook_flat` | 1.6 | the English `From:`/`Sent:`/`To:`/`Subject:` flat block after the new text | `outlook_flat_en`, quote, ordinal 1; plain level 1 | decision 3: a maximal run of >= 2 adjacent labels from one language's set, in canonical order as a subsequence |
+| `quoted_prefix_gt_deep` | 1.6 | `> level one` / `>> level two` / `>>> level three` | `gt_family`, quote, ordinal 1; plain level 3 (deepest prefix depth) | decision 3: the `>`-family alphabet counted on decoded text; per-line prefix depth [1, 2, 3] |
+| `inline_reply_interleaved` | 1.6 | `> first question` then `> second question`, new text between | `gt_family`, quote, ordinals 1 and 2; plain level 2; gap `body.inline_reply_interleaved` | decision 3: only a non-contiguous alternation is that gap; non-contiguous views are legal |
+| `html_only` | 1.5 | `&lt;p&gt;Hello Ben. No quoting here at all.&lt;/p&gt;` | no boundary (control): no quote rule may fire | a bare `p` is not a quote container |
+| `html_gmail_quote` | 1.7 | `div class="gmail_quote"` on the container and on the nested `blockquote` | plain `on_wrote_en` quote 1 (level 1); html `gmail_quote` quote 1 (level 1) | decision 3: `gmail_quote` on a `div` or a `blockquote`; the attribution wrapper adds no second ordinal |
+| `html_outlook_divrplyfwd` | 1.7 | `id="divRplyFwdMsg"` | plain `outlook_flat_en` quote 1; html `outlook_divrplyfwd` quote 1 (each level 1) | decision 3: the Outlook `divRplyFwdMsg` container (kind quote) and the flat block |
+| `no_boundary_found` | 1.5 | `No quoting anywhere in this message.` | no boundary (control): no quote rule fires; gap `body.no_boundary_found` | decision 3 amendment: the absence answer, not inferred from silence |
+| `i18n_reply_marker` | 1.6 | `Am 4. Marz 2025 schrieb Ada Sender:` then a `Name:`/`Datum:`/`Betreff:` run | no quote rule; gap `body.i18n_reply_marker` | decision 3: a label-shaped unknown-language block, never `no_boundary_found` |
+| `forwarded_inline_marker` | 1.6 | `Begin forwarded message:` plus a From/Date/Subject block | `forward_banner`, forward, ordinal 0; plain level 0 | owner decision 15: a forward reads as level 0 and an inline forward is never the sender's quoted words |
+| `headers_only` | 1.5 | the whole header block (blank line, empty body) | no boundary (control): no quote rule may fire | no body content; a headers-only message is a legal state |
+| `gmail_reply_quoting_outlook_authored` | 1.7 | Gmail `div.gmail_quote` + `blockquote` + `divRplyFwdMsg` in the HTML; in the plain alternative an `On ... wrote:` line, Outlook `From:`/`Sent:` blocks and a forward banner, **no `>` prefix at all** | plain `on_wrote_en` quote 1, `outlook_flat_en` quote 2, `forward_banner` forward 0 (level 2); html `gmail_quote` quote 1 (level 1) | design D3: the plain view's all-zero `>` depth beside fired structural rules is a normal state; mixed origin keeps one ordinal per view |
+| `gmail_short_reply_gt_and_on_wrote` | 1.6 | both `>` prefixes (`>>`) and an `On ... wrote:` line in the plain part | plain `on_wrote_en` quote 1 and `gt_family` quote 2 (level 2); html `gmail_quote` quote 1 | decision 2: `view.quote_level_disagreement` is recorded (the two families' ranks differ: `>>` depth 2 beside ordinal 1); recorded, never averaged |
+| `mixed_origin_quote` | 1.7 | a Gmail container wrapping an Outlook block (one ordinal per view) | plain `on_wrote_en` quote 1; html `gmail_quote` quote 1; gap `body.mixed_origin_quoting` | design D3: boundaries of mixed origin keep one ordinal sequence per view with a per-boundary rule id |
+| `outlook_labels_de` | 1.6 | `Von:`/`Gesendet:`/`An:`/`Betreff:` run | `outlook_flat_de`, quote, ordinal 1; plain level 1 | decision 3: the German set, the date slot accepting `Gesendet`/`Datum`, the language per block |
+| `outlook_labels_fr` | 1.6 | `De :`/`Envoyé :`/`À :`/`Objet :` run (NBSP before `:`) | `outlook_flat_fr`, quote, ordinal 1; plain level 1 | decision 3: the French set, separators accepting a whitespace run before `:` including U+00A0 after NFC |
+| `unknown_language_label_block` | 1.6 | a header-like run of short `Label:` lines after a boundary-looking line | no quote rule; gap `body.i18n_reply_marker` | decision 3: a label-shaped unknown-language block, never `no_boundary_found` |
+| `gmail_quote_on_blockquote` | 1.7 | `class="gmail_quote"` on a `blockquote` | plain `on_wrote_en` quote 1; html `gmail_quote` quote 1 | decision 3: `gmail_quote` fires on a `blockquote` too |
+| `outlook_com_appendonsend` | 1.7 | `#appendonsend` / `#x_appendonsend` | plain `on_wrote_en` quote 1; html `outlook_appendonsend` quote 1 | decision 3: `#appendonsend` with the `x_` prefix Outlook adds on rewrite |
+| `thunderbird_moz_cite_prefix` | 1.7 | `div.moz-cite-prefix` | plain `on_wrote_en` quote 1; html `thunderbird_moz_cite_prefix` quote 1 | decision 3: the `moz-cite-prefix` rule (the following bare `blockquote` has no `type=cite`) |
+| `thunderbird_moz_forward_container` | 1.7 | `div.moz-forward-container` | plain `forward_banner` forward 0; html `thunderbird_moz_forward_container` forward 0 (each level 0) | decision 3 + owner decision 15: a forward container reads as level 0 |
+| `begin_forwarded_message` | 1.6 | `Begin forwarded message:` plus a From/Date/Subject block | `forward_banner` forward 0 and `outlook_flat_en` quote 1; plain level 1 | decision 3 + 15; the flat block under the banner also fires (open question 4) |
+| `original_message_dashes` | 1.6 | `-----Original Message-----` | `original_message_dashes`, forward, ordinal 0; plain level 0 | decision 3 groups it with the Begin-forwarded banner (open question 5) |
+| `signature_dash_dash_space` | 1.6 | the `-- ` line (exactly dash dash space) | `dash_dash_space`, signature, ordinal 0; plain level 0 | decision 3 / RFC 3676 4.3: a candidate only, never stripped |
+| `list_footer_underscores` | 1.6 | a line of at least 30 `_` and the "You received this message because you are subscribed" sentence | `list_footer_underscores` list_footer 0 and `list_footer_subscribed` list_footer 0; plain level 0 | decision 3: list footers are detection-only candidates |
+| `bottom_posted_reply` | 1.6 | a quoted-first message with a later level-0 span (**legal, not a gap**) | `gt_family`, quote, ordinal 1; plain level 1 | decision 3: bottom-posting is legal, not a gap (only a non-contiguous alternation is one) |
+| `vendor_prefix_class_no_table_row` | 1.7 | a class matching a known vendor prefix with no table row | plain `on_wrote_en` quote 1; html no quote rule; gap `body.html_quote_rule_gap` (expected but not asserted: the tree records it only for an unclosed container -- see the review document, open question 6) | decision 3: a vendor-prefix class with no table row is a gap, never `no_boundary_found` |
 
-**(26 rows; approximately 15-20 of them carry a real quote boundary, the rest are the controls.)**
+| `on_wrote_hard_wrapped` | 1.6 | a hard-wrapped `On ... wrote:` attribution: two physical lines (fires) and a second three-line attribution (must NOT fire) | plain `on_wrote_en` quote 1 (level 2) spanning the two-line attribution and its quoted line; `gt_family` quote 2 for the three-line window's `>` line | the plan debate (section 3): the `N = 2` window joins two physical lines and never three |
+| `flowed_quote_depth` | 1.6 | a `format=flowed` part: two `>`-prefixed lines with a stuffed space after the `>` run and soft-break trailing spaces | `gt_family` quote 1, per-line depths [1, 1] (level 1); gap `body.flowed_reflow_unresolved` | decision 2/3: depth is per PHYSICAL line on the unjoined `body.text`; the soft-break join is deferred |
+| `gt_spacing_variants` | 1.6 | `> a`, `>> b`, `> > c`, `>` TAB `> d`, `>>> e`, and a U+00A0 separator line | `gt_family` quote 1, per-line depths [1, 2, 2, 2, 3, 1] (level 3) | decision 3: a `>`-family prefix is a run of `>` separated by SP or TAB only; U+00A0 is not a separator |
+
+**(29 rows; approximately 15-20 of them carry a real quote boundary, the rest are the controls.)**
 
 **NOT v1 (decision 13).** These two rows are **deliberately not in the catalogue** until the owner
 confirms them from a structure-only probe of their own mail (class and id names, never content). Neither
@@ -248,8 +252,8 @@ Every item maps to at least one fixture above; a reviewer can walk this table ag
 | headers / date / address | 30 | 1.0c-1 |
 | body / HTML | 22 | 1.0c-2 |
 | attachments / caps | 22 | 1.0c-3 |
-| quote catalogue (typed after 1.5) | 26 | the quote increment |
-| **total committed sidecars** | **100** | |
+| quote catalogue (typed after 1.5) | 29 | the quote increment |
+| **total committed sidecars** | **103** | |
 
 Every floor in `docs/design/phase1-facts.md` is met with room: the tightest are `document.axes` (floor
 80, on every one of the ~100 sidecars), `headers.projection` and `body.text` (floor 60 each; every
