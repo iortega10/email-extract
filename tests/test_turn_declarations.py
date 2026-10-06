@@ -54,6 +54,7 @@ BUILT_TURNS = (
     "1.7",
     "1.8",
     "1.9",
+    "1.10a",
 )
 
 #: The frozen Phase 0 baseline: the node ids collected before Turn 1.0b wrote a test.

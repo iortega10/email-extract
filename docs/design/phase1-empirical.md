@@ -728,3 +728,42 @@ document instead of a parsed one, because the contract refuses the pair), an uns
 manifest refuses to exist unsorted), a same-Message-ID merge (the two files collapse to one document
 and one row loses its writer), and a projection version dropped from the key (bumping
 `QUOTE_RULES_VERSION` no longer moves it).
+
+## Turn 1.10a -- corpus agreement (the golden projection and the gates over it)
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.10a.
+
+* **The phase-1 wait is exactly the named set.** `python -m emailextract.evals` (3.14.3) prints
+  `phase-1 gaps  pass checked 30 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s)`
+  and `phase1 exit  pass wait=6 (named=6), compared=1330; extra=0 missing=0`; L1 is `matched=1330
+  mismatched=0 unmeasurable=0 unmodelled=0`, `not_yet: phase 1=9, phase 3=26`. Identical on 3.11.15.
+* **The golden HTML projection.** Command: `python tests/support/html_projection_hash.py`, and the
+  same file under `C:\Users\ivan_\AppData\Local\Temp\wbv311\Scripts\python.exe` (CPython 3.11.15).
+  Both print **26** HTML parts and the same corpus projection hash
+  `356608376ccd4821441f1f272a59735d9bffa448214138316abbae430f2bf00e`, and the same quote-normalisation
+  hash `eb674f90e940bda6f5678dd151dc18daf2a57edd28bb82094d62e049457970ad`. The 3.14 output's sha256
+  is `71a5211fe7f384018b0e533fc3d221878f070c77e8ae895d6a4046da2ea0ca19`; the 3.11 output's is
+  `84ae91492c03caa8c79793c375f8f0377964eb60367c4f909cfcee1edeff38ea` (the two differ only in the
+  interpreter line). `tests/ledger/html_projection_golden.json` commits the 26
+  `(fixture, locator, sha256)` rows and the normalisation table; `tests/test_html_projection_golden.py`
+  recomputes them in-process and runs the second interpreter as an **additional** comparison.
+  Regenerating after an intentional interpreter/`html.parser` upgrade:
+  `python tests/support/html_projection_hash.py --json` written to the ledger, dated, in the same
+  commit; a second interpreter that still disagrees is a committed, dated, reasoned `waivers` entry
+  (never an environment variable).
+* **The coverage floors.** 9 of the 20 phase-1 facts meet the design's declared floor; 11 fall short
+  (`headers.date` 6 of 12, `headers.projection` 12 of 60, `body.text` 37 of 60, `attach.types` 5 of
+  12, `attach.filename` 2 of 10, ...). No phase-1 fact has zero labelled sidecars. The unmet declared
+  floors and the re-base to the achieved counts are recorded in `tests/ledger/facts_ledger.json`'s
+  `declared_unmet` and `rebase` (status `proposed`; the owner signs by committing).
+* **The walker recurses.** The Phase 1 scope scan (`tests/test_phase1_scope.py`) names one
+  self-recursive function: `emailextract/walk.py::_walk_part` (it calls itself at `walk.py:709` to
+  descend into a nested multipart child), which the exit criteria's "the walkers are iterative" does
+  not hold for. `walk.py` is outside Turn 1.10a's allow-list, so it is a recorded FINDING
+  (`KNOWN_SELF_RECURSION`) with its reason, not fixed.
+* **Clone safety.** A copy of the working tree with **no sibling checkout** beside it
+  (`...\Temp\ee-clone-ochdijx6\clone`) runs `python -m pytest -q` green: **1767 passed, 2 skipped**.
+  The three subprocess tests that used to build a path from `ROOT.parent / "word-extract" / ...` now
+  take `docextract_core` from the running interpreter, and `tools/runboth.py` finds the second
+  interpreter by the pinned selector or `EMAIL_EXTRACT_SECOND_PYTHON`, and still exits 2 with a named
+  message when neither is present.

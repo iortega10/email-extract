@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -39,6 +40,11 @@ ROOT = Path(__file__).resolve().parent.parent
 #: The pinned selector, then the PATH candidates tried in order.
 PINNED_SELECTOR = ("py", "-V:Astral/CPython3.11.15")
 PATH_CANDIDATES = ("python3.11", "python3", "python", "py")
+
+#: An explicit override (Turn 1.10a): the interpreter named here is probed **first**, so a clone
+#: whose CPython 3.11 lives somewhere the selector and PATH do not reach (a venv, another install)
+#: can still run both. It must still answer 3.11, or it is ignored.
+SECOND_INTERPRETER_ENV = "EMAIL_EXTRACT_SECOND_PYTHON"
 
 DEFAULT_COMMAND = ("-m", "pytest", "-q")
 
@@ -69,7 +75,17 @@ def _probe(prefix: Sequence[str]) -> tuple[str, tuple[int, int, int]] | None:
 
 
 def find_python311() -> tuple[list[str], str, str] | None:
-    """``(argv prefix, source, version)`` for a CPython 3.11, or ``None``."""
+    """``(argv prefix, source, version)`` for a CPython 3.11, or ``None``.
+
+    The explicit override (:data:`SECOND_INTERPRETER_ENV`) wins, then the pinned selector, then the
+    first 3.11 on ``PATH``. ``None`` is a named, printed skip in :func:`main` (exit 2), never a crash
+    -- the runner never silently runs one interpreter twice and calls it "both".
+    """
+    override = os.environ.get(SECOND_INTERPRETER_ENV)
+    if override:
+        probed = _probe([override])
+        if probed is not None and probed[1][:2] == (3, 11):
+            return [override], SECOND_INTERPRETER_ENV, probed[0]
     probed = _probe(list(PINNED_SELECTOR))
     if probed is not None and probed[1][:2] == (3, 11):
         return list(PINNED_SELECTOR), "pinned selector", probed[0]

@@ -38,6 +38,7 @@ from typing import Any, Callable
 
 import pytest
 
+import docextract_core
 import emailextract.walk as walk_module
 from emailextract.container import EmlContainer
 from emailextract.evals import gates
@@ -580,7 +581,7 @@ def test_a_capped_walk_is_deterministic_across_runs_and_interpreters() -> None:
     if second is None:
         return
     prefix, source, version = second
-    core = ROOT.parent / "word-extract" / "docextract-core"
+    core = Path(docextract_core.__file__).resolve().parent.parent
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), str(core)])}
     script = (
         f"import sys; sys.path.insert(0, {str(ROOT / 'tests').replace(os.sep, '/')!r});"

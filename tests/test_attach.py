@@ -29,6 +29,7 @@ from typing import Any, Callable
 
 import pytest
 
+import docextract_core
 import emailextract.attach as attach_module
 from emailextract.attach import (
     DEFINED_NOT_EMITTED_GAP_IDS,
@@ -1777,7 +1778,7 @@ def test_attach_is_deterministic_across_runs_and_interpreters() -> None:
     if second is None:
         return
     prefix, source, version = second
-    core = ROOT.parent / "word-extract" / "docextract-core"
+    core = Path(docextract_core.__file__).resolve().parent.parent
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), str(core)])}
     script = (
         f"import sys; sys.path.insert(0, {str(ROOT / 'tests').replace(os.sep, '/')!r});"

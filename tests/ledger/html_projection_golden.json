@@ -1,0 +1,194 @@
+{
+  "_rule": "Turn 1.10a: the golden projection regression pin. One (fixture, locator, sha256) row per committed HTML part's projection (the hash over its projected text and its element spans), the corpus hash over them, the interpreter label and CPython minor they were produced under, and the pinned plain-text quote-label normalisation table. tests/test_html_projection_golden.py recomputes every row in-process and fails naming the fixture and locator when one moves; a second interpreter, when present, is an ADDITIONAL comparison that must also equal it. A moved row from an intentional interpreter or html.parser upgrade is recorded with the regenerating command (python -m tests.test_html_projection_golden --regenerate, or tools/regenerate_projection_golden.py) and, if an interpreter still disagrees, a dated, reasoned entry in 'waivers' -- never an environment variable. The golden is a regression pin: it never overrides a label.",
+  "interpreter": "CPython 3.14.3",
+  "cpython_minor": [
+    3,
+    14
+  ],
+  "corpus_hash": "356608376ccd4821441f1f272a59735d9bffa448214138316abbae430f2bf00e",
+  "rows": [
+    [
+      "fixtures/generated/alternative_text_html.eml",
+      "1.2",
+      "399cad1b44ead4eb9c6948395668f88422c84dbf88d02c6c0f01c4c19304b5f3"
+    ],
+    [
+      "fixtures/generated/attach_cid_dangling.eml",
+      "1",
+      "b9908cb671e222a49626c2c1d5d839b320799be81be583bbfe1b6ffec21eb1a6"
+    ],
+    [
+      "fixtures/generated/attach_decoration_tracking_pixel.eml",
+      "1.1",
+      "670ba93d2f5b8fe5990f5d0cea3f21a76db82e8c62a30fe90cf6e8ca7047c4e9"
+    ],
+    [
+      "fixtures/generated/attach_inline_referenced.eml",
+      "1.1",
+      "fa85c4d18d756e43e54ebc5d5f418f4716f9572922cab318a9c03e274b55c1f5"
+    ],
+    [
+      "fixtures/generated/attach_inline_unreferenced.eml",
+      "1.1",
+      "bac78e08c83935465ea7438167e4071841974daae37e0a067be0bf80f5f7c017"
+    ],
+    [
+      "fixtures/generated/attach_remote_image_only.eml",
+      "1.2",
+      "02ceaf84df62c6ebf1a4b2c334ac54698c3c4e26a30519aca8f03483db0fc2b5"
+    ],
+    [
+      "fixtures/generated/content_location_in_related.eml",
+      "1.1",
+      "b4b3cd62e96aeb32b5053ed004b0f76ae411e36e98584eea1a71888258196e04"
+    ],
+    [
+      "fixtures/generated/gmail_quote_on_blockquote.eml",
+      "1.2",
+      "d9debf82352c547da2981092bbd94a587d060914f86e4a68d00d044d65b81fa2"
+    ],
+    [
+      "fixtures/generated/gmail_reply_quoting_outlook_authored.eml",
+      "1.2",
+      "d59b7258574e23ed032b3e3bf696d061683a0d92735750d74637d293da6b01ec"
+    ],
+    [
+      "fixtures/generated/gmail_short_reply_gt_and_on_wrote.eml",
+      "1.2",
+      "fb6174f2eb1d53e23ae651375e8a244ac184b2ee0ec27334b7c82162f6a4b8a1"
+    ],
+    [
+      "fixtures/generated/html_data_uri_and_tracking_pixel.eml",
+      "1",
+      "3cce83534bfbaf01c97b9536acac91556a6be9c492ba7cdba5c0751a0c4a7364"
+    ],
+    [
+      "fixtures/generated/html_gmail_quote.eml",
+      "1.2",
+      "6a4fa105ccf2abb64a6599204525b60e5838f8a3672e799ac0116de900f0c94e"
+    ],
+    [
+      "fixtures/generated/html_href_img_remote_and_cid.eml",
+      "1",
+      "4d06a9aa2b7853672ced0e0082920b5e0b833b8f282d331532d40f63ad65b0a2"
+    ],
+    [
+      "fixtures/generated/html_only.eml",
+      "1",
+      "04645d902f71e0f736f47335681b098a72a61b2425ea47570879be551fb3fc01"
+    ],
+    [
+      "fixtures/generated/html_outlook_divrplyfwd.eml",
+      "1.2",
+      "daaaaa37e40970d13b2cf54577d89fada9273dee4964954723f6457b3dcaf7a8"
+    ],
+    [
+      "fixtures/generated/html_style_and_script.eml",
+      "1",
+      "410bb46e102de2f8e10abc27dc6cf00320bece2668351d6dd3baa3c9b100df9d"
+    ],
+    [
+      "fixtures/generated/inline_cid_referenced_and_not.eml",
+      "1.1",
+      "fa85c4d18d756e43e54ebc5d5f418f4716f9572922cab318a9c03e274b55c1f5"
+    ],
+    [
+      "fixtures/generated/mixed_origin_quote.eml",
+      "1.2",
+      "8441cf4f09ef2d56caab8333877b1511f901b1fec2beef089a2b430d4c030206"
+    ],
+    [
+      "fixtures/generated/multipart_mixed_wraps_alternative.eml",
+      "1.1.2",
+      "399cad1b44ead4eb9c6948395668f88422c84dbf88d02c6c0f01c4c19304b5f3"
+    ],
+    [
+      "fixtures/generated/nested_alternative_in_related_in_mixed.eml",
+      "1.1.1.2",
+      "a8cfa53456b0a5dccee9a2a6f4769704eb9dba9dddeb37eb7519fef39a315188"
+    ],
+    [
+      "fixtures/generated/outlook_com_appendonsend.eml",
+      "1.2",
+      "249b3695da3d173038148c307409c60b44e9be519c67011e36f34b377ade016c"
+    ],
+    [
+      "fixtures/generated/plain_effectively_empty.eml",
+      "1.2",
+      "13adc51c21e95e66773b372a22c5a0fc65a2dad57f65531a0acf6e10a345fb20"
+    ],
+    [
+      "fixtures/generated/text_calendar_alternative.eml",
+      "1.2",
+      "a8cfa53456b0a5dccee9a2a6f4769704eb9dba9dddeb37eb7519fef39a315188"
+    ],
+    [
+      "fixtures/generated/thunderbird_moz_cite_prefix.eml",
+      "1.2",
+      "47269fff6face1d25951a4a8c4e477fd5cc7c28ee13f67ea03ef67a58cd5da54"
+    ],
+    [
+      "fixtures/generated/thunderbird_moz_forward_container.eml",
+      "1.2",
+      "065bb743ea5c42408ef1b2068a0eab2a4ee03810a203a1358da80e49fb75287f"
+    ],
+    [
+      "fixtures/generated/vendor_prefix_class_no_table_row.eml",
+      "1.2",
+      "30f479586a4db71c1d60052dbdcb8a0e11ca92a1446ee6e5f25034a1854bd327"
+    ]
+  ],
+  "normalisation": [
+    [
+      "Am 12.01.2021 schrieb Anna:",
+      "Am 12.01.2021 schrieb Anna:",
+      false,
+      null,
+      null
+    ],
+    [
+      "Äm 12.01.2021 schrieb Anna:",
+      "Äm 12.01.2021 schrieb Anna:",
+      false,
+      null,
+      null
+    ],
+    [
+      "From: Anna",
+      "From: Anna",
+      true,
+      "from",
+      null
+    ],
+    [
+      "From: Anna",
+      "From: Anna",
+      true,
+      "from",
+      null
+    ],
+    [
+      "From: Anna",
+      "From: Anna",
+      true,
+      "from",
+      null
+    ],
+    [
+      "from: Anna",
+      "from: Anna",
+      true,
+      null,
+      null
+    ],
+    [
+      "Von: Anna",
+      "Von: Anna",
+      true,
+      null,
+      "from"
+    ]
+  ],
+  "normalisation_hash": "eb674f90e940bda6f5678dd151dc18daf2a57edd28bb82094d62e049457970ad",
+  "waivers": []
+}

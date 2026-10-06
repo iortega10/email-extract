@@ -604,6 +604,82 @@ drift test checks against the resolver's own row functions. A consumer that need
 boundary has to re-derive the order. Reported, not fixed: the type is frozen and 1.9's allow-list
 does not include its shape.
 
+### Turn 1.10a -- corpus agreement (the choices the turn forces)
+
+The plan (`email-remaining-plan-debate.md` table row 6) splits 1.10; 1.10a is the corpus/gate/floor
+agreement. No stage output changes: `EMAIL_PARSER_VERSION`, `OUTPUT_SCHEMA_VERSION`,
+`DECODE_CHAIN_VERSION` and every stage version stay. The choices the turn forced:
+
+55. **`document.axes` is measured from the assembled record, not re-derived.** The oracle calls
+    `assemble.assemble(EmlContainer(raw), limits=Limits.untrusted())` -- the caller's own bound, as
+    every other measurer does -- and reads the four document-level `TriValue` axes off it, so the
+    fact reports exactly what a caller stores. The attachment axes ride each occurrence, not the
+    document, so they are **not** rows: the fact's rows are the four `document.*` ids in
+    `model.AXIS_IDS` order.
+56. **The quote stage's gap channel is wired into `gaps.later` -- filtered to `LIVE_GAP_IDS`.**
+    Decision 32 recorded that 1.6/1.7 implemented the predicates and did not wire them; Turn 1.10a
+    wires them, and the fact's docstring ("rows for this turn's live gap ids") is made literal by
+    the filter. Exactly **one** quote id becomes live: `body.i18n_reply_marker`, the only one whose
+    emission over the committed corpus is exactly the rows the frozen labels type (two sidecars, two
+    rows). The rest leave the live set and are named in the phase-1 exit ledger (decision 57).
+    The **address** channel joins in the same edit: `l1._gaps_later` reads `_address_gap_pairs`, so
+    `headers.address_unparsable` -- labelled at phase 1 since Turn 1.2 and never measured, because
+    the id was never in `LIVE_GAP_IDS` -- is compared (one sidecar). Those two are the class-`a`
+    rows of the turn's classification (decision 63): now measurable, so made live.
+57. **The phase-1 wait is a closed, named, committed set; the `phase1 exit` gate enforces it.**
+    `tests/ledger/phase1_exit.json` holds six rows, each a class-`b` finding -- an **over-emission**
+    (`body.no_boundary_found` on 102 fixtures, `view.quote_level_disagreement` on 6,
+    `body.inline_reply_interleaved` on 3, each labelled on one) or a **no-emission**
+    (`attach.cid_dangling`, `body.mixed_origin_quoting`, typed but emitted by nothing) -- with the
+    label's own reason and the fixture bytes' sha256. The gate fails on a wait outside the set, a
+    named row the corpus stops waiting on, an empty corpus and a corpus that compared nothing.
+58. **The phase-1 gap gate and its mutation catalogue.** `EMITTABLE_GAP_IDS` (`evals/falsify.py`) is
+    the ids a wired channel can emit: `LIVE_GAP_IDS` plus the three quote ids of decision 56.
+    `PHASE1_CASES` has one mutation case per emittable id a committed fixture labels at a live row
+    (22); the five no fixture exercises against the gate are **named** in `UNEXERCISED_GAP_IDS`
+    (`body.html_quote_rule_gap` -- an unlabelled emission -- plus `headers.date_no_zone` and the
+    three decision-57 quote ids). The mutation drops the id on **every** channel, so an id emitted
+    twice cannot survive and pass the case vacuously.
+59. **The corpus-completeness rules are stated over the committed corpus.** A caller may report on
+    another corpus (`--root`); there, "does the corpus exercise the named rows", "does it compare
+    anything" and "does it label any live gap" are **reported but not fatal**, because a subset
+    legitimately carries neither. Every rule about a row that *waits* unnamed or an emission that was
+    *dropped* is fatal everywhere. (Without this, no one-fixture corpus could exit 0, and the metrics
+    CLI's clean-corpus contract -- a subset run -- would break.)
+60. **The coverage floors: declared, achieved, ratchet.** `tests/ledger/facts_ledger.json` gains each
+    phase-1 fact's `declared` floor (parsed from `docs/design/phase1-facts.md`, so the ledger and the
+    design cannot drift), the `achieved` labelled and compared counts at this commit, the
+    `zero_labelled` closed list (empty), the `declared_unmet` findings (11 of 20 facts fall short:
+    the corpus was sized before the floors) and the `rebase` record -- `status: "proposed"`,
+    `signed_by: null`, the owner signs by committing. The effective floor (`floors`) is the achieved
+    count, a ratchet: a count may rise, never fall.
+61. **The golden HTML projection is a committed regression pin.** One `(fixture, locator, sha256)`
+    row per committed HTML part in `tests/ledger/html_projection_golden.json`, recomputed
+    **in-process** on whatever interpreter reads it (so the pin holds on a one-interpreter machine);
+    a second interpreter, when present, is an **additional** comparison. The interpreter label is a
+    recorded-only input, like the run record's `environment`. Regeneration is
+    `python tests/support/html_projection_hash.py --json` in the same commit; a second interpreter
+    that still disagrees is a committed, dated, reasoned `waivers` entry, never an environment
+    variable. The same shape pins the plain-text quote-label normalisation (NFC only, case-sensitive).
+62. **The Phase 1 scope test replaces the Phase 0 one, and the walk-recursion finding is named.**
+    `tests/test_phase1_scope.py` keeps the Phase 0 assertions (module set, import bans, name scan)
+    and adds the concurrency/fetch import scan and a self-recursion scan. The scan finds
+    `emailextract/walk.py::_walk_part` recursing over the parts tree (`walk.py:709`) -- which the
+    exit criteria's "the walkers are iterative" does not hold for. `walk.py` is outside this turn's
+    allow-list, so it is recorded, with its reason, in `KNOWN_SELF_RECURSION`: a new recursion fails,
+    and the exemption cannot outlive the fact.
+63. **The phase-1 waits are classified (a)/(b)/(c).** Before Turn 1.10a twelve sidecars labelled
+    `gaps.later` without a comparison (a `not_yet` row each; `thread_three_refs_chain` carries two).
+    Three became measurable and are live -- class **(a)**: `headers.address_unparsable` on one sidecar
+    (the address channel) and `body.i18n_reply_marker` on two (the quote channel; decisions 56/57).
+    Six are class **(b)**: a frozen label asserts a row no emission can satisfy without editing one,
+    so they are named in `tests/ledger/phase1_exit.json` and the exit gate accepts them. Three are
+    class **(c)**: their row's own phase column is 3 (`future_date_in_text`,
+    `rfc2047_folded_duplicate_received`, `thread_three_refs_chain` -- `time.in_text_dates_not_extracted_v1`,
+    `headers.received_chain_unverified`, `thread.parent_not_in_corpus`), so the labels themselves defer
+    them and the exit gate does not count them as phase-1 waits. Nothing is tuned to satisfy a label
+    another frozen label contradicts.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

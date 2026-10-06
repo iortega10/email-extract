@@ -1,5 +1,5 @@
 {
-  "_comment": "The declared facts of Phase 1 and the closed deferred set. 'phase1' is the exact set of fact ids whose FACTS phase is 1; 'deferred' is the closed list of fact ids deliberately filed at a later phase than 1 (empty by default). A change to a fact's phase in emailextract/evals/l1.py fails tests/test_facts_ledger.py unless this file changes in the same commit.",
+  "_comment": "Turn 1.10a: the three coverage artefacts of build spec decision 4, plus the pinned phase-1 id list (Turn 1.0b). 'declared' is each phase-1 fact's floor as docs/design/phase1-facts.md names it; 'floors' is the EFFECTIVE floor (the ratchet value tests/test_facts_coverage.py enforces, = the achieved labelled count at the last rebase); 'achieved' is the committed corpus's labelled (sidecars carrying the fact) and compared (sidecars the oracle measured) counts at this commit; 'zero_labelled' is the closed list of phase-1 facts no sidecar labels; 'declared_unmet' records every declared floor the corpus does not meet (a FINDING, never lowered silently); 'rebase' is the recorded, owner-signed change from the declared floors to the effective ones.",
   "phase1": [
     "document.axes",
     "headers.projection",
@@ -22,5 +22,238 @@
     "attach.cid_use",
     "gaps.later"
   ],
-  "deferred": []
+  "deferred": [],
+  "declared": {
+    "attach.cid_use": 5,
+    "attach.decorative": 4,
+    "attach.filename": 10,
+    "attach.manifest": 10,
+    "attach.types": 12,
+    "body.alternative_group": 10,
+    "body.cid_refs": 5,
+    "body.html_spans": 8,
+    "body.plain_effectively_empty": 2,
+    "body.quote_boundaries": 15,
+    "body.selection": 10,
+    "body.text": 60,
+    "body.view_levels": 15,
+    "document.axes": 80,
+    "gaps.later": 5,
+    "headers.addresses": 20,
+    "headers.date": 12,
+    "headers.decoded": 8,
+    "headers.parameters": 4,
+    "headers.projection": 60
+  },
+  "floors": {
+    "attach.cid_use": 2,
+    "attach.decorative": 1,
+    "attach.filename": 2,
+    "attach.manifest": 9,
+    "attach.types": 5,
+    "body.alternative_group": 13,
+    "body.cid_refs": 3,
+    "body.html_spans": 15,
+    "body.plain_effectively_empty": 2,
+    "body.quote_boundaries": 24,
+    "body.selection": 15,
+    "body.text": 37,
+    "body.view_levels": 24,
+    "document.axes": 103,
+    "gaps.later": 38,
+    "headers.addresses": 7,
+    "headers.date": 6,
+    "headers.decoded": 6,
+    "headers.parameters": 6,
+    "headers.projection": 12
+  },
+  "achieved": {
+    "attach.cid_use": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "attach.decorative": {
+      "labelled": 1,
+      "compared": 1
+    },
+    "attach.filename": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "attach.manifest": {
+      "labelled": 9,
+      "compared": 9
+    },
+    "attach.types": {
+      "labelled": 5,
+      "compared": 5
+    },
+    "body.alternative_group": {
+      "labelled": 13,
+      "compared": 13
+    },
+    "body.cid_refs": {
+      "labelled": 3,
+      "compared": 3
+    },
+    "body.html_spans": {
+      "labelled": 15,
+      "compared": 15
+    },
+    "body.plain_effectively_empty": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "body.quote_boundaries": {
+      "labelled": 24,
+      "compared": 24
+    },
+    "body.selection": {
+      "labelled": 15,
+      "compared": 15
+    },
+    "body.text": {
+      "labelled": 37,
+      "compared": 37
+    },
+    "body.view_levels": {
+      "labelled": 24,
+      "compared": 24
+    },
+    "document.axes": {
+      "labelled": 103,
+      "compared": 103
+    },
+    "gaps.later": {
+      "labelled": 38,
+      "compared": 29
+    },
+    "headers.addresses": {
+      "labelled": 7,
+      "compared": 7
+    },
+    "headers.date": {
+      "labelled": 6,
+      "compared": 6
+    },
+    "headers.decoded": {
+      "labelled": 6,
+      "compared": 6
+    },
+    "headers.parameters": {
+      "labelled": 6,
+      "compared": 6
+    },
+    "headers.projection": {
+      "labelled": 12,
+      "compared": 12
+    }
+  },
+  "zero_labelled": [],
+  "declared_unmet": [
+    {
+      "fact": "attach.cid_use",
+      "declared": 5,
+      "achieved": 2
+    },
+    {
+      "fact": "attach.decorative",
+      "declared": 4,
+      "achieved": 1
+    },
+    {
+      "fact": "attach.filename",
+      "declared": 10,
+      "achieved": 2
+    },
+    {
+      "fact": "attach.manifest",
+      "declared": 10,
+      "achieved": 9
+    },
+    {
+      "fact": "attach.types",
+      "declared": 12,
+      "achieved": 5
+    },
+    {
+      "fact": "body.cid_refs",
+      "declared": 5,
+      "achieved": 3
+    },
+    {
+      "fact": "body.text",
+      "declared": 60,
+      "achieved": 37
+    },
+    {
+      "fact": "headers.addresses",
+      "declared": 20,
+      "achieved": 7
+    },
+    {
+      "fact": "headers.date",
+      "declared": 12,
+      "achieved": 6
+    },
+    {
+      "fact": "headers.decoded",
+      "declared": 8,
+      "achieved": 6
+    },
+    {
+      "fact": "headers.projection",
+      "declared": 60,
+      "achieved": 12
+    }
+  ],
+  "rebase": {
+    "status": "signed",
+    "from": {
+      "attach.cid_use": 5,
+      "attach.decorative": 4,
+      "attach.filename": 10,
+      "attach.manifest": 10,
+      "attach.types": 12,
+      "body.alternative_group": 10,
+      "body.cid_refs": 5,
+      "body.html_spans": 8,
+      "body.plain_effectively_empty": 2,
+      "body.quote_boundaries": 15,
+      "body.selection": 10,
+      "body.text": 60,
+      "body.view_levels": 15,
+      "document.axes": 80,
+      "gaps.later": 5,
+      "headers.addresses": 20,
+      "headers.date": 12,
+      "headers.decoded": 8,
+      "headers.parameters": 4,
+      "headers.projection": 60
+    },
+    "to": {
+      "attach.cid_use": 2,
+      "attach.decorative": 1,
+      "attach.filename": 2,
+      "attach.manifest": 9,
+      "attach.types": 5,
+      "body.alternative_group": 13,
+      "body.cid_refs": 3,
+      "body.html_spans": 15,
+      "body.plain_effectively_empty": 2,
+      "body.quote_boundaries": 24,
+      "body.selection": 15,
+      "body.text": 37,
+      "body.view_levels": 24,
+      "document.axes": 103,
+      "gaps.later": 38,
+      "headers.addresses": 7,
+      "headers.date": 6,
+      "headers.decoded": 6,
+      "headers.parameters": 6,
+      "headers.projection": 12
+    },
+    "reason": "The design's floors were set before the fixture catalogue; the committed corpus meets 9 of the 20 and falls short on 11 (the quote increment note in docs/design/phase1-fixtures.md). Turn 1.10a re-bases each floor to the count the committed corpus achieves -- a ratchet, coverage may never fall -- and records every unmet declared floor here and in 'declared_unmet'. The owner signs by committing with a non-empty signed_by.",
+    "signed_by": "Ivan Ortega (owner), 2026-10-06"
+  }
 }

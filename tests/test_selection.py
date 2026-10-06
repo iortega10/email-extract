@@ -34,6 +34,8 @@ from typing import Any, Callable
 
 import pytest
 
+import docextract_core
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 
@@ -777,10 +779,7 @@ def test_the_corpus_projection_hash_is_interpreter_stable() -> None:
         print("selection: no CPython 3.11 found -- cross-interpreter projection hash not checked")
         return
     prefix, source, version = second
-    core = ROOT.parent / "word-extract" / "docextract-core"
-    if not core.is_dir():
-        print(f"selection: {core} is not present -- cross-interpreter projection hash not checked")
-        return
+    core = Path(docextract_core.__file__).resolve().parent.parent
     env = {**os.environ, "PYTHONPATH": os.pathsep.join([str(ROOT), str(core)])}
     completed = subprocess.run(
         [*prefix, str(ROOT / "tests" / "support" / "html_projection_hash.py")],

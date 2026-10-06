@@ -43,6 +43,8 @@ from pathlib import Path
 from types import MappingProxyType
 from typing import Any, Callable, Final, Mapping
 
+from .. import addresses as address_stage
+from ..assemble import assemble as assemble_document
 from .. import attach as attach_stage
 from .. import dates as date_stage
 from .. import headers as header_stage
@@ -50,6 +52,7 @@ from .. import quote as quote_package  # noqa: F401  the stage's own package (Tu
 from .. import selection as selection_stage
 from .. import text as text_stage
 from ..quote import resolve as quote_stage
+from ..quote import text_rules as quote_text_stage
 from ..container import EmlContainer
 from ..parse import Limits
 from ..walk import WalkResult, walk
@@ -70,6 +73,7 @@ __all__ = [
     "check_all",
     "check_path",
     "deferral_counts",
+    "emitted_gap_ids",
     "quote_only_mismatches",
 ]
 
@@ -225,8 +229,20 @@ WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_field_work_units_
 #: such row, while ``attach_cid_dangling`` types one, so no live emission of that id can satisfy
 #: both. The measured dangling list rides ``attach.Attachments.dangling`` instead, and the row
 #: ``attach_cid_dangling`` types stays ``not_yet`` (the turn's finding, reported with its bytes).
+#:
+#: Turn 1.10a wires the quote stage's channel (Turn 1.6/1.7) and makes exactly one of its ids
+#: live -- ``body.i18n_reply_marker`` -- because it is the only one whose emission over the
+#: committed corpus is *exactly* the rows the frozen labels type (two sidecars, two rows). The
+#: other quote ids stay out of this set and the phase-1 wait: the **over-emission finding**. The
+#: quote stage emits ``body.no_boundary_found`` on 102 fixtures (every plain body with no boundary
+#: rule) and ``view.quote_level_disagreement`` on 6 and ``body.inline_reply_interleaved`` on 3,
+#: while the frozen labels type them on 1 sidecar each; ``body.mixed_origin_quoting`` and
+#: ``attach.cid_dangling`` are typed but emitted by nothing. Those six phase-1 rows the labels
+#: assert cannot be satisfied by the package's emissions without editing a frozen sidecar (which
+#: the label ledger forbids), so they are ``not_yet`` and named in ``tests/ledger/phase1_exit.json``.
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
+        address_stage.GAP_HEADERS_ADDRESS_UNPARSABLE,
         header_stage.GAP_HEADERS_DUPLICATE_HEADER,
         header_stage.GAP_HEADERS_LEADING_BOM,
         header_stage.GAP_HEADERS_MBOX_FROM_LINE,
@@ -241,6 +257,7 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         selection_stage.GAP_SECURITY_REMOTE_CONTENT_PRESENT,
         selection_stage.GAP_BODY_INLINE_DATA_URI,
         selection_stage.htmltree.GAP_BODY_HTML_QUOTE_RULE_GAP,
+        quote_text_stage.GAP_I18N_REPLY_MARKER,
         *attach_stage.EMITTED_GAP_IDS,
     }
 )
@@ -290,9 +307,18 @@ def _headers_parameters(measured: Measured) -> list[list[Any]]:
 def _gaps_later(measured: Measured) -> list[list[Any]]:
     """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``.
 
-    The header stage's gaps (Turn 1.1-1.3) and the body stage's (Turn 1.4, the flowed part's
-    deferred reflow; Turn 1.5b, the digest/no-text/remote/``data:``/unclosed-quote gaps),
+    The header stage's gaps (Turn 1.1-1.3), the body stage's (Turn 1.4, the flowed part's
+    deferred reflow; Turn 1.5b, the digest/no-text/remote/``data:``/unclosed-quote gaps), the
+    attachment stage's (Turn 1.8) and the address stage's (Turn 1.2, ``headers.address_unparsable``),
     each from its own channel -- never the walker's ``part.gaps``.
+
+    The **quote stage's** channel (Turn 1.6/1.7, ``resolve.gap_pairs``/``html_gap_pairs``) joins
+    here in Turn 1.10a: its docstring calls its output "the registry's answers", but no turn had
+    fed them to ``gaps.later``, so every quote gap id sat ``not_yet``. The result is filtered to
+    :data:`LIVE_GAP_IDS` -- the fact is *this turn's live rows*, and the quote stage emits several
+    ids whose emissions are broader than the frozen labels (the over-emission finding: see
+    :data:`LIVE_GAP_IDS`), so wiring its raw output would flood the fact and turn the labels into
+    spurious mismatches that no edit to the package could fix.
     """
     pairs = [
         *header_stage.later_gaps(_region(measured)),
@@ -304,8 +330,18 @@ def _gaps_later(measured: Measured) -> list[list[Any]]:
             max_elements=HTML_MAX_ELEMENTS,
         ),
         *attach_stage.gap_pairs(_attachments(measured)),
+        *_address_gap_pairs(measured),
+        *quote_stage.gap_pairs(measured.raw, measured.walked()),
+        *quote_stage.html_gap_pairs(
+            measured.raw,
+            measured.walked(),
+            max_depth=HTML_MAX_DEPTH,
+            max_elements=HTML_MAX_ELEMENTS,
+        ),
     ]
-    return [[gap_id, locator, 1, ""] for gap_id, locator in pairs]
+    return [
+        [gap_id, locator, 1, ""] for gap_id, locator in pairs if gap_id in LIVE_GAP_IDS
+    ]
 
 
 def _body_text(measured: Measured) -> list[list[Any]]:
@@ -324,6 +360,12 @@ def _body_text(measured: Measured) -> list[list[Any]]:
 #: real caller would use. ``htmltext.project``/``htmltree.build_tree`` take no default.
 HTML_MAX_DEPTH: Final[int] = Limits.untrusted().max_depth
 HTML_MAX_ELEMENTS: Final[int] = Limits.untrusted().max_parts
+
+
+#: The ``Limits`` the oracle hands :func:`emailextract.assemble.assemble`: the approved untrusted
+#: defaults, the same bound the HTML projection runs under, so a cap the walk records is the one a
+#: real caller would hit (decision 9: a cap is a caller parameter).
+ORACLE_LIMITS: Final[Limits] = Limits.untrusted()
 
 
 def _html_spans(measured: Measured) -> list[list[Any]]:
@@ -526,6 +568,50 @@ def _attach_decorative(measured: Measured) -> list[list[Any]]:
 def _attach_cid_use(measured: Measured) -> list[list[Any]]:
     """``attach.cid_use`` rows: the cid and whether any body view references it."""
     return attach_stage.cid_use_rows(_attachments(measured))
+
+
+#: The document-level axes ``document.axes`` reports, in the closed ``model.AXIS_IDS`` order:
+#: ``(axis_id, the EmailDocument field carrying its TriValue)``. The attachment axes ride each
+#: occurrence, not the document, so they are not rows here.
+DOCUMENT_AXES: Final[tuple[tuple[str, str], ...]] = (
+    ("document.times", "times_axis"),
+    ("document.thread_edges", "thread_edges_axis"),
+    ("document.children", "children_axis"),
+    ("document.same_message_candidates", "same_message_candidates_axis"),
+)
+
+
+def _document_axes(measured: Measured) -> list[list[Any]]:
+    """``document.axes`` rows: ``[axis_id, state, reason_id | null]`` per document-level axis.
+
+    The value is the **assembled** record's own axis field (Turn 1.9), not a re-derivation: the
+    measurer calls :func:`emailextract.assemble.assemble` with the oracle's own ``Limits`` and reads
+    the four ``TriValue`` axes off the document, so the fact reports exactly what a caller stored.
+    A phase-1 not-built axis is ``(unknown, not_built_in_phase1)``; a built axis would be ``value``
+    with no reason id (decision 6).
+    """
+    document = assemble_document(EmlContainer(measured.raw), limits=ORACLE_LIMITS)
+    rows: list[list[Any]] = []
+    for axis_name, field_name in DOCUMENT_AXES:
+        axis = getattr(document, field_name)
+        reason = axis.reason_id if axis.state.value == "unknown" else None
+        rows.append([axis_name, axis.state.value, reason])
+    return rows
+
+
+def _address_gap_pairs(measured: Measured) -> list[tuple[str, str]]:
+    """The ``headers.address_unparsable`` pairs: one per address row whose structure did not parse.
+
+    The address stage records the tri-state **on the row** (``state=unparsed``, the raw fragment kept
+    verbatim beside it, D2/D9); this turns each such row into the registry's gap answer, on locator
+    ``1``. It is a plain emission of a state the stage already measures, never a second parse.
+    """
+    pairs: list[tuple[str, str]] = []
+    for _ordinal, _field_name, addresses in header_stage.address_rows(_region(measured)):
+        for address in addresses:
+            if address[4] == "unparsed":
+                pairs.append((address_stage.GAP_HEADERS_ADDRESS_UNPARSABLE, "1"))
+    return pairs
 
 
 def _projection_compare(expected: Any, actual: Any) -> tuple[bool, str | None]:
@@ -761,7 +847,11 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
         # instead of being skipped, and an unmodelled label is still a hard failure.
         "document.axes": Measure(
             1,
-            note="[[axis_id, state, reason_id | null], ...] one row per axis the record carries; "
+            _document_axes,
+            live=True,
+            note="[[axis_id, state, reason_id | null], ...] one row per document-level axis the "
+            "record carries (the attachment axes ride each occurrence, not the document, so they "
+            "are not rows here); "
             "axis_id is one of attachment.status/attachment.route/document.times/"
             "document.thread_edges/document.children/document.same_message_candidates (a wildcard "
             "id is banned); state is value|absent|unknown; reason_id is not_built_in_phase1 or "
@@ -1101,6 +1191,20 @@ def check_path(
 ) -> Report:
     """Convenience: load one sidecar from a path and check it."""
     return check(load_sidecar(path), phase=phase)
+
+
+def emitted_gap_ids(sidecar: Sidecar) -> set[str]:
+    """The ``gaps.later`` ids the package emits for one sidecar's fixture (the gate's public seam).
+
+    Turn 1.10a: the phase-1 gap gate (``evals.gates.gap_gate``) needs the ids the code *records*
+    without reaching into the private measurer, and a mutation must re-measure on every call, so
+    this is a fresh walk rather than a cache. A fixture that cannot be walked is an
+    :class:`OracleError`, not an empty set -- an unwalked fixture must never look like "no gaps".
+    """
+    measured = _measure(sidecar)
+    if measured.result is None:
+        raise OracleError(measured.problem or "the fixture could not be walked")
+    return {row[0] for row in _gaps_later(measured)}
 
 
 def deferral_counts(root: Path | str = DEFAULT_FIXTURES) -> dict[str, int]:

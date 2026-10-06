@@ -23,6 +23,7 @@ if str(ROOT) not in sys.path:  # let a bare interpreter run this file directly
     sys.path.insert(0, str(ROOT))
 
 from emailextract.container import EmlContainer, memory_bytes  # noqa: E402
+from emailextract.quote import i18n  # noqa: E402
 from emailextract.selection import html_projections  # noqa: E402
 from emailextract.walk import walk  # noqa: E402
 
@@ -66,12 +67,70 @@ def corpus_projection_hash() -> str:
     return hashlib.sha256(joined.encode("utf-8")).hexdigest()
 
 
+#: The hand-typed inputs the quote-label normalisation table pins. NFC only (decision 3: NFKC is
+#: not used, and the label tables are case-sensitive), so a careless implementation that casefolded
+#: or NFKC-normalised a head would move one of these rows.
+NORMALISATION_INPUTS: tuple[str, ...] = (
+    "Am 12.01.2021 schrieb Anna:",  # already NFC
+    "A\u0308m 12.01.2021 schrieb Anna:",  # A + combining diaeresis, composes to U+00C4
+    "From:\u00a0Anna",  # a no-break space stays a no-break space
+    "From:\u202fAnna",  # a narrow no-break space stays itself
+    "From: Anna",  # a plain ASCII head
+    "from: Anna",  # a lower-case head (the tables are case-sensitive, so it fills no slot)
+    "Von: Anna",  # German, as written
+)
+
+
+def normalisation_rows() -> list[list[object]]:
+    """``[input, nfc(input), label_shaped, slot_of_line(en), slot_of_line(de)]`` per pinned input."""
+    return [
+        [
+            line,
+            i18n.nfc(line),
+            i18n.label_shaped(line),
+            i18n.slot_of_line(line, "en"),
+            i18n.slot_of_line(line, "de"),
+        ]
+        for line in NORMALISATION_INPUTS
+    ]
+
+
+def normalisation_hash() -> str:
+    """The sha256 over the pinned normalisation rows."""
+    payload = json.dumps(normalisation_rows(), ensure_ascii=False)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
 def interpreter_label() -> str:
     """A recorded-only run input: the interpreter and patch level this module ran under."""
     return f"CPython {sys.version.split()[0]}"
 
 
+def as_json(*, ensure_ascii: bool = True) -> str:
+    """The whole fingerprint as one machine-readable JSON object (the golden's own shape).
+
+    ``ensure_ascii`` defaults **on** so a bare child interpreter prints it on any stdout encoding
+    (a Windows cp1252 console cannot encode a combining mark); the JSON decodes to the same values.
+    """
+    return json.dumps(
+        {
+            "interpreter": interpreter_label(),
+            "cpython_minor": list(sys.version_info[:2]),
+            "corpus_hash": corpus_projection_hash(),
+            "rows": [list(row) for row in projection_rows()],
+            "normalisation": normalisation_rows(),
+            "normalisation_hash": normalisation_hash(),
+        },
+        ensure_ascii=ensure_ascii,
+        sort_keys=True,
+    )
+
+
 if __name__ == "__main__":
-    print("interpreter:", interpreter_label())
-    print("html parts:", len(projection_rows()))
-    print("corpus projection hash:", corpus_projection_hash())
+    if "--json" in sys.argv:
+        print(as_json())
+    else:
+        print("interpreter:", interpreter_label())
+        print("html parts:", len(projection_rows()))
+        print("corpus projection hash:", corpus_projection_hash())
+        print("quote normalisation hash:", normalisation_hash())

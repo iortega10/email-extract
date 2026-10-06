@@ -22,7 +22,15 @@ data, and a label/walker disagreement is a finding, never something to reconcile
 from __future__ import annotations
 
 from .falsify import CASES, GapCase, WALKER_GAPS, describe, mutated, uncovered_gaps
-from .gates import GateResult, Hole, holes, l1_gate, no_silent_drop_gate
+from .gates import (
+    GateResult,
+    Hole,
+    gap_gate,
+    holes,
+    l1_gate,
+    no_silent_drop_gate,
+    phase1_exit,
+)
 from .l1 import (
     CURRENT_PHASE,
     FACTS,
@@ -59,12 +67,14 @@ __all__ = [
     "check_all",
     "check_path",
     "describe",
+    "gap_gate",
     "holes",
     "l1_gate",
     "load_sidecar",
     "load_sidecars",
     "mutated",
     "no_silent_drop_gate",
+    "phase1_exit",
     "sidecar_paths",
     "uncovered_gaps",
 ]

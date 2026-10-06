@@ -71,3 +71,34 @@ def test_the_deferred_set_is_closed_and_empty() -> None:
     # A non-empty deferred set that overlaps phase 1 is itself a problem.
     broken = {**ledger, "deferred": [ledger["phase1"][0]]}
     assert _ledger_problems(dict(FACT_PHASES), broken)
+
+
+def test_the_coverage_artefacts_are_shaped() -> None:
+    """Turn 1.10a extends the ledger with the three coverage artefacts and the rebase record.
+
+    The values themselves are asserted by ``tests/test_facts_coverage.py``; this is the shape a
+    reader (and the ratchet) can rely on: one entry per phase-1 fact, integer counts, an empty
+    ``zero_labelled`` list of ids, a ``declared_unmet`` list of ``{fact, declared, achieved}`` and a
+    rebase whose ``from``/``to`` are the declared and effective floors.
+    """
+    ledger = _load()
+    phase1 = set(ledger["phase1"])
+    assert set(ledger["declared"]) == phase1
+    assert set(ledger["floors"]) == phase1
+    assert set(ledger["achieved"]) == phase1
+    assert all(isinstance(floor, int) and floor > 0 for floor in ledger["declared"].values())
+    assert all(isinstance(floor, int) and floor > 0 for floor in ledger["floors"].values())
+    for fact_id, row in ledger["achieved"].items():
+        assert set(row) == {"labelled", "compared"}
+        assert all(isinstance(value, int) and value >= 0 for value in row.values()), fact_id
+        assert row["compared"] <= row["labelled"], fact_id
+    assert isinstance(ledger["zero_labelled"], list)
+    assert set(ledger["zero_labelled"]) <= phase1
+    assert isinstance(ledger["declared_unmet"], list)
+    for entry in ledger["declared_unmet"]:
+        assert set(entry) == {"fact", "declared", "achieved"}
+        assert entry["fact"] in phase1
+        assert entry["achieved"] < entry["declared"]
+    assert set(ledger["rebase"]) == {"status", "from", "to", "reason", "signed_by"}
+    assert ledger["rebase"]["from"] == ledger["declared"]
+    assert ledger["rebase"]["to"] == ledger["floors"]

@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Sequence
 
 from .falsify import CASES, uncovered_gaps, WALKER_GAPS
-from .gates import GateResult, l1_gate, no_silent_drop_gate
+from .gates import GateResult, gap_gate, l1_gate, no_silent_drop_gate, phase1_exit
 from .labels import DEFAULT_FIXTURES, LabelError, load_sidecars
 
 #: Fixture files the corpus is made of: the message bytes, never a sidecar (which describes
@@ -74,9 +74,14 @@ def falsifiability(root: Path | str = DEFAULT_FIXTURES) -> tuple[int, int, tuple
     return len(CASES), exercised, uncovered
 
 
-def gates(root: Path | str = DEFAULT_FIXTURES) -> list[GateResult]:
+def gates(root: Path | str = DEFAULT_FIXTURES, *, ledger: str | Path | None = None) -> list[GateResult]:
     """Every gate, in the order the design lists them."""
-    return [l1_gate(root), no_silent_drop_gate(root)]
+    return [
+        l1_gate(root),
+        no_silent_drop_gate(root),
+        gap_gate(root),
+        phase1_exit(root, ledger=ledger),
+    ]
 
 
 def render(root: Path | str = DEFAULT_FIXTURES, results: Sequence[GateResult] | None = None) -> str:

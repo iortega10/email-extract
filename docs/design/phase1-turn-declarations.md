@@ -739,7 +739,7 @@ module: emailextract/selection.py
 module: emailextract/evals/l1.py
 module: tests/test_attach.py
 module: tests/support/stdlib_scanner.py
-module: tests/test_phase0_scope.py
+module: tests/test_phase1_scope.py
 module: tests/test_l1_gate.py
 module: tests/test_turn_declarations.py
 module: tests/ledger/label_ledger.json
@@ -988,3 +988,97 @@ Nothing above runs in Turn 1.0a. This turn writes **documents only**: the design
 (`email-extraction-design.md`), the registry (`phase0-gaps.md` + the design's registry), this file,
 `phase1-facts.md`, `phase1-ledgers.md` and `phase1-fixtures.md`, plus the `label-questions.md`
 annotations. No module, test, fixture, sidecar, ledger file or tool is created or changed.
+
+## Turn 1.10a -- corpus agreement: do the corpus, the gates and the floors agree
+
+The plan (`email-remaining-plan-debate.md` table row 6) splits the 1.10 block in two. **1.10a** is the
+corpus/gate/floor agreement: measure `document.axes` from the assembled record, wire the quote stage's
+gap channel and classify the phase-1 waits, add the `phase1 exit` and phase-1 `gap` gates with their
+mutation cases, extend the facts ledger with the coverage artefacts, pin the golden HTML projection,
+replace the Phase 0 scope test with the Phase 1 one, and pay the clone-safety debt. **1.10b** is the
+hostile set, the superlinearity gate, the filename test, the seeded fuzz and `docs/phase1-report.md`
+(its declared tests above -- `test_hostile_set.py`, `test_seeded_splitter_fuzz.py`,
+`test_the_phase1_report_sections_are_present_and_non_empty` -- are not this turn's).
+
+```declaration turn=1.10a
+module: emailextract/evals/l1.py
+module: emailextract/evals/gates.py
+module: emailextract/evals/falsify.py
+module: emailextract/evals/metrics.py
+module: emailextract/evals/__init__.py
+module: tests/support/html_projection_hash.py
+module: tests/test_phase1_gap_gate.py
+module: tests/test_phase1_exit_gate.py
+module: tests/test_facts_coverage.py
+module: tests/test_facts_ledger.py
+module: tests/test_html_projection_golden.py
+module: tests/test_phase1_scope.py
+module: tests/ledger/facts_ledger.json
+module: tests/ledger/phase1_exit.json
+module: tests/ledger/html_projection_golden.json
+module: tests/ledger/label_ledger.json
+module: tests/test_l1_gate.py
+module: tests/test_metrics_cli.py
+module: tests/test_attach.py
+module: tests/test_limits.py
+module: tests/test_selection.py
+module: tools/runboth.py
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-build-spec.md
+test: tests/test_phase1_gap_gate.py::test_every_phase1_gap_id_has_a_mutation_case
+test: tests/test_phase1_gap_gate.py::test_a_dropped_phase1_gap_fails_the_gate
+test: tests/test_phase1_gap_gate.py::test_the_mutation_patch_is_reached
+test: tests/test_phase1_gap_gate.py::test_the_committed_corpus_passes_the_gap_gate
+test: tests/test_phase1_gap_gate.py::test_the_ids_no_fixture_exercises_are_named
+test: tests/test_phase1_gap_gate.py::test_the_unlabelled_emissions_are_reported
+test: tests/test_phase1_gap_gate.py::test_the_gate_fails_on_an_empty_corpus
+test: tests/test_phase1_gap_gate.py::test_a_subset_corpus_is_reported_but_not_failed_on_completeness
+test: tests/test_phase1_gap_gate.py::test_the_metrics_table_reports_the_gap_gate
+test: tests/test_phase1_gap_gate.py::test_the_walker_catalogue_still_stands
+test: tests/test_facts_coverage.py::test_every_phase1_fact_meets_its_coverage_floor
+test: tests/test_facts_coverage.py::test_at_least_one_sidecar_carries_a_non_trivial_value
+test: tests/test_facts_coverage.py::test_the_ledger_declares_a_floor_for_every_phase1_fact
+test: tests/test_facts_coverage.py::test_the_achieved_counts_ratchet_against_the_ledger
+test: tests/test_facts_coverage.py::test_the_zero_labelled_row_facts_are_the_measured_list
+test: tests/test_facts_coverage.py::test_the_declared_floors_the_corpus_does_not_meet_are_recorded
+test: tests/test_facts_coverage.py::test_the_rebase_record_is_proposed_or_signed
+test: tests/test_facts_coverage.py::test_the_effective_floor_is_the_achieved_count_at_the_rebase
+test: tests/test_phase1_scope.py::test_no_msg_cfb_routing_recursion_or_threading_exists
+test: tests/test_phase1_scope.py::test_the_package_imports_with_no_sibling_and_no_chardet
+test: tests/test_phase1_scope.py::test_the_modules_are_exactly_the_phase_1_set
+test: tests/test_phase1_scope.py::test_no_library_module_imports_later_phase_machinery
+test: tests/test_phase1_scope.py::test_no_module_imports_threading_concurrency_sockets_or_http
+test: tests/test_phase1_scope.py::test_no_runtime_dependency_beyond_docextract_core
+test: tests/test_phase1_exit_gate.py::test_the_gate_passes_over_the_committed_corpus
+test: tests/test_phase1_exit_gate.py::test_the_named_wait_set_matches_the_observed_rows
+test: tests/test_phase1_exit_gate.py::test_a_dropped_named_row_fails_the_gate
+test: tests/test_phase1_exit_gate.py::test_a_named_row_the_corpus_does_not_wait_on_fails_the_gate
+test: tests/test_phase1_exit_gate.py::test_an_unnamed_phase1_wait_fails_the_gate
+test: tests/test_phase1_exit_gate.py::test_an_empty_corpus_fails_the_gate
+test: tests/test_phase1_exit_gate.py::test_a_vacuous_corpus_fails_the_gate
+test: tests/test_phase1_exit_gate.py::test_the_named_set_carries_a_reason_and_the_bytes_evidence
+test: tests/test_phase1_exit_gate.py::test_the_ledger_is_shaped_for_a_json_round_trip
+test: tests/test_phase1_exit_gate.py::test_the_metrics_table_reports_the_phase1_exit_gate
+test: tests/test_phase1_exit_gate.py::test_the_gate_reads_the_corpus_the_tests_read
+test: tests/test_html_projection_golden.py::test_the_golden_recomputes_in_process
+test: tests/test_html_projection_golden.py::test_a_moved_projection_fails_naming_fixture_and_locator
+test: tests/test_html_projection_golden.py::test_the_golden_rows_record_the_interpreter_minor
+test: tests/test_html_projection_golden.py::test_the_quote_label_normalisation_table_is_pinned
+test: tests/test_html_projection_golden.py::test_a_second_interpreter_is_an_additional_comparison
+test: tests/test_html_projection_golden.py::test_a_waiver_is_committed_dated_and_reasoned
+test: tests/test_html_projection_golden.py::test_the_golden_carries_its_required_keys
+test: tests/test_facts_ledger.py::test_the_coverage_artefacts_are_shaped
+stop: at the corpus/gate/floor agreement; the hostile set, the fuzz and the report are Turn 1.10b
+```
+
+Allow-list (`turn=1.10a`): `emailextract/evals/{l1,gates,falsify,metrics,__init__}.py`,
+`tests/support/html_projection_hash.py`, `tests/test_phase1_gap_gate.py`,
+`tests/test_facts_coverage.py`, `tests/test_phase1_scope.py` (new; `tests/test_phase0_scope.py`
+deleted), `tests/test_phase1_exit_gate.py` (new), `tests/test_html_projection_golden.py` (new),
+`tests/test_facts_ledger.py`, `tests/ledger/{facts_ledger,phase1_exit,html_projection_golden,
+label_ledger}.json` (the label ledger: oracle hashes only), the three clone-safety test edits
+(`tests/test_attach.py`, `tests/test_limits.py`, `tests/test_selection.py`), `tests/test_l1_gate.py`
+and `tests/test_metrics_cli.py` (counts only), `tools/runboth.py`, `docs/design/phase1-empirical.md`,
+`docs/design/phase1-build-spec.md`, `docs/design/phase1-turn-declarations.md`. Not `fixtures/**`,
+not `*.expected.json`, not any `emailextract/*` module outside `evals/`, not `model.py`, `ids.py`,
+`versions.py`, `walk.py`, `docs/phase1-report.md`.

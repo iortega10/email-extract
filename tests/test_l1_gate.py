@@ -74,7 +74,12 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     # so the two quote facts' sidecar rows moved from not_yet to compared:
     # 9 quote-fact rows in the quote catalogue's three hole rows; 19 more body.quote_boundaries
     # and 8 more body.view_levels rows over the catalogue.
-    assert gate.data["not_yet"] == {1: 115, 3: 26}
+    # Turn 1.10a measured document.axes from the assembled record (103 rows from not_yet to
+    # compared) and wired the quote stage's gap channel into gaps.later, making
+    # body.i18n_reply_marker live (2 rows). The phase-1 wait is now nine rows: six the frozen
+    # labels assert against emissions the package cannot produce (the over-emission finding,
+    # named in tests/ledger/phase1_exit.json) and three whose row names a phase-3 gap.
+    assert gate.data["not_yet"] == {1: 9, 3: 26}
 
 
 #: The stems whose **html** rows Turn 1.7's first (blind) run disagreed with, each on
@@ -96,13 +101,13 @@ def test_the_committed_corpus_is_green_with_the_quote_facts_live() -> None:
 
     The oracle's quote evidence names the fixture, the fact, the view, the row, the column and the
     turn's MEASURED value and never a labelled one (independence rule 3), so this test can assert
-    the green verdict without reading a label. The html rows are live (Turn 1.7), so the 1224
-    matched facts include them (the plain rows alone are 1201).
+    the green verdict without reading a label. The html rows are live (Turn 1.7), so the 1330
+    matched facts include both views.
     """
     gate = l1_gate()
     assert gate.passed is True, gate.lines()
     assert gate.data["mismatched"] == 0, gate.data["mismatches"]
-    assert gate.data["matched"] == 1224, gate.data["matched"]
+    assert gate.data["matched"] == 1330, gate.data["matched"]
     assert quote_only_mismatches(gate), gate.data["mismatches"]
     assert QUOTE_MISMATCH_STEMS == () and QUOTE_HTML_MISMATCH_STEMS == ()
 

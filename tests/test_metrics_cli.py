@@ -84,7 +84,7 @@ def test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live() 
     completed = run_cli()
     assert completed.returncode == 0, completed.stdout + completed.stderr
     output = completed.stdout
-    assert "pass matched=1224 mismatched=0" in output, output
+    assert "pass matched=1330 mismatched=0" in output, output
     assert "no-silent-drop" in output and "pass fixtures=119" in output, output
 
 

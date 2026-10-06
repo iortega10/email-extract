@@ -1,0 +1,162 @@
+{
+  "_rule": "FROZEN (Turn 1.10a). The closed, named set of phase-1 waits the exit gate (emailextract/evals/gates.py::phase1_exit) accepts: a frozen sidecar asserts a gaps.later row at phase 1 whose id the package does not emit at all (finding 'no-emission'), or emits on a superset of the sidecars that label it (finding 'over-emission'), so the row can never be compared without editing a frozen label -- which the label ledger forbids. tests/test_phase1_exit_gate.py rewrites this file's wait rows from the live corpus and compares both ways: a row that waits outside this set, or a named row the corpus no longer waits on, fails. Additions only; the owner signs a change by committing it.",
+  "phase": 1,
+  "wait": [
+    {
+      "fixture": "attach_cid_dangling",
+      "fact": "gaps.later",
+      "gap_id": "attach.cid_dangling",
+      "locator": "1",
+      "class": "b",
+      "finding": "no-emission",
+      "reason": "the html body references cid:missing@example.test and no part carries that Content-ID; the reference is recorded and no part is invented (D4), and the walker does not emit the gap today",
+      "evidence": {
+        "fixture_sha256": "c8b4e00d4e3178c6c0da0bb50f2c4d1472b13eeeba307c7a4b5623e26c002e92",
+        "labelled_rows": [
+          [
+            "attach.cid_dangling",
+            "1",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [
+          [
+            "body.no_boundary_found",
+            "1"
+          ]
+        ],
+        "quote_stage_emission_count_over_corpus": 0,
+        "label_row_count_over_corpus": 1
+      }
+    },
+    {
+      "fixture": "gmail_reply_quoting_outlook_authored",
+      "fact": "gaps.later",
+      "gap_id": "body.mixed_origin_quoting",
+      "locator": "1.2",
+      "class": "b",
+      "finding": "no-emission",
+      "reason": "the HTML view's boundary is a Gmail container wrapping an Outlook block; the origin is mixed and the view keeps one ordinal sequence with a per-boundary rule id (design D3)",
+      "evidence": {
+        "fixture_sha256": "1e9f1b734e508c5467e5342d6fd08e40b30526a030c49c6bbeee38c122474f16",
+        "labelled_rows": [
+          [
+            "body.mixed_origin_quoting",
+            "1.2",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [],
+        "quote_stage_emission_count_over_corpus": 0,
+        "label_row_count_over_corpus": 2
+      }
+    },
+    {
+      "fixture": "gmail_short_reply_gt_and_on_wrote",
+      "fact": "gaps.later",
+      "gap_id": "view.quote_level_disagreement",
+      "locator": "1.1",
+      "class": "b",
+      "finding": "over-emission",
+      "reason": "the plain view has quote_prefix_depth >= 1 and a structural quote ordinal >= 1 on the same span and the two resolved ranks differ (decision 2); recorded, never averaged",
+      "evidence": {
+        "fixture_sha256": "46e27fa6ddc0102c16ca1144da9af8f2a00759aac456e56c7d24f1db397e2a5c",
+        "labelled_rows": [
+          [
+            "view.quote_level_disagreement",
+            "1.1",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [
+          [
+            "view.quote_level_disagreement",
+            "1.1"
+          ]
+        ],
+        "quote_stage_emission_count_over_corpus": 6,
+        "label_row_count_over_corpus": 1
+      }
+    },
+    {
+      "fixture": "inline_reply_interleaved",
+      "fact": "gaps.later",
+      "gap_id": "body.inline_reply_interleaved",
+      "locator": "1",
+      "class": "b",
+      "finding": "over-emission",
+      "reason": "new text alternates with quoted blocks, so the new text is not one contiguous run (the legal non-contiguous view, decision 3; only a non-contiguous alternation is this gap)",
+      "evidence": {
+        "fixture_sha256": "a971d6f6b211980b647f9956419015abbb7016e43ca3d0449aad7c1aace1f5de",
+        "labelled_rows": [
+          [
+            "body.inline_reply_interleaved",
+            "1",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [
+          [
+            "body.inline_reply_interleaved",
+            "1"
+          ],
+          [
+            "view.quote_level_disagreement",
+            "1"
+          ]
+        ],
+        "quote_stage_emission_count_over_corpus": 3,
+        "label_row_count_over_corpus": 1
+      }
+    },
+    {
+      "fixture": "mixed_origin_quote",
+      "fact": "gaps.later",
+      "gap_id": "body.mixed_origin_quoting",
+      "locator": "1.2",
+      "class": "b",
+      "finding": "no-emission",
+      "reason": "a Gmail container wraps an Outlook block; the origin is mixed, one ordinal sequence per view with a per-boundary rule id (design D3)",
+      "evidence": {
+        "fixture_sha256": "3dbde79164b1e6b7953a7f9ba4049f4a6494ce3ecbd14b7494c15793b1f63f65",
+        "labelled_rows": [
+          [
+            "body.mixed_origin_quoting",
+            "1.2",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [],
+        "quote_stage_emission_count_over_corpus": 0,
+        "label_row_count_over_corpus": 2
+      }
+    },
+    {
+      "fixture": "no_boundary_found",
+      "fact": "gaps.later",
+      "gap_id": "body.no_boundary_found",
+      "locator": "1",
+      "class": "b",
+      "finding": "over-emission",
+      "reason": "no boundary rule fired and the body is not an unknown-language label block, so the absence answer is recorded (decision 3; it is never inferred that the message has no parts)",
+      "evidence": {
+        "fixture_sha256": "a99a276e889fc1de741fa58495161d67a88fe1eb77caaa36beaba95f8e52115f",
+        "labelled_rows": [
+          [
+            "body.no_boundary_found",
+            "1",
+            1
+          ]
+        ],
+        "quote_stage_emissions": [
+          [
+            "body.no_boundary_found",
+            "1"
+          ]
+        ],
+        "quote_stage_emission_count_over_corpus": 102,
+        "label_row_count_over_corpus": 1
+      }
+    }
+  ]
+}
