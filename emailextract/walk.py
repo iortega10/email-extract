@@ -27,6 +27,40 @@ strictly is a replacement decode taken, and it is recorded as
 
 Part identity is content-addressed (:mod:`emailextract.ids`); the ``1.2.3``
 ``path`` recorded here is an explicitly non-stable locator (D12), never an id.
+
+Turn 1.5c: the structural caps (``walk(container, *, limits=None)``)
+--------------------------------------------------------------------
+
+``walk`` takes the caller's :class:`~emailextract.parse.Limits` as a keyword. ``None``
+means **unbounded** and exists only so the Phase 0 callers, the frozen corpus and every
+test that predates the caps read exactly the bytes they always read; the entry point
+(``parse``, wired in Turn 1.9) always passes a ``Limits``.
+
+A cap hit is recorded with the vocabulary that already exists: the closed
+:data:`emailextract.model.REASON_TABLE` ``skipped`` reason of the cap, on the accounted
+bytes it stopped, plus the walker's own "unread, and here is why" entry. Concretely, and
+this is the whole channel:
+
+* the skipped bytes become **one** :class:`Region` whose ``kind`` *is* the closed cap
+  reason (``size_cap``, ``total_size_cap``, ``depth_cap``, ``part_count_cap``,
+  ``header_bytes_cap``), whose ``path`` is the locator of the part the cap stopped and
+  whose ``span`` is the exact byte range. Regions still tile the message exactly, so the
+  no-silent-drop gate needs no change to know about them.
+* one :class:`UnknownSection` goes on :attr:`WalkResult.unknown_sections` with
+  ``section`` set to that same locator and ``value = unknown(reason_id)``.
+
+No new reason id, no new record, no exception and no ``Truncation``: a cap hit is a
+*built* observation. ``cap_id`` is the reason id (the model's own convention,
+``CapRecord(cap_id="depth_cap", ...)``), the cap value is the caller's ``Limits`` field
+and the declared size is the skipped region's span length -- so a run that hits two caps
+records both, and the triple a later turn puts on ``RunRecord.caps`` is reconstructible
+from the result and the ``Limits`` that produced it. Phase 1 has no document to hang a
+status on, and adding a field to ``WalkResult`` would move the behaviour ledger's
+``contracts`` fingerprint (``tools/behavior_ledger.contract_records()`` hashes this
+module's dataclasses), which this turn may not do.
+
+The boundary rule is one rule for all five caps: **a value equal to the cap is allowed,
+one over is a hit**.
 """
 
 from __future__ import annotations
@@ -35,17 +69,29 @@ import base64
 import binascii
 import quopri
 from dataclasses import dataclass, field
+from typing import Final, Mapping
 
 from .container import Container
 from .ids import NOT_BUILT_IN_PHASE0, RawSpan, content_hash, part_id, sha256_hex
 from .model import ContainerKind, DecodeChain, EncodingSource, TriState, TriValue
+from . import parse
 
 __all__ = [
+    "CAP_LIMIT_FIELDS",
+    "CAP_REASONS",
+    "CAP_REASON_DEPTH",
+    "CAP_REASON_HEADER_BYTES",
+    "CAP_REASON_PART_COUNT",
+    "CAP_REASON_SIZE",
+    "CAP_REASON_TOTAL_SIZE",
+    "DECODE_CHUNK",
     "PartShape",
     "RawHeaderField",
     "Region",
     "UnknownSection",
+    "WORK",
     "WalkResult",
+    "WorkCounter",
     "header_fields_at",
     "leading_prelude",
     "walk",
@@ -80,6 +126,149 @@ _NAME_STOP = 58  # ':' -- RFC 5322 ftext is %d33-57 / %d59-126
 _UTF8_BOM = b"\xef\xbb\xbf"
 _MBOX_PREFIX = b"From "
 _TEXT_LADDER = ("us-ascii", "utf-8", "windows-1252")
+
+# ------------------------------------------------------------- the caps (1.5c)
+
+#: The five closed cap reason ids -- ``model.REASON_TABLE[Status.SKIPPED]``, spelled here
+#: as their own names so a test can prove the two sets are equal rather than restate one.
+CAP_REASON_SIZE: Final[str] = "size_cap"
+CAP_REASON_TOTAL_SIZE: Final[str] = "total_size_cap"
+CAP_REASON_DEPTH: Final[str] = "depth_cap"
+CAP_REASON_PART_COUNT: Final[str] = "part_count_cap"
+CAP_REASON_HEADER_BYTES: Final[str] = "header_bytes_cap"
+
+#: The closed cap reasons, in the model's own order: a cap hit is one of these, never a
+#: new id and never a dotted one.
+CAP_REASONS: Final[tuple[str, ...]] = (
+    CAP_REASON_SIZE,
+    CAP_REASON_TOTAL_SIZE,
+    CAP_REASON_DEPTH,
+    CAP_REASON_PART_COUNT,
+    CAP_REASON_HEADER_BYTES,
+)
+
+#: The ``Limits`` field each cap reason is the hit of: **the cap value a reader records is
+#: always the caller's own**, never a module default (there is none: ``Limits`` has no
+#: defaults). This is also the map from a recorded reason back to its ``CapRecord``
+#: ``cap_value_bytes``.
+CAP_LIMIT_FIELDS: Final[Mapping[str, str]] = {
+    CAP_REASON_SIZE: "max_decoded_part_bytes",
+    CAP_REASON_TOTAL_SIZE: "max_decoded_total_bytes",
+    CAP_REASON_DEPTH: "max_depth",
+    CAP_REASON_PART_COUNT: "max_parts",
+    CAP_REASON_HEADER_BYTES: "max_header_bytes",
+}
+
+#: The chunk of input bytes the bounded decoders read at a time (item 4). Base64 groups
+#: are decoded as they complete and quoted-printable is cut at a boundary no escape or
+#: line ending spans, so the streamed decode of a part *under* the cap equals the
+#: whole-buffer decode byte for byte, and a part *over* it never expands past the cap.
+DECODE_CHUNK: Final[int] = 8192
+
+#: The single hex digits, as one-byte ``bytes``: a quoted-printable ``=XX`` escape's second
+#: and third bytes, used to keep a decode chunk boundary out of an escape.
+_HEX_DIGITS: Final[tuple[bytes, ...]] = tuple(bytes([byte]) for byte in b"0123456789abcdef")
+
+
+class WorkCounter:
+    """A deterministic work counter -- the linearity seam (never a clock).
+
+    :data:`WORK` is the walker's own instance. A test resets it, walks, and reads it back:
+    ``WORK.reset(); walk(...); steps = WORK.count()``. The count is a pure function of the
+    bytes read and the caps applied -- no timing, no environment -- so a linearity claim
+    ("doubling the hostile input less than doubles the steps") is reproducible.
+    """
+
+    __slots__ = ("steps",)
+
+    def __init__(self) -> None:
+        self.steps = 0
+
+    def reset(self) -> None:
+        self.steps = 0
+
+    def add(self, count: int = 1) -> None:
+        self.steps += count
+
+    def count(self) -> int:
+        return self.steps
+
+
+#: The walker's work counter (the linearity seam). Swappable by a test.
+WORK: Final[WorkCounter] = WorkCounter()
+
+
+class _WalkState:
+    """One walk's mutable cap state: the caller's ``limits`` and what the caps stopped.
+
+    Not a record: nothing here is serialized and nothing here is a contract. ``limits`` is
+    ``None`` for the unbounded walk (see the module docstring). ``decoded_total`` is the
+    running sum of decoded body bytes across the message (``max_decoded_total_bytes``), and
+    ``caps`` collects the ``unknown(reason)`` entries that join
+    :attr:`WalkResult.unknown_sections`.
+    """
+
+    __slots__ = ("caps", "decoded_total", "limits")
+
+    def __init__(self, limits: parse.Limits | None) -> None:
+        self.limits = limits
+        self.decoded_total = 0
+        self.caps: list[UnknownSection] = []
+
+
+def _part_count_allows(limits: parse.Limits | None, emitted: int) -> bool:
+    """The ``max_parts`` test: a part count equal to the cap is allowed, one over is a hit."""
+    return limits is None or emitted < limits.max_parts
+
+
+def _header_bytes_allows(limits: parse.Limits | None, length: int) -> bool:
+    """The ``max_header_bytes`` test: a region equal to the cap is allowed, one over is a hit."""
+    return limits is None or length <= limits.max_header_bytes
+
+
+def _depth_allows(limits: parse.Limits | None, depth: int) -> bool:
+    """The ``max_depth`` test: a nesting depth equal to the cap is allowed, one over is a hit."""
+    return limits is None or depth <= limits.max_depth
+
+
+def _decode_budget(state: _WalkState) -> tuple[int | None, str | None]:
+    """The decoded-byte budget for the next leaf and the cap a stop would be a hit of.
+
+    ``(None, None)`` for the unbounded walk. Otherwise the budget is the tighter of the
+    part's own cap and what is left of the message-wide cap, and the *reason* is the cap
+    that is tighter (a tie is the part's own cap, ``size_cap``: it is the part-local
+    reading). A message whose total is exactly reached leaves a budget of 0, so a later
+    part with any decoded bytes at all is skipped with ``total_size_cap``.
+    """
+    limits = state.limits
+    if limits is None:
+        return None, None
+    remaining = limits.max_decoded_total_bytes - state.decoded_total
+    if limits.max_decoded_part_bytes <= remaining:
+        return limits.max_decoded_part_bytes, CAP_REASON_SIZE
+    return remaining, CAP_REASON_TOTAL_SIZE
+
+
+def _cap_hit(
+    regions: list[Region],
+    caps: list[UnknownSection],
+    reason: str,
+    locator: str,
+    span: RawSpan,
+) -> None:
+    """Record one cap hit: the accounted bytes and the walker's unread-and-why entry.
+
+    The region's ``kind`` is the closed cap reason, so the reason rides the bytes it
+    applies to and the regions still tile the message exactly; the ``UnknownSection``
+    carries the same reason as a ``TriValue`` on the walker's own channel. Nothing is
+    dropped and nothing is guessed: the bytes are accounted, and the reason is recorded.
+    """
+    regions.append(Region(reason, locator, RawSpan(span.offset, span.length, locator)))
+    caps.append(
+        UnknownSection(
+            section=locator, value=TriValue(state=TriState.UNKNOWN, reason_id=reason)
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -172,19 +361,29 @@ class WalkResult:
     total_bytes: int
 
 
-def walk(container: Container) -> WalkResult:
-    """Measure ``container``: parts, spans, decode chains, accounted regions."""
+def walk(container: Container, *, limits: parse.Limits | None = None) -> WalkResult:
+    """Measure ``container``: parts, spans, decode chains, accounted regions.
+
+    ``limits`` is the caller's :class:`~emailextract.parse.Limits`, or ``None`` for the
+    **unbounded** walk (tests, fixtures and the Phase 0 callers; the entry point always
+    passes a ``Limits``). Each cap it hits is recorded as the closed ``skipped`` reason of
+    the cap on the accounted bytes it stopped, plus the walker's own unread-and-why entry
+    -- see the module docstring. A cap hit never raises and never produces a part that
+    looks complete.
+    """
     raw = container.raw_bytes()
     container_id = container.container_hash()
     parts: list[PartShape] = []
     regions: list[Region] = []
-    _walk_part(raw, container_id, RawSpan(0, len(raw), "1"), "1", None, parts, regions)
+    state = _WalkState(limits)
+    _walk_part(raw, container_id, RawSpan(0, len(raw), "1"), "1", None, parts, regions, state, 1)
     unknowns = [
         UnknownSection(
             section, TriValue(state=TriState.UNKNOWN, reason_id=NOT_BUILT_IN_PHASE0)
         )
         for section in UNBUILT_SECTIONS
     ]
+    unknowns.extend(state.caps)
     return WalkResult(
         container_kind=container.kind,
         container_hash=container_id,
@@ -223,10 +422,13 @@ def _iter_lines(raw: bytes, start: int, end: int):
     """Yield ``(line_start, content_end, term_end)`` over ``[start, end)``.
 
     ``content`` is the line without its terminator; the terminator is ``CRLF``,
-    ``LF`` or ``CR``, and a last line at EOF may have none.
+    ``LF`` or ``CR``, and a last line at EOF may have none. Each line read is one step
+    on :data:`WORK`, so a test can state what a hostile input costs (a boundary storm is
+    one pass: linear in the lines, never quadratic in the delimiters).
     """
     position = start
     while position < end:
+        WORK.add()
         newline = raw.find(b"\n", position, end)
         carriage = raw.find(b"\r", position, end)
         if newline == -1 and carriage == -1:
@@ -415,10 +617,20 @@ def _walk_part(
     parent_path: str | None,
     parts: list[PartShape],
     regions: list[Region],
+    state: _WalkState,
+    depth: int,
 ) -> None:
+    limits = state.limits
+    WORK.add()
+    if not _part_count_allows(limits, len(parts)):
+        # Beyond the part cap: the part is not emitted, and its bytes are accounted as one
+        # unread region. Checked first, so nothing of the part is read to decide it.
+        _cap_hit(regions, state.caps, CAP_REASON_PART_COUNT, path, span)
+        return
     headers, body, gaps = _split_headers_body(raw, span.offset, span.end)
     fields, field_gaps = header_fields_at(raw, span.offset, headers.end)
     prelude_span = None
+    header_start = span.offset
     if path == "1":
         bom, mbox = leading_prelude(raw, span.offset)
         prelude_len = bom + mbox
@@ -430,6 +642,19 @@ def _walk_part(
     gaps.extend(field_gaps)
     if prelude_span is not None:
         regions.append(Region("prelude", path, prelude_span))
+
+    if not _header_bytes_allows(limits, headers.length):
+        # The header region is over the cap: it is not parsed field by field, the whole
+        # part is skipped and its bytes are one unread region (the prelude, if any, was
+        # already accounted, so the region starts at the headers).
+        _cap_hit(
+            regions,
+            state.caps,
+            CAP_REASON_HEADER_BYTES,
+            path,
+            RawSpan(header_start, span.end - header_start, path),
+        )
+        return
 
     content_type_value = _header_value(fields, raw, "content-type")
     media, params = _split_params(content_type_value) if content_type_value else ("", {})
@@ -475,7 +700,23 @@ def _walk_part(
             for index, chunk in enumerate(chunks):
                 regions.append(Region("delimiter", path, delimiters[index]))
                 child_span = RawSpan(chunk.offset, chunk.length, f"{path}.{index + 1}")
-                _walk_part(raw, container_id, child_span, child_span.locator, path, parts, regions)
+                if not _depth_allows(limits, depth + 1):
+                    # Deeper than the nesting cap: the child is not descended into at all,
+                    # and its bytes (the delimiters around it are accounted separately) are
+                    # one unread region.
+                    _cap_hit(regions, state.caps, CAP_REASON_DEPTH, child_span.locator, child_span)
+                    continue
+                _walk_part(
+                    raw,
+                    container_id,
+                    child_span,
+                    child_span.locator,
+                    path,
+                    parts,
+                    regions,
+                    state,
+                    depth + 1,
+                )
             for tail in delimiters[len(chunks) :]:
                 regions.append(Region("delimiter", path, tail))
             if epilogue.length:
@@ -485,22 +726,34 @@ def _walk_part(
     if not is_multipart:
         regions.append(Region("headers", path, headers))
         payload = raw[body.offset : body.end]
-        used_cte, decoded, cte_fired, cte_gap = _decode_cte(payload, declared_cte)
-        # A charset belongs to TEXT: a part with no Content-Type is text/plain by default (RFC 2045),
-        # and anything else (a pdf, a png, an office zip) is bytes with no charset. Running the text
-        # ladder over a binary part reported a windows-1252 reading and a false
-        # body.decode_destroyed_bytes for content that was never text.
-        if content_type is None or content_type.lower().startswith("text/"):
-            used_charset, encoding_source, charset_fired, charset_gap = _charset_ladder(
-                decoded, declared_charset
-            )
-        else:
+        budget, cap_reason = _decode_budget(state)
+        used_cte, decoded, cte_fired, cte_gap = _decode_cte(payload, declared_cte, limit=budget)
+        if decoded is None:
+            # A cap stopped the decode: the part is SKIPPED, never truncated. Its decoded
+            # size is not computed past the cap, its content sha256 is unknown (the
+            # walker's existing idiom for a body it did not read: ``None``), no decode gap
+            # is recorded and the bytes are accounted as one unread region -- the cap
+            # region *is* the body region, so nothing is counted twice.
+            _cap_hit(regions, state.caps, cap_reason, path, body)
+            used_cte, cte_fired, cte_gap = None, False, None
             used_charset, encoding_source, charset_fired, charset_gap = None, None, False, None
+        else:
+            state.decoded_total += len(decoded)
+            # A charset belongs to TEXT: a part with no Content-Type is text/plain by default
+            # (RFC 2045), and anything else (a pdf, a png, an office zip) is bytes with no
+            # charset. Running the text ladder over a binary part reported a windows-1252
+            # reading and a false body.decode_destroyed_bytes for content that was never text.
+            if content_type is None or content_type.lower().startswith("text/"):
+                used_charset, encoding_source, charset_fired, charset_gap = _charset_ladder(
+                    decoded, declared_charset
+                )
+            else:
+                used_charset, encoding_source, charset_fired, charset_gap = None, None, False, None
+            regions.append(Region("body", path, body))
         if cte_gap:
             gaps.append(cte_gap)
         if charset_gap:
             gaps.append(charset_gap)
-        regions.append(Region("body", path, body))
         parts.append(
             PartShape(
                 path=path,
@@ -519,7 +772,7 @@ def _walk_part(
                     fallback_fired=cte_fired or charset_fired,
                 ),
                 encoding_source=encoding_source,
-                body_sha256=sha256_hex(decoded),
+                body_sha256=None if decoded is None else sha256_hex(decoded),
                 gaps=_dedup(gaps),
             )
         )
@@ -600,27 +853,136 @@ def _segment(
 # ------------------------------------------------------------------ decoding
 
 
-def _decode_cte(payload: bytes, declared: str | None) -> tuple[str | None, bytes, bool, str | None]:
+def _decode_cte(
+    payload: bytes, declared: str | None, *, limit: int | None = None
+) -> tuple[str | None, bytes | None, bool, str | None]:
     """Transfer decoding, recording the chain instead of trusting stdlib.
 
     No declared CTE means the RFC default ``7bit`` (identity). An unknown CTE is
     stdlib's *silent* raw-payload fallback (spike d03) -- here it is recorded:
     ``used_cte = None``, ``fallback_fired``, gap ``body.decode_fallback_used``.
+
+    ``limit`` is the **caller's** decoded-byte budget for this part (item 4), or ``None``
+    for the unbounded walk: ``None`` decodes the whole payload exactly as Phase 0 always
+    has (so the frozen corpus cannot move), while a number decodes it in ``DECODE_CHUNK``
+    -byte chunks and stops the moment the decoded count would exceed the budget -- a
+    base64 or quoted-printable bomb is never expanded past the cap. A stopped decode
+    returns ``used_cte = None`` and ``decoded = None``: the part is *skipped*, so the
+    caller records the cap and never reports a body, not even a prefix, as the part's.
+
+    The default ``None`` is the unbounded reading every caller that predates the caps
+    (``emailextract.text`` re-decodes a part's body for its own text projection) already
+    had, and is what it keeps: a caller that never sees a limit cannot change.
     """
     if declared is None:
-        return "7bit", payload, False, None
-    cte = declared.strip().lower()
+        cte: str | None = "7bit"
+    else:
+        cte = declared.strip().lower()
     if cte in ("7bit", "8bit", "binary"):
+        if limit is not None and len(payload) > limit:
+            return None, None, False, None
         return cte, payload, False, None
     if cte == "quoted-printable":
-        return "quoted-printable", quopri.decodestring(payload), False, None
+        if limit is None:
+            return "quoted-printable", quopri.decodestring(payload), False, None
+        decoded, stopped = _quoted_printable_bounded(payload, limit)
+        if stopped:
+            return None, None, False, None
+        return "quoted-printable", decoded, False, None
     if cte == "base64":
+        if limit is None:
+            try:
+                compact = b"".join(payload.split())
+                return "base64", base64.b64decode(compact, validate=True), False, None
+            except (binascii.Error, ValueError):
+                return None, payload, True, GAP_BODY_DECODE_FALLBACK_USED
         try:
-            compact = b"".join(payload.split())
-            return "base64", base64.b64decode(compact, validate=True), False, None
+            decoded, stopped = _base64_bounded(payload, limit)
         except (binascii.Error, ValueError):
+            # The same rejection the whole-string ``validate=True`` decode makes: the bytes
+            # are not base64, so the raw payload is the recorded fallback reading.
+            if len(payload) > limit:
+                return None, None, False, None
             return None, payload, True, GAP_BODY_DECODE_FALLBACK_USED
+        if stopped:
+            return None, None, False, None
+        return "base64", decoded, False, None
+    if limit is not None and len(payload) > limit:
+        return None, None, False, None
     return None, payload, True, GAP_BODY_DECODE_FALLBACK_USED
+
+
+def _base64_bounded(payload: bytes, limit: int) -> tuple[bytes, bool]:
+    """``(decoded, stopped)``: the base64 payload decoded in ``DECODE_CHUNK``-byte chunks.
+
+    Whitespace is dropped and complete 4-byte groups are decoded as they arrive (so the
+    groups stay aligned across a chunk boundary), and the loop stops as soon as the decoded
+    count exceeds ``limit`` -- so a base64 bomb is never expanded past the cap, and
+    ``stopped`` says the part is skipped rather than decoded. It raises ``binascii.Error``
+    on exactly the input ``base64.b64decode(compact, validate=True)`` rejects over the
+    whole string: a compact length that is not a multiple of 4, or padding that is not on
+    the last group.
+    """
+    out = bytearray()
+    carry = b""
+    held = b""
+    for start in range(0, len(payload), DECODE_CHUNK):
+        WORK.add()
+        chunk = carry + b"".join(payload[start : start + DECODE_CHUNK].split())
+        whole = len(chunk) - len(chunk) % 4
+        for position in range(0, whole, 4):
+            group = chunk[position : position + 4]
+            if held:
+                if b"=" in held:
+                    raise binascii.Error("padding is not on the last group")
+                out.extend(base64.b64decode(held, validate=True))
+                if len(out) > limit:
+                    return bytes(out), True
+            held = group
+        carry = chunk[whole:]
+    if held:
+        out.extend(base64.b64decode(held, validate=True))
+    if carry:
+        out.extend(base64.b64decode(carry, validate=True))
+    return bytes(out), len(out) > limit
+
+
+def _quoted_printable_bounded(payload: bytes, limit: int) -> tuple[bytes, bool]:
+    """``(decoded, stopped)``: the QP payload decoded in ``DECODE_CHUNK``-byte chunks.
+
+    Quoted-printable decoding is local -- an ``=XX`` escape or a line ending is at most
+    three bytes -- so the payload is cut only at a boundary no escape and no CRLF spans.
+    The chunks' decodes therefore concatenate to the whole payload's decode, and the loop
+    stops as soon as the decoded count exceeds ``limit``.
+    """
+    out = bytearray()
+    end = len(payload)
+    start = 0
+    while start < end:
+        WORK.add()
+        cut = _qp_chunk_end(payload, start, min(start + DECODE_CHUNK, end))
+        out.extend(quopri.decodestring(payload[start:cut]))
+        if len(out) > limit:
+            return bytes(out), True
+        start = cut
+    return bytes(out), False
+
+
+def _qp_chunk_end(payload: bytes, start: int, cut: int) -> int:
+    """The first boundary at or after ``cut`` that no escape and no line ending straddles.
+
+    A boundary is safe when the byte before it is neither ``=`` nor ``\\r`` and the two
+    bytes before it are not ``=<hex>``; walking forward at most two bytes lands on one.
+    """
+    end = len(payload)
+    while cut < end:
+        if payload[cut - 1 : cut] in (b"=", b"\r") or (
+            payload[cut - 2 : cut - 1] == b"=" and payload[cut - 1 : cut].lower() in _HEX_DIGITS
+        ):
+            cut += 1
+            continue
+        break
+    return cut
 
 
 def _charset_ladder(

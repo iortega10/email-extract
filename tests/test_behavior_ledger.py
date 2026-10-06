@@ -150,7 +150,9 @@ def test_a_header_scanner_rule_change_is_caught(monkeypatch) -> None:
 
 def test_a_decode_rule_change_is_caught(monkeypatch) -> None:
     monkeypatch.setattr(
-        walk_module, "_decode_cte", lambda payload, declared: ("7bit", payload, False, None)
+        walk_module,
+        "_decode_cte",
+        lambda payload, declared, *, limit=None: ("7bit", payload, False, None),
     )
     problems = behavior_ledger.check()
     assert any(p.startswith("decode_chain:") and "DECODE_CHAIN_VERSION" in p for p in problems)
@@ -273,7 +275,9 @@ def test_a_version_bump_without_a_recorded_line_names_the_constant(monkeypatch) 
 
 def test_the_cli_exits_one_when_a_rule_changes_without_a_bump(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
-        walk_module, "_decode_cte", lambda payload, declared: ("7bit", payload, False, None)
+        walk_module,
+        "_decode_cte",
+        lambda payload, declared, *, limit=None: ("7bit", payload, False, None),
     )
     assert update_behavior_ledger.main(["--check"]) == 1
     assert "DECODE_CHAIN_VERSION" in capsys.readouterr().err

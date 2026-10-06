@@ -484,6 +484,71 @@ Allow-list (`turn=quote-catalogue`): `fixtures/generated/`, `tests/ledger/label_
 `docs/design/phase1-turn-declarations.md`. **Owner review is a hard gate**: the increment does not
 proceed to 1.6 until the owner has reviewed the rows (decision 13).
 
+## Turn 1.5c -- limits enforcement (the new declared turn)
+
+```declaration turn=1.5c
+module: emailextract/walk.py
+module: emailextract/parse.py
+module: emailextract/evals/l1.py
+module: emailextract/evals/falsify.py
+module: tests/test_limits.py
+module: tests/test_parse_entry.py
+module: tests/test_behavior_ledger.py
+module: tests/test_turn_declarations.py
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-build-spec.md
+module: tests/ledger/label_ledger.json
+test: tests/test_limits.py::test_the_cap_reasons_are_exactly_the_models_closed_skipped_reasons
+test: tests/test_limits.py::test_a_cap_hit_is_the_existing_status_reason_and_a_cap_record
+test: tests/test_limits.py::test_the_depth_cap_boundary_is_at_one_below_and_one_above
+test: tests/test_limits.py::test_the_part_count_cap_boundary_is_at_one_below_and_one_above
+test: tests/test_limits.py::test_the_header_bytes_cap_boundary_is_at_one_below_and_one_above
+test: tests/test_limits.py::test_the_decoded_part_cap_boundary_is_at_one_below_and_one_above
+test: tests/test_limits.py::test_the_decoded_total_cap_boundary_is_at_one_below_and_one_above
+test: tests/test_limits.py::test_a_part_over_the_decoded_cap_is_skipped_and_its_sha256_is_unknown
+test: tests/test_limits.py::test_every_later_part_is_skipped_once_the_total_cap_is_reached
+test: tests/test_limits.py::test_a_quoted_printable_escape_bomb_is_bounded_and_skipped
+test: tests/test_limits.py::test_cap_deep_nesting_records_the_depth_cap_and_nothing_under_untrusted
+test: tests/test_limits.py::test_cap_large_part_count_records_the_part_count_cap_and_nothing_under_untrusted
+test: tests/test_limits.py::test_cap_enormous_header_block_records_the_header_bytes_cap_and_nothing_under_untrusted
+test: tests/test_limits.py::test_cap_very_long_base64_run_records_the_size_cap_and_nothing_under_untrusted
+test: tests/test_limits.py::test_cap_encoded_word_bomb_records_the_header_bytes_cap_and_nothing_under_untrusted
+test: tests/test_limits.py::test_every_capped_result_accounts_for_every_byte
+test: tests/test_limits.py::test_two_caps_in_one_run_are_both_recorded
+test: tests/test_limits.py::test_a_capped_walk_is_deterministic_across_runs_and_interpreters
+test: tests/test_limits.py::test_no_mutated_fixture_and_random_limits_raises_and_the_bytes_tile
+test: tests/test_limits.py::test_the_unbounded_walk_records_no_cap_and_equals_the_untrusted_walk
+test: tests/test_limits.py::test_a_boundary_storm_is_linear_under_a_cap
+test: tests/test_limits.py::test_a_deep_nesting_bomb_is_bounded_by_the_depth_cap
+test: tests/test_limits.py::test_the_depth_cap_off_by_one_mutant_is_caught
+test: tests/test_limits.py::test_the_part_count_cap_checked_after_building_the_parts_mutant_is_caught
+test: tests/test_limits.py::test_the_header_cap_checked_after_the_fields_mutant_is_caught
+test: tests/test_limits.py::test_a_truncated_body_mutant_is_refused_by_the_gate
+test: tests/test_limits.py::test_a_total_cap_that_does_not_accumulate_mutant_is_caught
+test: tests/test_limits.py::test_a_cap_hit_that_raises_mutant_is_caught
+test: tests/test_limits.py::test_a_dropped_cap_region_mutant_fails_no_silent_drop
+test: tests/test_limits.py::test_a_wrong_reason_id_mutant_is_caught
+test: tests/test_limits.py::test_a_cap_value_not_the_callers_mutant_is_caught
+test: tests/test_limits.py::test_every_cap_reason_has_a_mutation_case
+stop: after every cap is enforced and recorded and the ledgers are green, before Turn 1.8
+```
+
+**Turn 1.5c is the "limits enforcement" turn** (`email-remaining-plan-debate.md` section 1 row 1 and
+section 4's limits audit): `Limits` threaded into the walker, each of the seven caps enforced as the
+structure is discovered, and each hit recorded as the closed `skipped(<cap>_cap)` status plus a
+`CapRecord` triple -- no new reason id, no new record, no exception. The three forced edits in existing
+tests (`tests/test_parse_entry.py` and `tests/test_behavior_ledger.py`, whose `_decode_cte` stand-in
+gained the `limit` keyword) and `emailextract/evals/falsify.py` (the same stand-in) are the signature
+change's, and `tests/test_turn_declarations.py` gains `"1.5c"` in `BUILT_TURNS`; each is reported by the
+turn, none is loosened.
+
+Allow-list (`turn=1.5c`): `emailextract/walk.py`, `emailextract/parse.py`, `emailextract/evals/l1.py`
+(one attribute read), `emailextract/evals/falsify.py` (one mutant stand-in), `tests/test_limits.py`
+(new), the narrow signature-forced edits reported above, `tests/ledger/label_ledger.json` (only the two
+oracle files' hashes), `docs/design/phase1-turn-declarations.md`, `docs/design/phase1-empirical.md`,
+`docs/design/phase1-build-spec.md`. Not `fixtures/**`, not `*.expected.json`, not `model.py`, not
+`emailextract/evals/gates.py`.
+
 ## Turn 1.6 -- quote boundaries, text family
 
 ```declaration turn=1.6

@@ -22,7 +22,7 @@ The recommended untrusted default cap set (decision 10,
 | `max_header_bytes` | 256 KiB | 262 144 |
 | `max_decoded_part_bytes` | 32 MiB | 33 554 432 |
 | `max_decoded_total_bytes` | 128 MiB | 134 217 728 |
-| `max_work_units_per_input_byte` | 64 | — |
+| `max_field_work_units_per_byte` | 64 | — |
 
 **Reasoned, not measured.** No corpus measurement produced these numbers; the design
 owner approved them as the recommended defaults. The reasoning: a real message the size of
@@ -30,14 +30,14 @@ the largest fixtures is orders of magnitude below 64 MiB, so the input cap is ge
 enough never to bite a genuine message while still bounding a hostile one; 16-deep
 multipart nesting and 1000 parts exceed any producer's legitimate tree (real mail nests a
 handful deep) by a wide margin; the per-part and total decoded caps bound the base64/QP
-expansion of a small input to a few times its size; and `max_work_units_per_input_byte`
-is a per-input-byte **work** budget (never a time) for the encoded-word and base64
+expansion of a small input to a few times its size; and `max_field_work_units_per_byte`
+is a per-**field-value** **work** budget (never a time) for the encoded-word and base64
 expansions that a later turn asserts against.
 
-**Enforcement is staged.** Turn 1.0d enforces **only** `max_input_bytes` (`parse` checks
-it before any sniff). The walker and later stages enforce the rest in the turns that build
-them; until then the other fields are carried but not read. The cap fixtures' sidecars
-never assert a status: a `Limits` is a parameter of the test, not of the label.
+**Enforcement is staged.** Turn 1.0d enforced **only** `max_input_bytes` (`parse` checks
+it before any sniff); **Turn 1.5c enforces the other six** in the walker, as the structure
+is discovered. The cap fixtures' sidecars never assert a status: a `Limits` is a parameter
+of the test, not of the label.
 
 ## The HTML parser decision (Turn 1.0d)
 
@@ -300,3 +300,50 @@ import only the stdlib `html.parser`/`html`, which is the interpreter-sensitive 
   disagreement (it never silently runs one interpreter twice and calls it "both").
 * **The interpreter and patch level** (`CPython 3.14.3` / `CPython 3.11.15`) are a recorded-only
   run input, never keyed on; the two runs build byte-identical projections over the whole corpus.
+
+## Turn 1.5c -- limits enforcement (all seven caps live)
+
+**Measured, not reasoned.** Every number here is produced by a command run in Turn 1.5c; the
+command and its output are the record.
+
+* **Every cap is now enforced and recorded.** Commands: `python -m pytest tests/test_limits.py -q`
+  (**32 passed**) and `python -m pytest -q` (**1495 passed, 1 skipped**, 38.8 s on CPython 3.14.3
+  and the same 1495/1 in 44.3 s under the CPython 3.11.15 venv). The 32 tests cover each cap's
+  boundary at / one below / one above, the five cap fixtures, the two caps in one run, the seeded
+  mutated-fixture × random-Limits loop, the tiling of every capped result, and the nine
+  mutation cases with the anti-vacuity triple.
+* **The frozen reading does not move.** `python tools/update_behavior_ledger.py --check` exits
+  **0** before and after, with **no new ledger lines**: the `walk` and `decode_chain` lines and
+  the `contracts` fingerprint (`786b311fe418b90f84f7634c4edec111d92796395929295e46225feea8c91f59`,
+  the recorded `OUTPUT_SCHEMA_VERSION` 4) are byte-identical. `python -m emailextract.evals`:
+  `L1 matched=1147 mismatched=0 unmeasurable=0 unmodelled=0; not_yet: phase 1=192, phase 3=26`
+  before and after; `no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass`.
+  The turn's own proof: for **all 119** fixtures, `walk(container)` and
+  `walk(container, limits=Limits.untrusted())` compare **equal** -- which also proves the
+  streamed decoder equals the whole-buffer one over the whole corpus.
+* **The five cap fixtures' measured values** (from the walker, uncapped): `cap_deep_nesting`
+  reaches depth **6** in **6** parts; `cap_large_part_count` has **10** parts;
+  `cap_enormous_header_block`'s header region is **5 982** bytes; `cap_very_long_base64_run`
+  decodes its **5 466**-byte body to **4 096** bytes; `cap_encoded_word_bomb`'s header region
+  is **303** bytes. Each records its cap at one below the measured value and **nothing** under
+  `Limits.untrusted()`.
+* **Work is linear under a cap, measured with the step counter (never a clock).** A boundary
+  storm of 50 000 delimiter+part line pairs costs **250 082** steps and 100 000 pairs
+  **500 082** (exactly 2.00×, ~1.1 s); a 1 000-level nested-multipart bomb costs **31 936**
+  steps and a 20 000-level one **639 936** (20.0× the input, 20.0× the steps) -- because the
+  depth cap of 8 stops the descent, both emit the same **8** parts and one `depth_cap`. The
+  per-level cost is the level's own body scan, so the bound is `4 × (cap + 1) × lines`, not
+  the input's depth squared.
+* **The capped walk is interpreter-stable.** The same capped walks (the five cap fixtures under
+  the cap each was built for, plus inline boundary messages) hash to
+  `07ff3869031ff40e9fd5f36592b268dd8ec91bd97ad290b226f72b4ab7a65f05` under CPython 3.14.3 and
+  under CPython 3.11.15, and the test fails loudly on a disagreement.
+* **The contract shapes did not move, and could not.** `behavior_ledger.contract_records()`
+  hashes the dataclasses of `model`, `timeevent`, `ids`, `walk`, `store`, `siblings` and
+  `seam` -- so a new field on `WalkResult` moves the `contracts` fingerprint, and so does
+  **importing a contract dataclass into a fingerprinted module** (Turn 1.5c's `walk.py` reaches
+  `Limits` as `parse.Limits` for exactly that reason). The cap hit therefore rides the existing
+  `Region`/`UnknownSection` shapes and `evals/gates.py` is unchanged.
+* **Decode chunk size: `walk.DECODE_CHUNK` = 8 192 input bytes**, and the recorded
+  `declared_size_bytes` of a decoded cap is the skipped region's span length -- the part's
+  **encoded** body length, an exact, already-measured bound on its decoded size.

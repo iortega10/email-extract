@@ -204,8 +204,8 @@ def _labels_undetermined(measured: Measured) -> Any:
 # ------------------------------------------------ Turn 1.1: the header-stage facts
 
 #: The work budget the oracle hands the RFC 2047 decoder: the caller's own limit
-#: (``Limits.max_work_units_per_input_byte``), never a module default the decoder chose.
-WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_work_units_per_input_byte
+#: (``Limits.max_field_work_units_per_byte``), never a module default the decoder chose.
+WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_field_work_units_per_byte
 
 #: The **live** gap ids of Turns 1.1-1.5b: the only ``gaps.later`` rows these turns'
 #: components can emit. A label row naming any other id waits for its own turn (``not_yet``).

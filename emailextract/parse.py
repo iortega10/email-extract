@@ -127,15 +127,17 @@ class Limits:
     :meth:`untrusted` returns the **recommended untrusted defaults the design owner
     approved** (decision 10's ``Limits.untrusted()``): 64 MiB input, 16-deep multipart
     nesting, 1000 parts, a 256 KiB header region, 32 MiB decoded per part, 128 MiB
-    decoded in total, and a work budget of 64 work units per input byte. These numbers
-    are **reasoned, not measured** (``docs/design/phase1-empirical.md`` records them as
-    such).
+    decoded in total, and a work budget of 64 work units per byte of one **header field
+    value** (Turn 1.5c renamed it from ``max_work_units_per_input_byte``: the budget is
+    per field value, not message-wide, and unit kinds are not commensurable, so there is
+    deliberately no message-scope work accumulator). These numbers are **reasoned, not
+    measured** (``docs/design/phase1-empirical.md`` records them as such).
 
-    **Turn 1.0d enforces only** :attr:`max_input_bytes` (``parse`` checks it before any
-    sniff). The walker and later stages enforce the rest in the turns that build them,
-    so the other fields are recorded here and carried, but not yet read. A cap fixture's
-    sidecar never asserts a status: a ``Limits`` is a parameter of the test, not of the
-    label.
+    **Turn 1.5c enforces** every one of them: ``parse`` checks :attr:`max_input_bytes`
+    before any sniff (Turn 1.0d) and ``walk`` checks the other six as the structure is
+    discovered (before Turn 1.5c only the HTML tree's depth/element caps and the per-field
+    RFC 2047 budget were enforced). A cap fixture's sidecar never asserts a status: a
+    ``Limits`` is a parameter of the test, not of the label.
     """
 
     max_input_bytes: int
@@ -144,7 +146,7 @@ class Limits:
     max_header_bytes: int
     max_decoded_part_bytes: int
     max_decoded_total_bytes: int
-    max_work_units_per_input_byte: int
+    max_field_work_units_per_byte: int
 
     def __post_init__(self) -> None:
         for field_ in fields(self):
@@ -160,7 +162,7 @@ class Limits:
             max_header_bytes=256 * 1024,
             max_decoded_part_bytes=32 * 1024 * 1024,
             max_decoded_total_bytes=128 * 1024 * 1024,
-            max_work_units_per_input_byte=64,
+            max_field_work_units_per_byte=64,
         )
 
 

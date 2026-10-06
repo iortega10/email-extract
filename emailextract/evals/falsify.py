@@ -144,8 +144,8 @@ def _drop_decode_fallback(module: Any) -> Callable[[], None]:
     """Let a broken transfer encoding fall back to the raw payload, recording no gap (d03)."""
     original = module._decode_cte
 
-    def naive(payload: bytes, declared: str | None):
-        used_cte, decoded, fired, _gap = original(payload, declared)
+    def naive(payload: bytes, declared: str | None, *, limit: int | None = None):
+        used_cte, decoded, fired, _gap = original(payload, declared, limit=limit)
         return used_cte, decoded, fired, None
 
     return _patch(module, "_decode_cte", naive)

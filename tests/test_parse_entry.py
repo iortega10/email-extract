@@ -80,7 +80,7 @@ def test_limits_untrusted_constructor_supplies_the_caps() -> None:
     assert limits.max_header_bytes == 256 * 1024
     assert limits.max_decoded_part_bytes == 32 * 1024 * 1024
     assert limits.max_decoded_total_bytes == 128 * 1024 * 1024
-    assert limits.max_work_units_per_input_byte == 64
+    assert limits.max_field_work_units_per_byte == 64
     # No field carries a default: every one is a caller parameter.
     for field in __import__("dataclasses").fields(Limits):
         assert field.default is __import__("dataclasses").MISSING

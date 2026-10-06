@@ -268,6 +268,44 @@ anywhere in the package.
     an ingest-level fact about two files, not a thread edge.
 20. **Test ceilings per turn** (<= 40; <= 25 for quote turns) are guidelines (decision: operating rule 10).
 
+### Turn 1.5c -- limits enforcement (decided by the "limits audit", `email-remaining-plan-debate.md`)
+
+21. **A cap hit is the existing closed pair, recorded on the walk result.** `walk(container, *, limits=None)`:
+    `None` is the **unbounded** walk and exists only so the Phase 0 callers, the frozen corpus and every
+    pre-cap test read the bytes they always read (the entry point always passes a `Limits`). A hit is recorded,
+    never raised and never truncated: the skipped bytes become **one `Region` whose `kind` is the closed cap
+    reason** (`size_cap`, `total_size_cap`, `depth_cap`, `part_count_cap`, `header_bytes_cap`) with the stopped
+    locator as its `path`, and one `UnknownSection(section=<that locator>, value=unknown(<that reason>))` joins
+    the walker's own `unknown_sections` channel. `cap_id` is the reason id (the model's convention,
+    `CapRecord(cap_id="depth_cap", ...)`), `cap_value_bytes` is the caller's `Limits` field and
+    `declared_size_bytes` is the skipped region's span length, so Turn 1.9 builds `RunRecord.caps` from the
+    result. **No new reason id, no new record, no contract-shape change:** a new field on `WalkResult` would
+    move the behaviour ledger's `contracts` fingerprint (`behavior_ledger.contract_records()` hashes this
+    module's dataclasses -- and, as Turn 1.5c found, importing a contract dataclass *into* a fingerprinted
+    module moves it too), and this turn may not bump `OUTPUT_SCHEMA_VERSION`. `evals/gates.py` is unchanged:
+    the regions still tile, so no-silent-drop already sees the skipped bytes.
+22. **One boundary rule for all five caps: a value equal to the cap is allowed, one over is a hit.** A part is
+    skipped (not emitted, `depth_cap`/`part_count_cap`/`header_bytes_cap`) or its body is skipped (`size_cap`,
+    `total_size_cap`) and, for the decoded caps, its `body_sha256` is `None` -- the walker's existing idiom for
+    a body it did not read, so a skipped part can never look complete or truncated. The checks run in one
+    stated order: the parent's depth test, then the part-count test, then the header-bytes test (all before the
+    part is read further), then the decoded budget.
+23. **The decoded caps are enforced in the walker, streamed.** It is the one place a body is CTE-decoded, so
+    `max_decoded_part_bytes` and `max_decoded_total_bytes` are checked there, in chunks of `walk.DECODE_CHUNK`
+    (8192) input bytes, stopping the moment the decoded count would exceed the budget -- a base64 or
+    quoted-printable bomb is never expanded past the cap. The budget is the tighter of the part's cap and what
+    is left of the message-wide total, and the reason is the tighter one (a tie is the part's own `size_cap`);
+    once the total is exactly reached, the budget is 0 and every later part with any decoded bytes is skipped
+    with `total_size_cap`. `limit=None` keeps the whole-buffer decode byte for byte, so the frozen corpus and
+    the two ledger lines cannot move; a test proves the streamed decode equals it over all 119 fixtures.
+24. **`max_work_units_per_input_byte` is renamed `max_field_work_units_per_byte`.** A per-**field-value** budget,
+    not a message-wide one (the plan debate drops the message-scope accumulator: unit kinds are not
+    commensurable and a counter threaded through five layers is cross-cutting state). `Limits` is a call
+    parameter, never serialised, so this is a clean rename with **no schema bump and no behaviour change**; the
+    callers' `max_work_units` keyword keeps its name. `EMAIL_PARSER_VERSION` does **not** move (no corpus output
+    moves under `limits=None`) and no `LIMITS_VERSION` is introduced: nothing emits it and no ledger line keys
+    it.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),
