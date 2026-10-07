@@ -1,0 +1,96 @@
+{
+  "fixture": "headerless_alternative_text_part.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/alternative whose first child declares NO Content-Type (it defaults to text/plain) beside an explicit 'text/html; charset=utf-8' child",
+    "generator": "tools/make_fixtures.py _fixture_headerless_alternative_text_part (boundary b0-headerless-alt-20250304, Message-ID <headerless-alternative-6004@example.test>, pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "rfc_basis": "RFC 2045 section 5.2: the first child has no Content-Type header, so it is text/plain; charset=us-ascii by default. RFC 2046 section 5.1.2: a multipart/alternative's parts are alternative versions, so the display rule (design D3) prefers the text/plain child over the text/html one. The header-less child therefore is a text/plain view, gets the quote analysis, and is selected.",
+    "labels_are_typed": "every value was typed by a model from the RFC rules and read out of the fixture bytes (a byte/offset listing); never produced by running the library. labels_provenance is spec because a model wrote them, not a person.",
+    "phase_0_facts": "container.*, part.tree, part.gaps, decode.chain and body.content_sha256 (the multipart has no body_sha256, as for every container).",
+    "phase_1_facts": "document.axes, body.text, body.quote_boundaries, body.view_levels, body.selection and body.alternative_group.",
+    "not_yet_labelled": "headers.fields, part.regions and body.preamble_epilogue are not typed here; body.html_spans (the html projection) is not this turn's subject; phases 2 and 3 are not exercised."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "71932119a62c2b8c445ef2ee0bb23b3c1b746a5b67b39a8d91c84627158ef282"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 517
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/alternative", [0, 517], [0, 289], [289, 228]],
+        ["1.1", "1", null, [319, 70], [319, 2], [321, 68]],
+        ["1.2", "1", "text/html", [421, 62], [421, 42], [463, 20]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, null, "7bit", "us-ascii", false, "ascii"],
+        ["1.2", null, "utf-8", "7bit", "utf-8", false, "declared_charset"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "f6ed9e7d3bdb19b2343baef217fe0cc28f5cc9b4a771f1fb8f3979dd3ff2d16b"],
+        ["1.2", "2432a1180ec1fcf8c39e029b054480a8b533c3d2af7c4a2e309f5dcc25341d13"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        ["1.1", "Thanks.\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada wrote:\r\n> earlier line\r\n", "exact", null],
+        ["1.2", "<div>Thanks.</div>\r\n", "exact", null]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        ["1.1", "plain", "on_wrote_en", "quote", 1, [0, 1], 11, 57]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        ["1.1", "plain", 1, "on_wrote_en"]
+      ]
+    },
+    "body.alternative_group": {
+      "phase": 1,
+      "value": [
+        ["1.1", "1"],
+        ["1.2", "1"]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1.1", "selected"],
+        ["1.2", "alternative_not_selected"]
+      ]
+    }
+  }
+}

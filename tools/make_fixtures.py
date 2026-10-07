@@ -2161,6 +2161,113 @@ def _fixture_on_wrote_hard_wrapped() -> bytes:
     )
 
 
+# =========================================== Turn 1.12: the header-less part (RFC 2045 5.2)
+
+#: The header set every Turn 1.12 message opens with: the five fields a plain message carries
+#: and **no** ``MIME-Version`` and **no** ``Content-Type``. A part with no ``Content-Type`` is
+#: ``text/plain; charset=us-ascii`` by default (RFC 2045 5.2), which is the whole point of the
+#: family, so the generator must not add one by accident.
+
+
+def _headerless_headers(subject: str, message_id: str) -> list[tuple[str, str]]:
+    return [
+        ("From", "Ada Sender <ada@example.test>"),
+        ("To", "Ben Receiver <ben@example.test>"),
+        ("Subject", subject),
+        ("Date", PINNED_DATE_0805),
+        ("Message-ID", f"<{message_id}@example.test>"),
+    ]
+
+
+#: The reproduction body (the reviewer's bytes): new text, a blank line, an English ``On ...
+#: wrote:`` attribution and a ``>`` block it carries.
+_ON_WROTE_BODY = (
+    b"Thanks.\r\n"
+    b"\r\n"
+    b"On Mon, 3 Mar 2025 at 09:00, Ada wrote:\r\n"
+    b"> earlier line\r\n"
+    b"> another\r\n"
+)
+
+
+def _fixture_headerless_plain_on_wrote() -> bytes:
+    return render_message(
+        Leaf(_headerless_headers("headerless plain on wrote", "headerless-on-wrote-6001"), _ON_WROTE_BODY)
+    )
+
+
+def _fixture_headerless_plain_gt_only() -> bytes:
+    return render_message(
+        Leaf(
+            _headerless_headers("headerless plain gt only", "headerless-gt-only-6002"),
+            b"Thanks for the update.\r\n"
+            b"\r\n"
+            b"> earlier line\r\n"
+            b"> another line\r\n",
+        )
+    )
+
+
+def _fixture_headerless_plain_mime_version_only() -> bytes:
+    headers = _headerless_headers("headerless plain mime version only", "headerless-mime-only-6003")
+    headers.insert(5, ("MIME-Version", "1.0"))
+    return render_message(Leaf(headers, _ON_WROTE_BODY))
+
+
+def _fixture_headerless_alternative_text_part() -> bytes:
+    return render_message(
+        Multi(
+            _headerless_headers("headerless alternative text part", "headerless-alternative-6004")
+            + [("Content-Type", 'multipart/alternative; boundary="b0-headerless-alt-20250304"')],
+            "b0-headerless-alt-20250304",
+            [
+                Leaf([], b"Thanks.\r\n\r\nOn Tue, 4 Mar 2025 at 09:00, Ada wrote:\r\n> earlier line\r\n"),
+                Leaf([("Content-Type", "text/html; charset=utf-8")], b"<div>Thanks.</div>\r\n"),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_headerless_mixed_text_and_attachment() -> bytes:
+    return render_message(
+        Multi(
+            _headerless_headers("headerless mixed text and attachment", "headerless-mixed-6005")
+            + [("Content-Type", 'multipart/mixed; boundary="b0-headerless-mixed-20250304"')],
+            "b0-headerless-mixed-20250304",
+            [
+                Leaf([], b"Just a plain note.\r\n"),
+                Leaf(
+                    [("Content-Disposition", 'attachment; filename="notes.txt"')],
+                    b"attached text\r\n",
+                ),
+            ],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_headerless_digest_child() -> bytes:
+    return render_message(
+        Multi(
+            _headerless_headers("headerless digest child", "headerless-digest-6006")
+            + [("Content-Type", 'multipart/digest; boundary="b0-headerless-digest-20250304"')],
+            "b0-headerless-digest-20250304",
+            [Leaf([], b"Plain digest body.\r\n")],
+            epilogue=b"",
+        )
+    )
+
+
+def _fixture_headerless_plain_8bit() -> bytes:
+    return render_message(
+        Leaf(
+            _headerless_headers("headerless plain 8bit", "headerless-8bit-6007"),
+            b"Caf\xe9 \xff body line.\r\n",
+        )
+    )
+
+
 FIXTURES = {
     "plain_simple": _fixture_plain_simple,
     "alternative_text_html": _fixture_alternative_text_html,
@@ -2246,6 +2353,14 @@ FIXTURES = {
     "bottom_posted_reply": _fixture_bottom_posted_reply,
     "vendor_prefix_class_no_table_row": _fixture_vendor_prefix_class_no_table_row,
     "on_wrote_hard_wrapped": _fixture_on_wrote_hard_wrapped,
+    # Turn 1.12: the header-less part (RFC 2045 5.2 default text/plain; RFC 2046 5.1.5 digest)
+    "headerless_plain_on_wrote": _fixture_headerless_plain_on_wrote,
+    "headerless_plain_gt_only": _fixture_headerless_plain_gt_only,
+    "headerless_plain_mime_version_only": _fixture_headerless_plain_mime_version_only,
+    "headerless_alternative_text_part": _fixture_headerless_alternative_text_part,
+    "headerless_mixed_text_and_attachment": _fixture_headerless_mixed_text_and_attachment,
+    "headerless_digest_child": _fixture_headerless_digest_child,
+    "headerless_plain_8bit": _fixture_headerless_plain_8bit,
 }
 
 FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)

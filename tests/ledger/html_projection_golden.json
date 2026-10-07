@@ -5,7 +5,7 @@
     3,
     14
   ],
-  "corpus_hash": "356608376ccd4821441f1f272a59735d9bffa448214138316abbae430f2bf00e",
+  "corpus_hash": "62d20991a3405a1a63d28f69514e48786e8bb97d359a5348f12f86ab76a26341",
   "rows": [
     [
       "fixtures/generated/alternative_text_html.eml",
@@ -56,6 +56,11 @@
       "fixtures/generated/gmail_short_reply_gt_and_on_wrote.eml",
       "1.2",
       "fb6174f2eb1d53e23ae651375e8a244ac184b2ee0ec27334b7c82162f6a4b8a1"
+    ],
+    [
+      "fixtures/generated/headerless_alternative_text_part.eml",
+      "1.2",
+      "b83574ad684365123665abfa3a436b5236ddfdcb46a4e7482c35d643e56cc2b2"
     ],
     [
       "fixtures/generated/html_data_uri_and_tracking_pixel.eml",

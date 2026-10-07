@@ -89,6 +89,7 @@ def catalogue_rows(text: str) -> dict[str, str]:
         ("## Family B:", "B", None),
         ("## Family C:", "C", None),
         ("## The quote catalogue", "quote", "**NOT v1"),
+        ("## Turn 1.12:", "D", None),
     )
     for header, family, stop in sections:
         start = text.index(header)
@@ -198,8 +199,13 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert len(family_quote) == 29, sorted(family_quote)
     assert not (family_quote & pending), sorted(family_quote & pending)
     assert family_quote <= committed and family_quote <= sidecars
+    # Turn 1.12's header-less fixtures: their own section, all committed with sidecars.
+    family_d = {name for name, family in catalogued.items() if family == "D"}
+    assert len(family_d) == 7, sorted(family_d)
+    assert not (family_d & pending), sorted(family_d & pending)
+    assert family_d <= committed and family_d <= sidecars
     # The same check must fail when a committed fixture is missing, by name -- for every family.
-    for family in (family_a, family_b, family_c, family_quote):
+    for family in (family_a, family_b, family_c, family_quote, family_d):
         missing = sorted(family)[0]
         problems = census_problems(catalogued, pending, committed - {missing}, sidecars, design_names)
         assert any(missing in problem for problem in problems), (missing, problems)

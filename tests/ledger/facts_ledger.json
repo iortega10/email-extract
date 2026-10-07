@@ -1,5 +1,5 @@
 {
-  "_comment": "Turn 1.10a: the three coverage artefacts of build spec decision 4, plus the pinned phase-1 id list (Turn 1.0b). 'declared' is each phase-1 fact's floor as docs/design/phase1-facts.md names it; 'floors' is the EFFECTIVE floor (the ratchet value tests/test_facts_coverage.py enforces, = the achieved labelled count at the last rebase); 'achieved' is the committed corpus's labelled (sidecars carrying the fact) and compared (sidecars the oracle measured) counts at this commit; 'zero_labelled' is the closed list of phase-1 facts no sidecar labels; 'declared_unmet' records every declared floor the corpus does not meet (a FINDING, never lowered silently); 'rebase' is the recorded, owner-signed change from the declared floors to the effective ones.",
+  "_comment": "Turn 1.10a: the three coverage artefacts of build spec decision 4, plus the pinned phase-1 id list (Turn 1.0b). 'declared' is each phase-1 fact's floor as docs/design/phase1-facts.md names it; 'floors' is the EFFECTIVE floor (the ratchet value tests/test_facts_coverage.py enforces, = the achieved labelled count at the last rebase); 'achieved' is the committed corpus's labelled (sidecars carrying the fact) and compared (sidecars the oracle measured) counts at this commit; 'zero_labelled' is the closed list of phase-1 facts no sidecar labels; 'declared_unmet' records every declared floor the corpus does not meet (a FINDING, never lowered silently); 'rebase' is the recorded, owner-signed change from the declared floors to the effective ones. Turn 1.12 refreshes 'achieved' and 'declared_unmet' for the seven new header-less fixtures: the corpus grew, so decision 4's ledger must track the new labelled/compared counts; no declared floor and no effective floor moved, and the ratchet only rises.",
   "phase1": [
     "document.axes",
     "headers.projection",
@@ -81,16 +81,16 @@
       "compared": 2
     },
     "attach.manifest": {
-      "labelled": 9,
-      "compared": 9
+      "labelled": 11,
+      "compared": 11
     },
     "attach.types": {
-      "labelled": 5,
-      "compared": 5
+      "labelled": 7,
+      "compared": 7
     },
     "body.alternative_group": {
-      "labelled": 13,
-      "compared": 13
+      "labelled": 14,
+      "compared": 14
     },
     "body.cid_refs": {
       "labelled": 3,
@@ -105,28 +105,28 @@
       "compared": 2
     },
     "body.quote_boundaries": {
-      "labelled": 24,
-      "compared": 24
+      "labelled": 28,
+      "compared": 28
     },
     "body.selection": {
-      "labelled": 15,
-      "compared": 15
+      "labelled": 21,
+      "compared": 21
     },
     "body.text": {
-      "labelled": 37,
-      "compared": 37
+      "labelled": 42,
+      "compared": 42
     },
     "body.view_levels": {
-      "labelled": 24,
-      "compared": 24
+      "labelled": 28,
+      "compared": 28
     },
     "document.axes": {
-      "labelled": 103,
-      "compared": 103
+      "labelled": 110,
+      "compared": 110
     },
     "gaps.later": {
-      "labelled": 38,
-      "compared": 29
+      "labelled": 39,
+      "compared": 30
     },
     "headers.addresses": {
       "labelled": 7,
@@ -167,14 +167,9 @@
       "achieved": 2
     },
     {
-      "fact": "attach.manifest",
-      "declared": 10,
-      "achieved": 9
-    },
-    {
       "fact": "attach.types",
       "declared": 12,
-      "achieved": 5
+      "achieved": 7
     },
     {
       "fact": "body.cid_refs",
@@ -184,7 +179,7 @@
     {
       "fact": "body.text",
       "declared": 60,
-      "achieved": 37
+      "achieved": 42
     },
     {
       "fact": "headers.addresses",

@@ -44,6 +44,7 @@ from .attach import attachments as attachment_stage
 from .container import Container
 from .headers import header_region
 from .ids import NOT_BUILT_IN_PHASE1, RawSpan, SPAN_NOT_RESOLVABLE, sha256_hex, walk_key
+from .mediatype import effective_media_type_in
 from .model import (
     BodyView,
     CapRecord,
@@ -189,9 +190,9 @@ class Unresolvable:
 # --------------------------------------------------------------- the composition
 
 
-def _media(part: PartShape) -> str:
-    """The part's media type, exactly as the walker parsed it (parameters dropped)."""
-    return (part.content_type or "").strip().lower()
+def _media(part: PartShape, by_path: Mapping[str, PartShape]) -> str:
+    """The part's effective media type (RFC 2045 5.2 / RFC 2046 5.1.5; ``mediatype``)."""
+    return effective_media_type_in(part, by_path)
 
 
 def _reads_as_text(part: PartShape) -> bool:
@@ -317,14 +318,14 @@ def _content_fingerprint(
                 return part
         return candidates[0]
 
-    html_views = [part for part in views if _media(part) == "text/html"]
+    html_views = [part for part in views if _media(part, by_path) == "text/html"]
     if html_views:
         chosen = choose(html_views)
         assert chosen is not None
         text = html_text.get(chosen.path, "")
         view = BodyView.HTML
     else:
-        plain_views = [part for part in views if _media(part) == "text/plain"]
+        plain_views = [part for part in views if _media(part, by_path) == "text/plain"]
         chosen = choose(plain_views)
         text = plain_text.get(chosen.path, "") if chosen is not None else ""
         view = BodyView.PLAIN
@@ -355,7 +356,7 @@ def _part_records(
     }
     records: list[PartRecord] = []
     for part in result.parts:
-        media = _media(part)
+        media = _media(part, by_path)
         parent = by_path.get(part.parent_path or "")
         if part.path in attachments:
             occurrence = attachments[part.path]

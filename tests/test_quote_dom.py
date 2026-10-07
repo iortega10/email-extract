@@ -964,12 +964,13 @@ def test_a_planted_raiser_fails_the_fuzz_with_the_seed(monkeypatch: pytest.Monke
 # ================================================ item 7d: the cross-interpreter digest
 
 #: sha256 of the JSON of ``{stem: [all_quote_boundary_rows, all_view_level_rows]}`` (both views)
-#: over the 119 committed fixtures, with ``sort_keys=True`` and ``ensure_ascii=False``. The html
+#: over the 126 committed fixtures, with ``sort_keys=True`` and ``ensure_ascii=False``. The html
 #: projection's line model and ``html.parser`` can differ across CPython patch levels, so this
 #: digest is the check that no DOM rule moves with them: it must be **identical** on both
 #: interpreters and is recorded in ``docs/design/phase1-empirical.md`` with the command that
-#: produced it.
-DOM_ROWS_DIGEST = "7e4c417a64fb6563b33200c010d43180c7f79ebdeb7d7e71183f0c75889e72f7"
+#: produced it. Turn 1.12 re-recorded it for the seven header-less fixtures and the
+#: ``QUOTE_RULES_VERSION`` 4 -> 5 move.
+DOM_ROWS_DIGEST = "a88d09cbb567234c604e0693659f48f610527ab3f4a4849f20e8d8eb93000bac"
 
 
 def test_the_dom_rows_are_identical_on_both_interpreters() -> None:
@@ -987,7 +988,7 @@ def test_the_dom_rows_are_identical_on_both_interpreters() -> None:
             ),
         ]
     blob = json.dumps(rows, sort_keys=True, ensure_ascii=False).encode("utf-8")
-    assert len(rows) == 119, len(rows)
+    assert len(rows) == 126, len(rows)
     digest = hashlib.sha256(blob).hexdigest()
     assert digest == DOM_ROWS_DIGEST, (
         f"the quote output moved: {digest} != {DOM_ROWS_DIGEST}; if a rule changed on purpose, "

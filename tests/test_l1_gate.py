@@ -49,7 +49,7 @@ def test_the_gate_compares_the_whole_corpus_and_counts_not_yet_by_phase() -> Non
     gate = l1_gate()
     assert isinstance(gate, GateResult)
     assert gate.skipped is False
-    assert gate.data["sidecars"] == 119
+    assert gate.data["sidecars"] == 126
     assert gate.data["matched"] > 0
     # not_yet is by phase, never a single total: phase 1 (parser) and phase 3 (time/thread).
     # Turn 1.1 made headers.projection, headers.decoded, headers.parameters and its live
@@ -101,13 +101,13 @@ def test_the_committed_corpus_is_green_with_the_quote_facts_live() -> None:
 
     The oracle's quote evidence names the fixture, the fact, the view, the row, the column and the
     turn's MEASURED value and never a labelled one (independence rule 3), so this test can assert
-    the green verdict without reading a label. The html rows are live (Turn 1.7), so the 1330
-    matched facts include both views.
+    the green verdict without reading a label. The html rows are live (Turn 1.7), so the 1406
+    matched facts include both views, plus the seven Turn 1.12 header-less fixtures.
     """
     gate = l1_gate()
     assert gate.passed is True, gate.lines()
     assert gate.data["mismatched"] == 0, gate.data["mismatches"]
-    assert gate.data["matched"] == 1330, gate.data["matched"]
+    assert gate.data["matched"] == 1406, gate.data["matched"]
     assert quote_only_mismatches(gate), gate.data["mismatches"]
     assert QUOTE_MISMATCH_STEMS == () and QUOTE_HTML_MISMATCH_STEMS == ()
 
@@ -229,6 +229,6 @@ def test_every_committed_sidecar_is_discovered_by_the_gate() -> None:
         for path in FIXTURES.rglob("*.expected.json")
         if "real" not in path.relative_to(FIXTURES).parts
     )
-    assert len(corpus) == 119
+    assert len(corpus) == 126
     assert [path for path in corpus if path == ATTACHMENTS] == [ATTACHMENTS]
     assert ALTERNATIVE.is_file()

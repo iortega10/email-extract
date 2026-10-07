@@ -1,0 +1,17 @@
+From: Ada Sender <ada@example.test>
+To: Ben Receiver <ben@example.test>
+Subject: headerless mixed text and attachment
+Date: Tue, 4 Mar 2025 08:05:00 +0000
+Message-ID: <headerless-mixed-6005@example.test>
+Content-Type: multipart/mixed; boundary="b0-headerless-mixed-20250304"
+
+--b0-headerless-mixed-20250304
+
+Just a plain note.
+
+--b0-headerless-mixed-20250304
+Content-Disposition: attachment; filename="notes.txt"
+
+attached text
+
+--b0-headerless-mixed-20250304--

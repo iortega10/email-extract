@@ -160,6 +160,7 @@ from types import MappingProxyType
 from typing import Callable, Final, Mapping, Sequence
 
 from . import text as text_stage
+from .mediatype import declared_media_type, effective_media_type_in
 from .model import (
     UNRECOGNIZED,
     AttachmentOccurrence,
@@ -605,7 +606,7 @@ def is_attachment_part(part: PartShape, parts: Mapping[str, PartShape]) -> bool:
     attachment). A ``message/rfc822`` part is an occurrence (and is never recursed); a
     ``text/calendar`` alternative is a view, never an attachment.
     """
-    if (part.content_type or "").lower().startswith("multipart/"):
+    if effective_media_type_in(part, parts).startswith("multipart/"):
         return False
     if any(other.parent_path == part.path for other in parts.values()):
         return False
@@ -975,8 +976,14 @@ def _gaps(
 
 
 def _declares_message_rfc822(part: PartShape) -> bool:
-    """Whether the part's **declared** ``Content-Type`` is ``message/rfc822`` (never a default)."""
-    return (part.content_type or "").lower() == "message/rfc822"
+    """Whether the part's **declared** ``Content-Type`` is ``message/rfc822`` (never a default).
+
+    Keyed on the walker's own parsed declaration (``mediatype.declared_media_type``), so a
+    header-less ``multipart/digest`` child -- whose **effective** type is ``message/rfc822``
+    (RFC 2046 5.1.5) but which declares nothing -- is its own gap
+    (``body.digest_default_not_applied``), never this one.
+    """
+    return declared_media_type(part) == "message/rfc822"
 
 
 def _macro_container(item: _Parts) -> bool:

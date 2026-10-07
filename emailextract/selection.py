@@ -44,6 +44,7 @@ from dataclasses import dataclass
 from typing import Final, Iterable, Mapping, Sequence
 
 from . import htmltext, htmltree, text as text_stage
+from .mediatype import effective_media_type_in
 from .walk import PartShape, WalkResult, WorkCounter
 
 __all__ = [
@@ -330,9 +331,10 @@ def html_projections(
     caps, passed straight to :func:`emailextract.htmltext.project` (no defaults here).
     """
     bodies = {record.path: record.text for record in text_stage.analyse_parts(raw, result)}
+    parts = {part.path: part for part in result.parts}
     projections: list[tuple[str, htmltext.HtmlProjection]] = []
     for part in result.parts:
-        if (part.content_type or "").lower() != "text/html":
+        if _media(part, parts) != "text/html":
             continue
         body = bodies.get(part.path)
         if body is None:
@@ -499,9 +501,14 @@ def _by_path(result: WalkResult) -> Mapping[str, PartShape]:
     return {part.path: part for part in result.parts}
 
 
-def _media(part: PartShape) -> str:
-    """The part's media type, lowercased; ``""`` when it declares none."""
-    return (part.content_type or "").lower()
+def _media(part: PartShape, parts: Mapping[str, PartShape]) -> str:
+    """The part's effective media type (RFC 2045 5.2 / RFC 2046 5.1.5; ``mediatype``).
+
+    A part that declares no ``Content-Type`` is ``text/plain`` (RFC 2045 5.2) except a
+    ``multipart/digest`` child, which is ``message/rfc822`` (RFC 2046 5.1.5). ``mediatype``
+    owns that rule once; this is a thin resolver so every call site shares it.
+    """
+    return effective_media_type_in(part, parts)
 
 
 def _is_digest_child_without_content_type(part: PartShape, parts: Mapping[str, PartShape]) -> bool:
@@ -509,7 +516,7 @@ def _is_digest_child_without_content_type(part: PartShape, parts: Mapping[str, P
     if part.content_type is not None:
         return False
     parent = parts.get(part.parent_path or "")
-    return parent is not None and _media(parent) == _DIGEST
+    return parent is not None and _media(parent, parts) == _DIGEST
 
 
 def _is_explicit_attachment(part: PartShape) -> bool:
@@ -533,7 +540,7 @@ def _is_body_view(part: PartShape, parts: Mapping[str, PartShape]) -> bool:
         return False
     if _is_explicit_attachment(part):
         return False
-    media = _media(part)
+    media = _media(part, parts)
     return not media or media.startswith("text/")
 
 
@@ -598,7 +605,7 @@ def alternative_group_rows(raw: bytes, result: WalkResult) -> list[list[object]]
     texts = display_text(raw, result)
     rows: list[list[object]] = []
     for part in result.parts:
-        if _media(part) != _ALTERNATIVE:
+        if _media(part, parts) != _ALTERNATIVE:
             continue
         group_id = _group_id(part)
         for child in _group_members(part, parts, texts):
@@ -639,7 +646,9 @@ def display_text(
 
 
 def _select_in_group(
-    children: Sequence[PartShape], texts: Mapping[str, str]
+    children: Sequence[PartShape],
+    texts: Mapping[str, str],
+    parts: Mapping[str, PartShape],
 ) -> str | None:
     """The selected child of one group, or ``None`` (the closed preference order).
 
@@ -650,7 +659,7 @@ def _select_in_group(
     """
     for media in DISPLAY_PREFERENCE:
         for child in children:
-            if _media(child) != media:
+            if _media(child, parts) != media:
                 continue
             if media == "text/plain" and _effectively_empty(texts.get(child.path, "")):
                 continue
@@ -675,10 +684,10 @@ def selection_rows(
     groups: dict[str, tuple[PartShape, ...]] = {}
     selected: dict[str, str] = {}
     for part in result.parts:
-        if _media(part) != _ALTERNATIVE:
+        if _media(part, parts) != _ALTERNATIVE:
             continue
         children = _group_members(part, parts, texts)
-        chosen = _select_in_group(children, texts)
+        chosen = _select_in_group(children, texts, parts)
         for child in children:
             groups[child.path] = children
         if chosen is not None:
@@ -701,9 +710,10 @@ def plain_effectively_empty_rows(raw: bytes, result: WalkResult) -> list[list[ob
     the legal state.
     """
     texts = display_text(raw, result)
+    parts = _by_path(result)
     rows: list[list[object]] = []
     for part in result.parts:
-        if _media(part) != "text/plain":
+        if _media(part, parts) != "text/plain":
             continue
         rule = _effectively_empty(texts.get(part.path, ""))
         if rule is not None:

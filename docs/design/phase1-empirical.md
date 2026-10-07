@@ -767,3 +767,33 @@ and one row loses its writer), and a projection version dropped from the key (bu
   take `docextract_core` from the running interpreter, and `tools/runboth.py` finds the second
   interpreter by the pinned selector or `EMAIL_EXTRACT_SECOND_PYTHON`, and still exits 2 with a named
   message when neither is present.
+
+## Turn 1.12 -- a part with no Content-Type is text/plain (RFC 2045 5.2)
+
+The quote and fingerprint digests moved **on purpose**: `QUOTE_RULES_VERSION` is now `5` (a part with
+no `Content-Type` is `text/plain`, RFC 2045 5.2, and gets its quote analysis) and the corpus grew to
+**126** fixtures. Both digests were re-recorded this turn, recomputed on CPython 3.14.3 and CPython
+3.11.15 (`python -m pytest
+tests/test_quote_text.py::test_the_quote_rows_are_identical_on_both_interpreters
+tests/test_quote_dom.py::test_the_dom_rows_are_identical_on_both_interpreters`):
+
+* `tests/test_quote_text.py::QUOTE_ROWS_DIGEST`: `a171f158888bc927087fc596835e953f9f6749cf24981a2fe40b9902b7d5dbbe`
+  -> `f497828f01a04a3711fc0a9d459423e5f6fee7f43cb7e5b611c52edb7282a5b7`;
+* `tests/test_quote_dom.py::DOM_ROWS_DIGEST`: `7e4c417a64fb6563b33200c010d43180c7f79ebdeb7d7e71183f0c75889e72f7`
+  -> `a88d09cbb567234c604e0693659f48f610527ab3f4a4849f20e8d8eb93000bac`.
+
+The identity-projection digest in `tests/test_ingest.py::EXPECTED_DIGEST` moved to
+`76bea6e31264fb4b52c9a52ad9b6a8838d6bd1d0a15ae7e0e1e293fb93468c1d` (the run record names
+`QUOTE_RULES_VERSION`). `python -m emailextract.evals` over the **126** fixtures:
+`matched=1406 mismatched=0`, `no-silent-drop pass fixtures=126 bytes=81755 mutation-checks=pass`. The
+three ledger `--check`s exit 0: the behaviour ledger's `walk`/`decode_chain` lines did **not** move (the
+walker records the raw field as absent) and corpus version **8** was appended as an addition.
+
+The golden HTML-projection pin moved too: `tests/ledger/html_projection_golden.json` gains the
+`headerless_alternative_text_part:1.2` row (the new fixture's explicit `text/html` child), so the
+corpus projection hash moves `356608376ccd4821441f1f272a59735d9bffa448214138316abbae430f2bf00e` ->
+`62d20991a3405a1a63d28f69514e48786e8bb97d359a5348f12f86ab76a26341` and the HTML-part count 26 -> 27
+(the quote-normalisation hash `eb674f90...` does not move; it is a plain-text table). One new closed
+reason, `headerless_default`, joins `tests/support/stdlib_scanner.SHARED_ATTACHMENT_MISREADING`: the
+stdlib applies the RFC 2045 5.2 default to a header-less part where the package records what the
+header declares.

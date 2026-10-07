@@ -1,0 +1,80 @@
+{
+  "fixture": "headerless_plain_gt_only.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one message with NO MIME-Version and NO Content-Type whose body is new text and a bare '>' block with no attribution line",
+    "generator": "tools/make_fixtures.py _fixture_headerless_plain_gt_only (Message-ID <headerless-gt-only-6002@example.test>, pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "rfc_basis": "RFC 2045 section 5.2: a part with no Content-Type header is text/plain by default. The body carries a '>' run with no 'On ... wrote:' line, so the boundary is the gt_family rule (the run of '>' lines), not an attribution.",
+    "labels_are_typed": "every value was typed by a model from the RFC rule (RFC 2045 section 5.2) and read out of the fixture bytes (a byte/offset listing); never produced by running the library. The span is the design's convention: a run to the end of the part keeps its final terminator. labels_provenance is spec because a model wrote them, not a person.",
+    "phase_0_facts": "container.*, part.tree, part.gaps, decode.chain and body.content_sha256 -- the skeleton walker's reading (content_type null; the default us-ascii charset ladder ran).",
+    "phase_1_facts": "document.axes, body.text, body.quote_boundaries, body.view_levels and body.selection.",
+    "not_yet_labelled": "headers.fields, part.regions and body.preamble_epilogue are not typed here; statuses (phase 2) and phases 3 are not exercised."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "94fa2171d8c32f3cde796202680c7477a1721d6f3d089c2fe3ad53e44cd3df75"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 259
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, [0, 259], [0, 201], [201, 58]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, "7bit", "us-ascii", false, "ascii"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "ac94fdfab5d11b4cddb69f44f1ab62b9f1694688ea2fb4a22404b16a6656affc"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        ["1", "Thanks for the update.\r\n\r\n> earlier line\r\n> another line\r\n", "exact", null]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", "gt_family", "quote", 1, [1, 1], 26, 32]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", 1, "gt_family"]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1", "n/a"]
+      ]
+    }
+  }
+}

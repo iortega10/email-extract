@@ -49,6 +49,13 @@
     "fixtures/generated/gmail_quote_on_blockquote.expected.json": "38115b3c8c3006c50b45bc61b987aaa2a5470150d4333054228951256b0e7d0f",
     "fixtures/generated/gmail_reply_quoting_outlook_authored.expected.json": "e7fcebfb1f5803b64dc1a593c949eef9b77cbebb99c08b3ba342d0b2356049db",
     "fixtures/generated/gmail_short_reply_gt_and_on_wrote.expected.json": "b9e3739e63c512402b96817be40dfcb6adf8dd9b7d38c4ab7a12feb1af907e54",
+    "fixtures/generated/headerless_alternative_text_part.expected.json": "fb01c1fad8982ba5d7fdfe8f6cd424aac36a81f7652c90e684aca2ac5189695a",
+    "fixtures/generated/headerless_digest_child.expected.json": "33790e4ecb155e0412951156565110868c49d3c13d54a2df9817141fc81e6a4c",
+    "fixtures/generated/headerless_mixed_text_and_attachment.expected.json": "d014738f52519dbc3233162434696ed36db99b8c603d4b83a3a082993e0ba072",
+    "fixtures/generated/headerless_plain_8bit.expected.json": "5daf9d4894b4e11677f5f358ed496d05bceba127d1cde7493efe4f40d65a231e",
+    "fixtures/generated/headerless_plain_gt_only.expected.json": "efd8949d342c4f3e1d61d28e33890a71cfcc6f29bd1370296fcca957b1f47880",
+    "fixtures/generated/headerless_plain_mime_version_only.expected.json": "1b9c6a7b1c99a7978172d42ab8880ce922e9f2d441941b583e990c175c96e169",
+    "fixtures/generated/headerless_plain_on_wrote.expected.json": "c7f83909fc3af64d4e46f068089404ffc3f41a3912a9f42da33be3d259fafccf",
     "fixtures/generated/headers_plain_baseline.expected.json": "53d730b580ffb39d8262fdc970a45b895f662af071279a3e9c20aa3c9cab1544",
     "fixtures/generated/html_data_uri_and_tracking_pixel.expected.json": "3363003540dd38c4642fe4242f5a102fac30d431141b6e444f55bfe9c6cba259",
     "fixtures/generated/html_gmail_quote.expected.json": "c19de655610d629f89cda6d45374769d3a2dcdc180aeb3ba793a0e2cc224b614",
@@ -132,7 +139,7 @@
     "tests/support/html_projection_hash.py": "ae4a5525a9929e4159c5172ecb6eefb58c9828c29ac29a1219c64ba8755feb04",
     "tests/support/legacy_walk.py": "e9b9895c3ff9789378da26b67a5f871a6d8612c5e2caffe18fb52197dd6bb89d",
     "tests/support/sidecar_copy.py": "3022d2f7ce133508ac1a9638a521562db83524ddeba7e73ef98126010a688757",
-    "tests/support/stdlib_scanner.py": "b905e958012699f4d4480c98d00bcb4f5e01bf9829d6f4831259e0397fde0c8a",
+    "tests/support/stdlib_scanner.py": "aca1a19ba8ee06288c450538e270142169ce4f7b462f59ad5599a25758a27f74",
     "tests/support/timeline_ref.py": "7eb9cf3ef876dace1e9fe3e6ba44f21676fa00acfb0f3dd877bf0feca1c5f55b"
   }
 }

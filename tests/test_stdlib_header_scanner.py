@@ -54,6 +54,7 @@ CONTENT_TYPE_EXCLUSIONS = {
     "attach_message_rfc822_no_filename": "no_recursion",
     "text_part_with_body_parts_tree": "no_recursion",
     "multipart_digest_content_type_less_child": "digest_default",
+    "headerless_digest_child": "digest_default",
     "malformed_mime": "fail_open",
 }
 

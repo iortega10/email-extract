@@ -1,0 +1,88 @@
+{
+  "fixture": "headerless_mixed_text_and_attachment.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "a multipart/mixed whose first child declares NO Content-Type (a filename-less inline text body) and whose second child declares 'Content-Disposition: attachment; filename=\"notes.txt\"' and NO Content-Type either",
+    "generator": "tools/make_fixtures.py _fixture_headerless_mixed_text_and_attachment (boundary b0-headerless-mixed-20250304, Message-ID <headerless-mixed-6005@example.test>, pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "rfc_basis": "RFC 2045 section 5.2: both children have no Content-Type header, so both default to text/plain; charset=us-ascii. RFC 2183/design D4: the first child carries no disposition and no filename, so it is a displayable text body, not an attachment; the second carries a disposition of 'attachment', so it is an attachment occurrence whatever its (defaulted) media type. The manifest's declared_mime column records what the header declares -- nothing here -- so it is null/absent, while the effective media type the classification uses is the RFC default.",
+    "labels_are_typed": "every value was typed by a model from the RFC rules and read out of the fixture bytes (a byte/offset listing); never produced by running the library. labels_provenance is spec because a model wrote them, not a person.",
+    "phase_0_facts": "container.*, part.tree, part.gaps, decode.chain and body.content_sha256.",
+    "phase_1_facts": "document.axes, body.text, body.selection and the attachment stage's attach.manifest/attach.types for the disposition-attachment occurrence.",
+    "not_yet_labelled": "headers.fields, part.regions and body.preamble_epilogue are not typed here; body.decorative and attach.filename are not labelled (the filename is a plain ASCII 'notes.txt' and this turn is about the media type); phases 2 and 3 are not exercised."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "4b88e19830ce1434d4c16370a79ceda769d173716981de3f6accd30f150be287"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 479
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, "multipart/mixed", [0, 479], [0, 283], [283, 196]],
+        ["1.1", "1", null, [315, 22], [315, 2], [317, 20]],
+        ["1.2", "1", null, [371, 72], [371, 57], [428, 15]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []],
+        ["1.1", []],
+        ["1.2", []]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, null, null, false, null],
+        ["1.1", null, null, "7bit", "us-ascii", false, "ascii"],
+        ["1.2", null, null, "7bit", "us-ascii", false, "ascii"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1.1", "9d56d8082681b100ec959736a39378bb26f6a6e87d39a2fe2a1d6806600b92b6"],
+        ["1.2", "2b11fe14105969927288bf27c4aabb4fba18d2b2dc605a49c7f9a0233faeaae9"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        ["1.1", "Just a plain note.\r\n", "exact", null],
+        ["1.2", "attached text\r\n", "exact", null]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1.1", "n/a"]
+      ]
+    },
+    "attach.manifest": {
+      "phase": 1,
+      "value": [
+        ["1.2", "notes.txt", null, null, "attachment", null, "2b11fe14105969927288bf27c4aabb4fba18d2b2dc605a49c7f9a0233faeaae9", 15]
+      ]
+    },
+    "attach.types": {
+      "phase": 1,
+      "value": [
+        ["1.2", ["absent", null, null], ["value", "unrecognized", null], ["unknown", null, "not_built_in_phase1"], null, false]
+      ]
+    }
+  }
+}

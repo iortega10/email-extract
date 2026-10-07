@@ -577,12 +577,15 @@ def test_a_span_stopping_before_a_blank_line_ends_at_the_last_content_line() -> 
 # ------------------------------------------------------------- determinism (item 8d)
 
 #: sha256 of the JSON of ``{stem: [quote_boundary_rows, view_level_rows, gap_pairs]}`` over the
-#: 119 committed fixtures under the pinned corpus, with ``sort_keys=True`` and ``ensure_ascii``
+#: 126 committed fixtures under the pinned corpus, with ``sort_keys=True`` and ``ensure_ascii``
 #: False. NFC and ``str.lower()`` depend on the interpreter's Unicode database (16.0.0 on
 #: CPython 3.14.3, 14.0.0 on 3.11.15, both recorded in ``docs/design/phase1-empirical.md``), so
 #: this digest is the check that no rule of this turn moves with it: it must be **identical**
 #: on both interpreters, and it is recorded in that document with the command that produced it.
-QUOTE_ROWS_DIGEST = "a171f158888bc927087fc596835e953f9f6749cf24981a2fe40b9902b7d5dbbe"
+#: Turn 1.12 re-recorded it: ``QUOTE_RULES_VERSION`` moved 4 -> 5 (a header-less part is
+#: ``text/plain`` by RFC 2045 5.2 and now gets its quote analysis) and the seven header-less
+#: fixtures joined the corpus.
+QUOTE_ROWS_DIGEST = "f497828f01a04a3711fc0a9d459423e5f6fee7f43cb7e5b611c52edb7282a5b7"
 
 
 def test_the_quote_rows_are_identical_on_both_interpreters() -> None:
@@ -602,7 +605,7 @@ def test_the_quote_rows_are_identical_on_both_interpreters() -> None:
             [[gap, locator] for gap, locator in resolve.gap_pairs(raw, result)],
         ]
     blob = json.dumps(rows, sort_keys=True, ensure_ascii=False).encode("utf-8")
-    assert len(rows) == 119, len(rows)
+    assert len(rows) == 126, len(rows)
     digest = hashlib.sha256(blob).hexdigest()
     assert digest == QUOTE_ROWS_DIGEST, (
         f"the quote output moved: {digest} != {QUOTE_ROWS_DIGEST}; if a rule changed on purpose, "
@@ -1107,7 +1110,7 @@ def test_the_seeded_fuzz_over_mutated_text_parts_is_bounded() -> None:
     began = time.monotonic()
     cases, failures = _fuzz_fixtures()
     elapsed = time.monotonic() - began
-    assert cases >= 119 * FUZZ_SEEDS, cases
+    assert cases >= 126 * FUZZ_SEEDS, cases
     assert not failures, failures[:3]
     assert elapsed < 60, f"the seeded fuzz took {elapsed:.1f}s"
 

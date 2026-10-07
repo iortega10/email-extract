@@ -77,7 +77,7 @@ keys on it. It ships so a later turn that *does* stamp a citation with the proje
 constant already owned by the module that defines the projection.
 """
 
-QUOTE_RULES_VERSION: Final[str] = "4"
+QUOTE_RULES_VERSION: Final[str] = "5"
 """Version of the quote stage's rules (``emailextract/quote``, Turn 1.6).
 
 Moves when the rule tables, a span convention, or the level rule changes: the closed
@@ -118,6 +118,15 @@ projected extent (its own extent when there is no following element sibling); an
 ``moz-cite-prefix`` pulls in its following element sibling when that sibling is a ``blockquote``,
 **with or without** ``type=cite``. The forward container's span is decision 28's, unchanged. The
 projection's own constant does not move: only these DOM span conventions changed.
+
+**"5" (Turn 1.12)** moves it because the stage now **scans a header-less text part**: a part
+that declares no ``Content-Type`` is ``text/plain`` by default (RFC 2045 5.2) and receives the
+same plain-view quote analysis an explicit ``text/plain`` part gets. Before, the stage computed a
+part's media type from the raw field with a fallback to the empty string, so a header-less part
+read as ``""``, no ``text/plain`` view existed and its quote boundaries and view levels were empty. The
+rule table, the span conventions and the level rule are unchanged; only *which parts the stage
+reads* moved, and that is a change in the stage's output for header-less messages. No record shape
+moved and the walker's bytes did not move.
 
 The walker's parser and decode-chain constants do **not** move with it: this stage reads
 the decoded text the body stage already produced and adds no decode rule, so a quote-rule

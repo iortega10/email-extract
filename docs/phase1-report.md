@@ -10,7 +10,7 @@ present and non-empty, and names the missing or empty one; the content is the ow
 
 Inputs the sections cite, so a reader can re-run rather than trust:
 
-* the committed corpus: **119** fixtures (81 `generated`, 33 `raw`, 5 `time`) with **119**
+* the committed corpus: **126** fixtures (88 `generated`, 33 `raw`, 5 `time`) with **126**
   sidecars; `fixtures/real/` is git-ignored and never read;
 * the two pinned interpreters: CPython **3.14.3** and CPython **3.11.15**;
 * the ledgers: `tests/ledger/{facts_ledger,phase1_exit,html_projection_golden,label_ledger,
@@ -18,22 +18,22 @@ Inputs the sections cite, so a reader can re-run rather than trust:
 * the tests named in each section.
 
 `python -m emailextract.evals` (CPython 3.14.3; the counts are identical on 3.11.15), stdout
-sha256 `443f30276480ddaf81fd308f3d781b872df3b1a9519ca3bdf7c05f9b5f5c22c9`:
+sha256 `3b9b0b40202f67226af99b2c09a664ff0debbd0fdd246f3a1c421a2d374ff998`:
 
 ```
 email-extract: L1 gate metrics at phase 0 (corpus: <repo>/fixtures)
-  L1              matched=1330 mismatched=0 unmeasurable=0 unmodelled=0
+  L1              matched=1406 mismatched=0 unmeasurable=0 unmodelled=0
                  not_yet: phase 1=9, phase 3=26
-  labels.undetermined=20 question(s) the labels leave open
+  labels.undetermined=26 question(s) the labels leave open
   gates:
-    L1             pass matched=1330 mismatched=0 unmeasurable=0 unmodelled=0 not_yet=35
-    no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass
-    phase-1 gaps   pass checked 30 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s); skipped 0
-    phase1 exit    pass wait=6 (named=6), compared=1330; extra=0 missing=0
-  corpus: 119 fixture(s), 119 sidecar(s)
-    generated      81 fixture(s), 81 sidecar(s)
+    L1             pass matched=1406 mismatched=0 unmeasurable=0 unmodelled=0 not_yet=35
+    no-silent-drop pass fixtures=126 bytes=81755 mutation-checks=pass
+    phase-1 gaps   pass checked 31 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s); skipped 0
+    phase1 exit    pass wait=6 (named=6), compared=1406; extra=0 missing=0
+  corpus: 126 fixture(s), 126 sidecar(s)
+    generated      88 fixture(s), 88 sidecar(s)
     raw            33 fixture(s), 33 sidecar(s)
-    time            5 fixture(s), 5 sidecar(s)
+    time           5 fixture(s), 5 sidecar(s)
   falsifiability: 8 gap(s) covered by cases, 6 recorded by sidecars
   not exercised by any fixture: body.headers_only, body.no_boundary_found
 ```
@@ -84,7 +84,7 @@ that changes what it names.
 | `EMAIL_PARSER_VERSION` | `2` | Turn 1.1 | the walker tolerates a leading UTF-8 BOM and/or an mbox `From ` line as its own prelude region (decision 14), so the regions and the top-level header span move for those inputs |
 | `DECODE_CHAIN_VERSION` | `2` | the Turn 0.4 finding | the charset ladder runs only over a text part; before, it ran over a binary payload and reported a charset, a fallback and a false `body.decode_destroyed_bytes` |
 | `TEXTPART_VERSION` | `1` | — | new in Turn 1.4; the per-part projection's rule set has not changed since |
-| `QUOTE_RULES_VERSION` | `4` | 1.6 → 1.6b → 1.7 → 1.7b | the TEXT rule table, then the adjudicated TEXT spans (decisions 33-39), then the DOM family and the html view, then the adjudicated DOM spans (decisions 40-42) |
+| `QUOTE_RULES_VERSION` | `5` | 1.6 → 1.6b → 1.7 → 1.7b → 1.12 | the TEXT rule table, then the adjudicated TEXT spans (decisions 33-39), then the DOM family and the html view, then the adjudicated DOM spans (decisions 40-42), then the header-less part (a part with no `Content-Type` is `text/plain`, RFC 2045 5.2) |
 | `HTMLTEXT_VERSION` | `1+htmlparser+<cpython minor>+verbatim+drop=style,script,head,comment+noelementtext+recorded-not-closed` | 1.0d, 1.5 | the projection's own key: the parser candidate, the interpreter minor, the whitespace rule, the dropped set and the unclosed-container rule (decision 1) |
 | `OUTPUT_SCHEMA_VERSION` | `5` | Turn 1.9 | the document gained its quote holder; `4` was the not-built axis fields (1.0b) |
 | `TEXTMODEL_VERSION`, `HEADERTEXT_VERSION`, `HTMLTEXT_SCHEMA`, `FLAG_SCHEMA_VERSION`, `TIMEEVENT_VERSION`, `MATCHER_VERSION` | `1` | — | unchanged through Phase 1 |
@@ -107,7 +107,7 @@ Every ambiguity Phase 1 resolved, with the artifact that pins it. "Resolved" mea
 | Is a missing close delimiter `body.boundary_disagreement` or `body.no_boundary_found`? (`label-questions.md` Q4) | `body.boundary_disagreement`: the boundary **is** found, its close is not. `body.no_boundary_found` is the absence answer and fires only when no boundary rule fired and the text is not a label-shaped unknown-language block (decision 3). | `tests/test_seeded_splitter_fuzz.py::test_mutants_return_the_declared_failure_type` (the `NO_CLOSE` class gates the gap); `tests/test_l1_gate.py`; the registry entry in `docs/design/phase0-gaps.md` |
 | Does a label-shaped unknown-language block read as "no boundary found"? | No: it records `body.i18n_reply_marker` (decision 3's trigger amendment), which is why `body.no_boundary_found`'s emission count over the corpus dropped. | `tests/test_phase1_gap_gate.py::test_the_unlabelled_emissions_are_reported`; `tests/ledger/phase1_exit.json` (`no_boundary_found`, `over-emission`) |
 | Where does the report-sections test live? | `docs/design/phase1-ledgers.md` (f) names `tests/test_phase1_report.py`; the frozen declaration block names `tests/test_phase1_scope.py::test_the_phase1_report_sections_are_present_and_non_empty`. The declaration wins -- it is the enforced record -- so the test is in `tests/test_phase1_scope.py`, and this line is the deviation. | `tests/test_turn_declarations.py::test_every_declared_test_is_collected` |
-| Do the design's coverage floors match the committed corpus? | They do not: the floors predate the catalogue and 11 of the 20 phase-1 facts fall short. Turn 1.10a **re-bases** each floor to the count the corpus achieves -- a ratchet, coverage may never fall -- and records every unmet declared floor rather than lowering it silently. The rebase is owner-signed. | `tests/test_facts_coverage.py::test_the_rebase_record_is_proposed_or_signed`, `::test_the_effective_floor_is_the_achieved_count_at_the_rebase`, `::test_the_declared_floors_the_corpus_does_not_meet_are_recorded` |
+| Do the design's coverage floors match the committed corpus? | They do not: the floors predate the catalogue and 10 of the 20 phase-1 facts fall short. Turn 1.10a **re-bases** each floor to the count the corpus achieves -- a ratchet, coverage may never fall -- and records every unmet declared floor rather than lowering it silently. The rebase is owner-signed. | `tests/test_facts_coverage.py::test_the_rebase_record_is_proposed_or_signed`, `::test_the_effective_floor_is_the_achieved_count_at_the_rebase`, `::test_the_declared_floors_the_corpus_does_not_meet_are_recorded` |
 | Is the `.msg`/CFB route reachable in Phase 1? | No: `parse` returns `cfb_msg_unsupported` for the CFB magic and `olefile` is named in `NOTICE` but is not a dependency. | `tests/test_parse_entry.py::test_limits_construction_is_the_only_named_error_raised`; `tests/test_licence_audit.py::test_olefile_is_not_a_declared_dependency` |
 | May a turn edit a label or a gate to make a gate pass? | No: the label ledger is additions-only, so a sidecar or an oracle file cannot be edited in place; the remedy is a new file or an owner-approved ledger change in the same commit. A label/parser disagreement is a finding. | `tools/update_label_ledger.py --check`; `tests/test_label_ledger.py` |
 | Does the walker's lone-CR line model change to match the splitter's? | No: a lone CR is a line terminator and its use is recorded as `body.lone_cr_line_terminator` (decision 17). The independent splitter's own model is CRLF-only, so the fuzz **cannot** see a lone-CR framing bug and `tests/test_seeded_splitter_fuzz.py` records that as its own honest limit rather than pretending to cover it. | `tests/test_limits.py`; `tests/test_seeded_splitter_fuzz.py` (the `EXCLUDED` class's reason) |
@@ -124,38 +124,38 @@ sidecars that label the fact and of sidecars the oracle measured.
 
 | phase-1 fact | declared floor | effective floor | sidecars labelling | sidecars compared |
 |---|---|---|---|---|
-| `document.axes` | 80 | 103 | 103 | 103 |
+| `document.axes` | 80 | 103 | 110 | 110 |
 | `headers.projection` | 60 | 12 | 12 | 12 |
 | `headers.addresses` | 20 | 7 | 7 | 7 |
 | `headers.date` | 12 | 6 | 6 | 6 |
 | `headers.decoded` | 8 | 6 | 6 | 6 |
 | `headers.parameters` | 4 | 6 | 6 | 6 |
-| `body.text` | 60 | 37 | 37 | 37 |
-| `body.alternative_group` | 10 | 13 | 13 | 13 |
-| `body.selection` | 10 | 15 | 15 | 15 |
+| `body.text` | 60 | 37 | 42 | 42 |
+| `body.alternative_group` | 10 | 13 | 14 | 14 |
+| `body.selection` | 10 | 15 | 21 | 21 |
 | `body.html_spans` | 8 | 15 | 15 | 15 |
 | `body.cid_refs` | 5 | 3 | 3 | 3 |
 | `body.plain_effectively_empty` | 2 | 2 | 2 | 2 |
-| `body.quote_boundaries` | 15 | 24 | 24 | 24 |
-| `body.view_levels` | 15 | 24 | 24 | 24 |
-| `attach.manifest` | 10 | 9 | 9 | 9 |
-| `attach.types` | 12 | 5 | 5 | 5 |
+| `body.quote_boundaries` | 15 | 24 | 28 | 28 |
+| `body.view_levels` | 15 | 24 | 28 | 28 |
+| `attach.manifest` | 10 | 9 | 11 | 11 |
+| `attach.types` | 12 | 5 | 7 | 7 |
 | `attach.filename` | 10 | 2 | 2 | 2 |
 | `attach.decorative` | 4 | 1 | 1 | 1 |
 | `attach.cid_use` | 5 | 2 | 2 | 2 |
-| `gaps.later` | 5 | 38 | 38 | 29 |
+| `gaps.later` | 5 | 38 | 39 | 30 |
 
-Totals: declared **355**, effective **330**, labelling **330**, compared **321**. The declared
+Totals: declared **355**, effective **330**, labelling **362**, compared **353**. The declared
 phase-1 fact-id list is pinned at **20** ids (`facts_ledger.json:phase1`) and the deferred set is a
-closed list that is **empty** (`deferred: []`). The 11 declared-but-unmet floors are recorded in
-`declared_unmet` (`attach.cid_use`, `attach.decorative`, `attach.filename`, `attach.manifest`,
-`attach.types`, `body.cid_refs`, `body.text`, `headers.addresses`, `headers.date`, `headers.decoded`,
+closed list that is **empty** (`deferred: []`). The 10 declared-but-unmet floors are recorded in
+`declared_unmet` (`attach.cid_use`, `attach.decorative`, `attach.filename`, `attach.types`,
+`body.cid_refs`, `body.text`, `headers.addresses`, `headers.date`, `headers.decoded`,
 `headers.projection`); `zero_labelled` is empty, so no phase-1 fact is unlabelled. The
 "at least one sidecar carries a non-trivial, non-empty value" floor and the "the sparse-fact
 convention is not used for new facts" rule are asserted by
 `tests/test_facts_coverage.py::test_at_least_one_sidecar_carries_a_non_trivial_value`.
 
-The `compared` count is below `labelling` for `gaps.later` only (38 vs 29): the nine rows a frozen
+The `compared` count is below `labelling` for `gaps.later` only (39 vs 30): the nine rows a frozen
 sidecar asserts that no comparison can satisfy without editing a label -- the six named waits of
 **Gap gate** below, plus the three whose own phase column is 3 (decision 63's class (c):
 `future_date_in_text`, `rfc2047_folded_duplicate_received`, `thread_three_refs_chain`). That is
@@ -164,7 +164,7 @@ also the `not_yet: phase 1=9` the metrics table reports.
 ## Gap gate
 
 `gaps.later` is the phase's gap channel. The gate (`emailextract/evals/gates.py::gap_gate`) passes
-over the committed corpus (`checked 30 live phase-1 gap label(s); 0 not recorded; 1 unlabelled
+over the committed corpus (`checked 31 live phase-1 gap label(s); 0 not recorded; 1 unlabelled
 emission(s); skipped 0`), and every emittable phase-1 gap id is either **cased** in
 `emailextract/evals/falsify.py::PHASE1_CASES` or **named** in `UNEXERCISED_GAP_IDS` -- the two sets
 tile `EMITTABLE_GAP_IDS` exactly (27 ids: 22 cased + 5 named). Each case is a mutation of a real
@@ -241,6 +241,17 @@ Phase 1 found:
   line; the bare `blockquote` sibling of a `moz-cite-prefix`).** Kept as
   `tests/test_l1_gate.py::QUOTE_HTML_MISMATCH_STEMS`, emptied after the adjudication (decisions
   40-42, `QUOTE_RULES_VERSION` `4`). Bytes: `tests/test_quote_dom.py`.
+* **Turn 1.12: the walker and the RFC disagree about a header-less `multipart/digest` child, and the
+  disagreement is recorded, not tuned.** RFC 2046 section 5.1.5 makes such a child `message/rfc822`;
+  the walker records `content_type null` and runs its TEXT charset ladder over it (`used_charset`
+  `us-ascii`), so its recorded reading is text. Turn 1.12 supplies the default as a **projection over
+  the raw field** (`emailextract/mediatype.py`) -- the shape the frozen
+  `body.digest_default_not_applied` gap already described (D3) -- and never rewrites the walker's
+  record; the sidecar `headerless_digest_child.expected.json` types the walker's decode chain, records
+  the gap, and puts `body.text`/`body.quote_boundaries`/`body.view_levels` in `labels.undetermined`
+  rather than settling either side. Bytes: `tests/test_headerless_part.py::`
+  `test_the_digest_child_default_is_message_rfc822_and_not_text_plain`;
+  `fixtures/generated/headerless_digest_child.expected.json`.
 * **`attach.cid_dangling` is still a finding, and it is why that gap id is deferred.** The two
   sidecars that carry the case disagree about whether the row is typed at all, so no live emission
   satisfies both and the label cannot be edited; the reference is recorded and no part is invented
@@ -278,11 +289,13 @@ Phase 1 found:
   self-recursive function in the package. A raised `max_depth` no longer blows the interpreter stack:
   `::test_a_raised_depth_cap_walks_deep_multipart_without_recursing` (the frozen recursive walker
   raises `RecursionError` on the same input; the iterative one assembles a `parsed` document).
-* **`labels.undetermined=20`: twenty rows, over eighteen sidecars, that the labels leave open** --
-  12 distinct fact or gap ids (`decode.chain` 5, `document.axes` 3, `headers.addresses` 2,
-  `headers.date` 2, and one each of `attach.decorative`, `attach.types`, `body.boundary_disagreement`,
-  `body.decode_destroyed_bytes`, `body.quote_boundaries`, `body.view_levels`, `gaps.later`,
-  `headers.parameters`). They are the design's own unknowns, typed into sidecars rather than guessed.
+* **`labels.undetermined=26`: twenty-six rows, over twenty sidecars, that the labels leave open** --
+  13 distinct fact or gap ids (`decode.chain` 5, `document.axes` 3, `body.quote_boundaries` 3,
+  `body.view_levels` 3, `body.text` 2, `headers.addresses` 2, `headers.date` 2, and one each of
+  `attach.decorative`, `attach.types`, `body.boundary_disagreement`, `body.decode_destroyed_bytes`,
+  `gaps.later`, `headers.parameters`). They are the design's own unknowns, typed into sidecars rather
+  than guessed; Turn 1.12 added the six rows of the digest child and the 8-bit header-less body (the
+  walker/RFC disagreement, below).
   `docs/design/label-questions.md` types the four distinct questions of the Turn 0.3 family (Q1-Q4);
   three are settled by revision 3 (see **Named resolutions**) and the fourth, Q2 (the RFC 822
   ladder's rungs, in order), is **not**, because it needs a design edit naming the rungs. The count
@@ -324,6 +337,21 @@ distribution appears in the audited files.
 ## Not done
 
 What Phase 1 deliberately left to a later phase, and what it found but did not fix.
+
+* **Turn 1.12 (found by the reviewer installing the published `0.1.0rc1` into a clean venv): a part
+  with no `Content-Type` was read as media type `""`.** RFC 2045 section 5.2 makes it `text/plain;
+  charset=us-ascii`, so the reproduction (a plain message whose body carries an `On ... wrote:`
+  attribution and a `>` block) got `quote_boundaries == []` and `view_levels == []` and a content
+  fingerprint over the empty string, while the explicit `text/plain` twin worked and `MIME-Version:
+  1.0` alone changed nothing. **Fixed** by one helper (`emailextract/mediatype.py`, supplying the two
+  RFC defaults) and `QUOTE_RULES_VERSION` `4` -> `5`; the corpus now covers it (**seven** new
+  header-less fixtures, 126 in all) and no walker byte moved (`tools/update_behavior_ledger.py
+  --check` exit 0). The one walker/RFC disagreement -- a header-less `multipart/digest` child, RFC
+  2046 5.1.5 `message/rfc822` versus the walker's text reading -- is recorded, not fixed (see
+  **Label-versus-parser findings**). The D14 content fingerprint and the display rule changed for
+  header-less messages but are not named by a version constant (the six projections are the ones
+  `assemble.PROJECTION_VERSION_NAMES` carries), so no constant moved for them; reported here rather
+  than left implicit.
 
 * **Deep nesting is quadratic in wall time at raised caps (found while validating Turn 1.11).** The walker
   is now iterative and its step counter is linear, but each nesting level scans its own body for its
@@ -394,18 +422,18 @@ report.
 
 ```
 email-extract: L1 gate metrics at phase 0 (corpus: <repo>/fixtures)
-  L1              matched=1330 mismatched=0 unmeasurable=0 unmodelled=0
+  L1              matched=1406 mismatched=0 unmeasurable=0 unmodelled=0
                  not_yet: phase 1=9, phase 3=26
-  labels.undetermined=20 question(s) the labels leave open
+  labels.undetermined=26 question(s) the labels leave open
   gates:
-    L1             pass matched=1330 mismatched=0 unmeasurable=0 unmodelled=0 not_yet=35
-    no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass
-    phase-1 gaps   pass checked 30 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s); skipped 0
-    phase1 exit    pass wait=6 (named=6), compared=1330; extra=0 missing=0
-  corpus: 119 fixture(s), 119 sidecar(s)
-    generated      81 fixture(s), 81 sidecar(s)
+    L1             pass matched=1406 mismatched=0 unmeasurable=0 unmodelled=0 not_yet=35
+    no-silent-drop pass fixtures=126 bytes=81755 mutation-checks=pass
+    phase-1 gaps   pass checked 31 live phase-1 gap label(s); 0 not recorded; 1 unlabelled emission(s); skipped 0
+    phase1 exit    pass wait=6 (named=6), compared=1406; extra=0 missing=0
+  corpus: 126 fixture(s), 126 sidecar(s)
+    generated      88 fixture(s), 88 sidecar(s)
     raw            33 fixture(s), 33 sidecar(s)
-    time            5 fixture(s), 5 sidecar(s)
+    time           5 fixture(s), 5 sidecar(s)
   falsifiability: 8 gap(s) covered by cases, 6 recorded by sidecars
   not exercised by any fixture: body.headers_only, body.no_boundary_found
 ```
@@ -422,18 +450,18 @@ tools/make_fixtures.py --check            exit 0   (the generated corpus reprodu
 The full suite, `python -m pytest -q`, run sequentially on both pinned interpreters:
 
 ```
-CPython 3.14.3:  1920 passed, 2 skipped
-CPython 3.11.15: 1920 passed, 2 skipped
+CPython 3.14.3:  2004 passed, 2 skipped
+CPython 3.11.15: 2004 passed, 2 skipped
 ```
 
 ### The bullets
 
 | # | the spec's claim (quoted, abridged) | status | the test or gate line that fails without it |
 |---|---|---|---|
-| 1 | "the declared phase-1 fact-id list is pinned in the ledger ... a closed list in the ledger, empty by default; L1 is 100% over every phase-1 fact with a per-(fact x phase) coverage floor ... the phase-1 gap gate passes and fails when a phase-1 gap is dropped" | **CLOSED** for the pin, the 100%, the ratchet and the gates; **OPEN** for the literal declared floors | `tests/test_facts_ledger.py` (the pin), `tests/test_facts_coverage.py` (the ratchet), `tests/test_phase1_gap_gate.py`, `tests/test_l1_gate.py`; the evals lines `L1 pass matched=1330 mismatched=0` and `phase-1 gaps pass ...`. **Open:** 11 of the 20 declared floors are unmet by the committed corpus (`tests/ledger/facts_ledger.json` `declared_unmet`), recorded as a FINDING and re-based rather than lowered -- see **Open and partly-open items**. |
+| 1 | "the declared phase-1 fact-id list is pinned in the ledger ... a closed list in the ledger, empty by default; L1 is 100% over every phase-1 fact with a per-(fact x phase) coverage floor ... the phase-1 gap gate passes and fails when a phase-1 gap is dropped" | **CLOSED** for the pin, the 100%, the ratchet and the gates; **OPEN** for the literal declared floors | `tests/test_facts_ledger.py` (the pin), `tests/test_facts_coverage.py` (the ratchet), `tests/test_phase1_gap_gate.py`, `tests/test_l1_gate.py`; the evals lines `L1 pass matched=1406 mismatched=0` and `phase-1 gaps pass ...`. **Open:** 10 of the 20 declared floors are unmet by the committed corpus (`tests/ledger/facts_ledger.json` `declared_unmet`), recorded as a FINDING and re-based rather than lowered -- see **Open and partly-open items**. |
 | 2 | "`benign` is an additions-only sidecar flag with closed reason ids ... on every benign fixture the stdlib scanner's three comparisons agree and a planted defect makes each fail; stdlib version differences are recorded" | **CLOSED** | `tests/test_benign_flag.py`; `tests/support/stdlib_scanner.py`; `tests/test_stdlib_header_scanner.py`. |
 | 3 | "every Phase 1 gap id has a mutation case (the tightened triple) that fails the gate naming the fixture, the fact and the bytes, and a catalogue test fails on an uncovered id" | **CLOSED** | `tests/test_gap_falsifiability.py`; `tests/test_quote_catalogue.py`; the tightened triple in `emailextract/evals/falsify.py`. |
-| 4 | "no-silent-drop passes on every fixture and mutation; boundary ordinal, prefix depth, rule id and kind are stored per boundary per view; every `exact` span passes the five-part property" | **CLOSED** | `tests/test_no_silent_drop.py`; the five-part property in `tests/test_text.py`; the boundary fields in `tests/test_quote_text.py` / `tests/test_quote_dom.py`; the evals line `no-silent-drop pass fixtures=119 bytes=79328 mutation-checks=pass`. |
+| 4 | "no-silent-drop passes on every fixture and mutation; boundary ordinal, prefix depth, rule id and kind are stored per boundary per view; every `exact` span passes the five-part property" | **CLOSED** | `tests/test_no_silent_drop.py`; the five-part property in `tests/test_text.py`; the boundary fields in `tests/test_quote_text.py` / `tests/test_quote_dom.py`; the evals line `no-silent-drop pass fixtures=126 bytes=81755 mutation-checks=pass`. |
 | 5 | "the identity projection is named and documents are byte-identical ... across two runs, hash seeds, locales, time zones and both interpreters ... re-ingest is a no-op; ledger fingerprints are identical on both interpreters; a behaviour change without a bump makes `--check` exit 1 and names the constant" | **CLOSED** | `tests/test_assemble.py::test_the_identity_projection_drops_the_recorded_only_inputs`; `tests/test_store.py::test_re_ingest_is_a_no_op_over_a_throwaway_store`; `tests/test_behavior_ledger.py::test_the_cli_check_exits_zero_on_unmodified_code` and its refusal cases; this turn's identical fingerprints and identical evals output on both interpreters. |
 | 6 | "the additions-only ledger passes over sidecars, `tests/support/**` and `emailextract/evals/**`; no existing sidecar is modified across the phase; the label-leak test passes; the fixture set is a superset of the design's Phase 1 list (a census test)" | **CLOSED** | `tests/test_label_ledger.py`; `tests/test_label_leak.py`; `tests/test_fixture_census.py`; `tools/update_label_ledger.py --check` exit 0. |
 | 7 | "the seeded fuzz and the independent splitter fuzz pass ... any other `Exception` (and `MemoryError` or `RecursionError` specifically) fails with the seed. The hostile set ... is recorded at the caps with a work-per-input-byte budget asserted non-superlinear ... nothing is fetched ... no attachment is written under its raw filename" | **CLOSED** | `tests/test_seeded_splitter_fuzz.py`; `tests/test_hostile_set.py` (the caps, the socket guard and the raw-filename rule); `tests/test_hostile_set.py::test_work_per_input_byte_is_not_superlinear`; `tests/test_walk_iterative.py` (a raised `max_depth` no longer raises `RecursionError`). |
@@ -444,15 +472,16 @@ CPython 3.11.15: 1920 passed, 2 skipped
 
 Stated plainly, so a reader does not have to infer them:
 
-* **The 11 declared coverage floors (bullet 1).** `tests/ledger/facts_ledger.json`'s `declared_unmet`
-  lists eleven phase-1 facts whose floor in `docs/design/phase1-facts.md` the committed corpus does
-  not meet (`attach.cid_use`, `attach.decorative`, `attach.filename`, `attach.manifest`,
-  `attach.types`, `body.cid_refs`, `body.text`, `headers.addresses`, `headers.date`,
-  `headers.decoded`, `headers.projection`). They are recorded, never lowered silently; the re-base to
+* **The 10 declared coverage floors (bullet 1).** `tests/ledger/facts_ledger.json`'s `declared_unmet`
+  lists ten phase-1 facts whose floor in `docs/design/phase1-facts.md` the committed corpus does
+  not meet (`attach.cid_use`, `attach.decorative`, `attach.filename`, `attach.types`, `body.cid_refs`,
+  `body.text`, `headers.addresses`, `headers.date`, `headers.decoded`,
+  `headers.projection`). They are recorded, never lowered silently; the re-base to
   the achieved counts is **owner-signed** (`rebase.status = "signed"`), so the effective floor is the
-  achieved count and is pinned by `tests/test_facts_coverage.py`.
+  achieved count and is pinned by `tests/test_facts_coverage.py`. Turn 1.12's seven new fixtures brought
+  `attach.manifest` up to its declared floor of 10, so it left the unmet list.
 * **The 6 named `phase1_exit` waits and the 3 rows filed under a later phase.** The evals line
-  `phase1 exit pass wait=6 (named=6), compared=1330; extra=0 missing=0` is a **wait set**, not a
+  `phase1 exit pass wait=6 (named=6), compared=1406; extra=0 missing=0` is a **wait set**, not a
   comparison: three no-emission rows (`attach.cid_dangling`, `body.mixed_origin_quoting` twice) and
   three over-emission rows (`view.quote_level_disagreement`, `body.inline_reply_interleaved`,
   `body.no_boundary_found`) cannot be compared without editing a frozen label another frozen label

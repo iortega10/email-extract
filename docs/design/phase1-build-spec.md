@@ -793,6 +793,65 @@ forces:
     B when it is absent" -- and gates the A-vs-B closed-container comparison on lxml's availability.
     No A-side assertion is loosened.
 
+### Turn 1.12 -- a part with no Content-Type is text/plain (RFC 2045 5.2; the choices the turn forces)
+
+The bug is the reviewer's: installing the published `0.1.0rc1` into a clean venv and running a plain
+message with no `Content-Type` gave `document.quote_boundaries == []` and `view_levels == []`, and
+adding `MIME-Version: 1.0` alone changed nothing, while an explicit `Content-Type: text/plain;
+charset=utf-8` gave one boundary. Root cause (confirmed by running the reproduction through every
+stage): each of `assemble`, `quote/resolve`, `selection` and `attach` computed a part's media type as
+`(part.content_type or "").strip().lower()`, so a header-less part read as `""` and every
+`== "text/plain"` / `startswith("text/")` test failed. `DECODE_CHAIN_VERSION` and the walker already
+treated such a part as text (`used_charset: us-ascii`), so only the *projections* were wrong. The turn
+moves `QUOTE_RULES_VERSION` **"4" -> "5"**; `OUTPUT_SCHEMA_VERSION`, `EMAIL_PARSER_VERSION`,
+`DECODE_CHAIN_VERSION`, `TEXTMODEL_VERSION`, `TEXTPART_VERSION`, `HEADERTEXT_VERSION` and
+`HTMLTEXT_VERSION` do **not** move (no record shape and no stage bytes other than the quote stage
+changed).
+
+76. **One helper owns the media type, and the two RFC defaults live only there.**
+    `emailextract/mediatype.effective_media_type(part, parent_media=None)` returns the declared media
+    type (lowercased, parameter-stripped) when the part declares a `Content-Type` the walker parsed
+    (`parse_status == "ok"`); otherwise `text/plain` for a non-multipart part (**RFC 2045 section
+    5.2**); otherwise `message/rfc822` for a child of a `multipart/digest` (**RFC 2046 section
+    5.1.5**). A declaration whose media token is **empty** or unparsable keeps the walker's reading --
+    `""` -- and is never reinterpreted as the default: the walker saw a declaration, and downstream
+    tests on `""` keep the behaviour they had. `effective_media_type_in(part, parts)` resolves the
+    parent's effective type from a `{locator: PartShape}` map so the four stages share one rule. This
+    is a **projection over the raw field**, exactly the shape the frozen `body.digest_default_not_applied`
+    gap describes (D3): the walker's `PartShape.content_type` stays as declared (absent stays `None`)
+    and the behavior ledger's `walk`/`decode_chain` lines do not move.
+77. **The stages' output changes only for header-less messages, so only `QUOTE_RULES_VERSION` moves.**
+    The stages whose output changes are the quote stage (a header-less part is now a `text/plain` view
+    with boundaries/levels) and the D14 content fingerprint (`assemble._content_fingerprint`, which now
+    digests the view text instead of the empty string); the selection stage changes only for a
+    header-less alternative group member. Neither the fingerprint nor the display rule is named by a
+    version constant -- the six projections `assemble.PROJECTION_VERSION_NAMES` carries are
+    `TEXTMODEL_VERSION`, `TEXTPART_VERSION`, `HEADERTEXT_VERSION`, `HTMLTEXT_VERSION`,
+    `DECODE_CHAIN_VERSION` and `QUOTE_RULES_VERSION` -- so no other constant can move for them; a bump
+    with no behaviour behind it is exactly what the ledger forbids. The attachment stage's
+    classification is unaffected (a header-less leaf is already a body view); `attach._media_as_written`
+    is **deliberately left** as a raw-field read (the manifest's `declared_mime` column is the header's
+    own value, D4, and a default is not a declaration) and `attach._declares_message_rfc822` stays a
+    **declared-only** test (a header-less digest child is its own gap, never `attach.filename_absent`).
+78. **Seven header-less fixtures, and the recorded walker/RFC disagreement on the digest child.**
+    The corpus gains a reproduction with an `On ... wrote:` attribution and a `>` block, a bare `>` run,
+    the same body with `MIME-Version` alone, a `multipart/alternative` header-less text child, a
+    `multipart/mixed` header-less inline body beside a `Content-Type`-less disposition-attachment, a
+    `multipart/digest` header-less child and an 8-bit header-less body. Their sidecars are hand-typed
+    from the RFC rules with `labels_provenance: spec`; the `multipart/digest` child is the **finding**:
+    the RFC makes it `message/rfc822`, the walker records `content_type null` and runs its text ladder
+    over it, and the sidecar types the walker's decode chain, records the gap and puts `body.text` /
+    `body.quote_boundaries` / `body.view_levels` in `labels.undetermined` rather than tuning either
+    side. `tests/ledger/facts_ledger.json` is **refreshed** (achieved/declared_unmet) because the corpus
+    grew: no declared floor and no effective floor moved and the ratchet only rises.
+79. **The coverage ledger refresh is a forced edit, named rather than silent.** Turn 1.10a's
+    `facts_ledger.json` records the committed corpus's labelled/compared counts *at that commit*;
+    `tests/test_facts_coverage.py` recomputes them and compares, so a turn that grows the corpus must
+    refresh `achieved` and `declared_unmet` or its coverage gate fails. The refresh changes no
+    `declared` and no `floors` value, so no floor is lowered; the new sidecars add, e.g.,
+    `body.quote_boundaries` 24 -> 28 and `attach.manifest` 9 -> 11, and `attach.manifest` now meets its
+    declared floor of 10.
+
 ### New gap ids (budget: seven; each costs a registry line, a `phase0-gaps.md` entry, a fixture and a mutation case)
 
 `headers.duplicate_header` (generalises `duplicate_message_id`; first-win in `walk._header_value` is silent),

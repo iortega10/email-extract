@@ -43,7 +43,7 @@ what a record means.
 | `OUTPUT_SCHEMA_VERSION` | `5` |
 | `EMAIL_PARSER_VERSION` | `2` |
 | `DECODE_CHAIN_VERSION` | `2` |
-| `QUOTE_RULES_VERSION` | `4` |
+| `QUOTE_RULES_VERSION` | `5` |
 | `TEXTPART_VERSION` | `1` |
 | `TEXTMODEL_VERSION` | `1` |
 | `HEADERTEXT_VERSION` | `1` |
@@ -52,6 +52,18 @@ what a record means.
 | `FLAG_SCHEMA_VERSION` | `1` |
 | `TIMEEVENT_VERSION` | `1` |
 | `MATCHER_VERSION` | `1` |
+
+### Fixed
+
+* **A part with no `Content-Type` is `text/plain` (RFC 2045 section 5.2).** The first release
+  candidate (`0.1.0rc1`) was published **before** this fix, and it read such a part as media type
+  `""`: the body got no quote analysis (`quote_boundaries`/`view_levels` were empty) and the content
+  fingerprint was the digest of the empty string. A message that spells the default out (`Content-Type:
+  text/plain; charset=us-ascii`) worked, so `MIME-Version: 1.0` alone changed nothing. Every stage now
+  derives the media type through one helper (`emailextract/mediatype.py`), which supplies the RFC 2045
+  section 5.2 default and the RFC 2046 section 5.1.5 `multipart/digest` child default
+  (`message/rfc822`). The walker's recorded output is unchanged; the fix moves `QUOTE_RULES_VERSION`
+  4 -> 5 and adds seven header-less fixtures to the corpus.
 
 ### Known limits
 

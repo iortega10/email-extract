@@ -43,10 +43,11 @@ are what a caller (Turn 1.7's DOM half beside it, then the assembly turn) record
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Final, Sequence
+from typing import Final, Mapping, Sequence
 
 from .. import htmltext
 from .. import text as text_stage
+from ..mediatype import effective_media_type_in
 from ..model import BoundaryKind, QuoteBoundary, ViewLevel
 from ..timeevent import Span
 from ..walk import PartShape, WalkResult
@@ -99,9 +100,9 @@ class ViewScan:
     disagreement: bool
 
 
-def _media(part: PartShape) -> str:
-    """The part's media type, exactly as the walker parsed it (parameters dropped)."""
-    return (part.content_type or "").strip().lower()
+def _media(part: PartShape, parts: Mapping[str, PartShape]) -> str:
+    """The part's effective media type (RFC 2045 5.2 / RFC 2046 5.1.5; ``mediatype``)."""
+    return effective_media_type_in(part, parts)
 
 
 def plain_views(raw: bytes, result: WalkResult) -> tuple[tuple[PartShape, text_stage.PartText], ...]:
@@ -109,12 +110,15 @@ def plain_views(raw: bytes, result: WalkResult) -> tuple[tuple[PartShape, text_s
 
     The walker's own text-part decision is reused, never widened: a part has a text record
     only when the charset ladder ran over it (:func:`emailextract.text.analyse_part`), and the
-    view is ``plain`` only when the parsed media type is ``text/plain`` (``model.BodyView``).
+    view is ``plain`` only when the effective media type is ``text/plain``
+    (``mediatype.effective_media_type``: an absent ``Content-Type`` is ``text/plain`` per RFC
+    2045 5.2, a ``multipart/digest`` child is ``message/rfc822`` per RFC 2046 5.1.5).
     """
+    parts = {part.path: part for part in result.parts}
     views: list[tuple[PartShape, text_stage.PartText]] = []
     for part in result.parts:
         record = text_stage.analyse_part(raw, part)
-        if record is None or _media(part) != "text/plain":
+        if record is None or _media(part, parts) != "text/plain":
             continue
         views.append((part, record))
     return tuple(views)
@@ -274,8 +278,9 @@ def html_views(
     project and is skipped.
     """
     views: list[tuple[PartShape, htmltext.HtmlProjection]] = []
+    parts = {part.path: part for part in result.parts}
     for part in result.parts:
-        if _media(part) != "text/html":
+        if _media(part, parts) != "text/html":
             continue
         record = text_stage.analyse_part(raw, part)
         if record is None:

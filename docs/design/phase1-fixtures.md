@@ -184,6 +184,23 @@ is a rule in v1; both raise `body.html_quote_rule_gap` meanwhile.
 | `apple_attribution` | **NOT v1** | the Apple attribution shape (`On 3 Jun 2024, at 10:12, X <a@b> wrote:`) is the least-trusted row and is not named in the design; it raises `body.html_quote_rule_gap` |
 | `yahoo_quoted` | **NOT v1** | Yahoo `div.yahoo_quoted` and `----- Original Message -----` are not confirmed from a probe; they raise `body.html_quote_rule_gap` |
 
+## Turn 1.12: the header-less part (RFC 2045 5.2)
+
+The reviewer found, installing the published `0.1.0rc1` into a clean venv, that a part with **no**
+`Content-Type` got no quote analysis. RFC 2045 section 5.2 makes such a part `text/plain;
+charset=us-ascii`; RFC 2046 section 5.1.5 makes a `multipart/digest` child `message/rfc822`. These
+seven fixtures pin both defaults and the stages that read them.
+
+| fixture | how | what it labels | turn |
+|---|---|---|---|
+| `headerless_plain_on_wrote` | generated | the reproduction: no `Content-Type`, an `On ... wrote:` attribution and a `>` block | `body.quote_boundaries`, `body.view_levels`, `body.text`, `body.selection` | 1.12 |
+| `headerless_plain_gt_only` | generated | no `Content-Type`, a bare `>` run with no attribution | `body.quote_boundaries` (gt_family), `body.view_levels`, `body.text`, `body.selection` | 1.12 |
+| `headerless_plain_mime_version_only` | generated | the reproduction with `MIME-Version: 1.0` alone (no `Content-Type`) | the same facts as `headerless_plain_on_wrote` | 1.12 |
+| `headerless_alternative_text_part` | generated | a `multipart/alternative` whose text child declares no `Content-Type` | `body.alternative_group`, `body.selection`, `body.quote_boundaries` | 1.12 |
+| `headerless_mixed_text_and_attachment` | generated | a header-less inline text body beside a `Content-Type`-less disposition-attachment | `body.selection`, `attach.manifest`, `attach.types` | 1.12 |
+| `headerless_digest_child` | generated | a `multipart/digest` child with no `Content-Type` (the recorded walker/RFC disagreement) | gap `body.digest_default_not_applied`, `attach.manifest`; `body.text`/`body.quote_boundaries`/`body.view_levels` undetermined | 1.12 |
+| `headerless_plain_8bit` | generated | no `Content-Type` with 8-bit non-ASCII bytes (the decode-chain outcome) | `decode.chain`, `body.selection`; `body.text`/quote facts undetermined | 1.12 |
+
 ## Census: the fixture set is a superset of the design's Phase 1 list
 
 The design (`docs/design/email-extraction-design.md`, "Phasing", the **Phase 1** paragraph) names ten

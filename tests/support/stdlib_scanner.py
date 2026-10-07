@@ -496,6 +496,9 @@ SHARED_ATTACHMENT_MISREADING: Final[dict[str, str]] = {
     "text_calendar_view": "the package reads every text/* leaf as a body view (D4: a "
     "text/calendar alternative is a VIEW, never an attachment); this scanner excludes only "
     "text/plain and text/html, so it counts a calendar leaf the package correctly does not",
+    "headerless_default": "the stdlib applies the RFC 2045 5.2 default (text/plain) to a part with "
+    "no Content-Type header, so it reads a header-less inline body as a view and a Content-Type-less "
+    "disposition-attachment as text/plain, while the package classifies by Content-Disposition",
 }
 
 

@@ -1169,3 +1169,93 @@ test: tests/test_readme_examples.py::test_every_python_block_in_the_readme_is_a_
 test: tests/test_readme_examples.py::test_every_readme_example_runs
 stop: after the first-release preparation; the reviewer validates, commits and drives the rc release
 ```
+
+## Turn 1.12 -- a part with no Content-Type is text/plain (RFC 2045 section 5.2)
+
+The reviewer installed the published ``0.1.0rc1`` into a clean venv and ran a plain message with no
+``Content-Type`` header: it got no quote analysis and a content fingerprint over the empty string,
+because every stage computed the part's media type as ``(part.content_type or
+"").strip().lower()`` and saw ``""``. RFC 2045 section 5.2 makes such a part ``text/plain;
+charset=us-ascii``; RFC 2046 section 5.1.5 makes a ``multipart/digest`` child ``message/rfc822``.
+The turn adds **one** helper (``emailextract/mediatype.py``), routes every stage through it, moves
+``QUOTE_RULES_VERSION`` 4 -> 5 (the stages whose output changes: quote boundaries/levels and the
+D14 fingerprint), adds seven header-less fixtures with hand-typed sidecars, and refreshes the
+coverage ledger. ``OUTPUT_SCHEMA_VERSION``, ``EMAIL_PARSER_VERSION`` and ``DECODE_CHAIN_VERSION``
+do **not** move: no record shape and no walker byte changed.
+
+```declaration turn=1.12
+module: emailextract/mediatype.py
+module: emailextract/assemble.py
+module: emailextract/attach.py
+module: emailextract/quote/resolve.py
+module: emailextract/selection.py
+module: emailextract/versions.py
+module: tools/make_fixtures.py
+module: fixtures/generated/headerless_plain_on_wrote.expected.json
+module: fixtures/generated/headerless_plain_gt_only.expected.json
+module: fixtures/generated/headerless_plain_mime_version_only.expected.json
+module: fixtures/generated/headerless_alternative_text_part.expected.json
+module: fixtures/generated/headerless_mixed_text_and_attachment.expected.json
+module: fixtures/generated/headerless_digest_child.expected.json
+module: fixtures/generated/headerless_plain_8bit.expected.json
+module: tests/test_mediatype.py
+module: tests/test_headerless_part.py
+module: tests/test_phase1_scope.py
+module: tests/test_turn_declarations.py
+module: tests/test_l1_gate.py
+module: tests/test_labels.py
+module: tests/test_metrics_cli.py
+module: tests/test_no_silent_drop.py
+module: tests/test_behavior_ledger.py
+module: tests/test_quote_text.py
+module: tests/test_quote_dom.py
+module: tests/test_ingest.py
+module: tests/ledger/behavior_ledger.json
+module: tests/ledger/corpus.json
+module: tests/ledger/facts_ledger.json
+module: tests/ledger/label_ledger.json
+module: README.md
+module: CHANGELOG.md
+module: docs/phase1-report.md
+module: docs/design/phase1-build-spec.md
+module: docs/design/phase1-empirical.md
+module: docs/design/phase1-turn-declarations.md
+test: tests/test_mediatype.py::test_the_declared_type_is_lowercased_and_parameter_stripped
+test: tests/test_mediatype.py::test_an_absent_content_type_defaults_to_text_plain
+test: tests/test_mediatype.py::test_an_absent_content_type_under_multipart_digest_defaults_to_message_rfc822
+test: tests/test_mediatype.py::test_a_present_but_empty_content_type_keeps_the_walkers_reading
+test: tests/test_mediatype.py::test_effective_media_type_in_resolves_the_parent_from_the_parts_map
+test: tests/test_mediatype.py::test_the_helper_is_a_pure_function_of_the_part_and_the_parent_media
+test: tests/test_headerless_part.py::test_the_reproduction_gets_the_quote_boundary_its_explicit_twin_gets
+test: tests/test_headerless_part.py::test_every_single_part_headerless_fixture_agrees_with_its_explicit_twin
+test: tests/test_headerless_part.py::test_the_headerless_alternative_child_agrees_with_its_explicit_twin
+test: tests/test_headerless_part.py::test_the_headerless_inline_text_body_agrees_with_its_explicit_twin
+test: tests/test_headerless_part.py::test_the_content_fingerprint_of_a_headerless_message_is_not_the_empty_digest
+test: tests/test_headerless_part.py::test_the_digest_child_default_is_message_rfc822_and_not_text_plain
+test: tests/test_headerless_part.py::test_no_module_outside_the_helper_computes_a_media_type_by_hand
+test: tests/test_headerless_part.py::test_the_helper_returning_empty_for_an_absent_content_type_fails_the_reproduction
+test: tests/test_headerless_part.py::test_a_stage_bypassing_the_helper_loses_the_headerless_boundary
+test: tests/test_headerless_part.py::test_the_fingerprint_default_is_not_ignored
+stop: after the fix, its labels and the refreshed ledgers; the reviewer audits the labels against the bytes and publishes 0.1.0rc2
+```
+
+Allow-list (``turn=1.12``): ``emailextract/mediatype.py`` (new), the call sites that computed a
+media type (``assemble.py``, ``attach.py``, ``quote/resolve.py``, ``selection.py``),
+``emailextract/versions.py`` (``QUOTE_RULES_VERSION`` 4 -> 5), ``tools/make_fixtures.py`` (the
+seven fixtures), ``fixtures/generated/headerless_*.eml`` (new), the seven new sidecars,
+``tests/test_mediatype.py`` and ``tests/test_headerless_part.py`` (new), the narrow edits to the
+corpus-count tests this forces (``test_l1_gate.py``, ``test_labels.py``, ``test_metrics_cli.py``,
+``test_no_silent_drop.py``, ``test_behavior_ledger.py``, ``test_quote_text.py``,
+``test_quote_dom.py``, ``test_ingest.py``, ``test_phase1_scope.py``), the fixtures census and the two
+scanner comparisons the new fixtures join (``test_fixture_census.py`` and its catalogue section in
+``docs/design/phase1-fixtures.md``, ``test_attach.py::ATTACHMENT_SCANNER_EXCLUSIONS``,
+``test_stdlib_header_scanner.py::CONTENT_TYPE_EXCLUSIONS`` and the one new closed reason
+``headerless_default`` in ``tests/support/stdlib_scanner.py``), ``test_turn_declarations.py``
+(``BUILT_TURNS``), the ledgers (``behavior_ledger.json``/``corpus.json``/
+``label_ledger.json`` via the repo's tools, additions only -- with the one hand-edited
+``stdlib_scanner.py`` hash, since a recorded file changed -- and ``facts_ledger.json`` refreshed and
+``html_projection_golden.json`` re-recorded because the corpus grew), ``README.md``, ``CHANGELOG.md``,
+``docs/phase1-report.md``, ``docs/design/phase1-build-spec.md``, ``docs/design/phase1-empirical.md``
+and ``docs/design/phase1-turn-declarations.md``. Not ``emailextract/walk.py``, ``parse.py``,
+``model.py``, ``ids.py``, ``emailextract/evals/**``, ``pyproject.toml``, or any existing fixture
+or sidecar.

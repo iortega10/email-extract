@@ -43,6 +43,7 @@ EXPECTED_LIBRARY = {
     "htmltree.py",
     "ids.py",
     "ingest.py",
+    "mediatype.py",
     "model.py",
     "parse.py",
     "rfc2047.py",

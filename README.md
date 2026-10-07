@@ -33,6 +33,18 @@ id wherever it is `unknown`. It is importable with **no sibling repository** ins
 * **not a replacement for reading the bytes.** Every claim it makes is anchored to a span, and the
   spans are what a citation resolves to.
 
+**Media types.** A part that declares no `Content-Type` is read as `text/plain` (RFC 2045 section
+5.2), so a plain old-style message gets the same body, quote and fingerprint treatment as one that
+spells the default out. A header-less child of a `multipart/digest` is `message/rfc822` per RFC 2046
+section 5.1.5; the walker still runs its text ladder over it, and that disagreement is recorded as a
+finding in `docs/phase1-report.md`, not silently resolved.
+
+A part that declares **no `Content-Type`** is read as `text/plain; charset=us-ascii` (RFC 2045
+section 5.2), so it gets the same body view, quote analysis and content fingerprint an explicit
+`text/plain` part gets; a `multipart/digest` child that declares none is `message/rfc822` (RFC 2046
+section 5.1.5). The walker still records the raw field as absent -- the default is a projection over
+the bytes (`emailextract/mediatype.py`), never a rewrite of the record.
+
 ## Install
 
 ```sh

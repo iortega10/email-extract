@@ -1,0 +1,80 @@
+{
+  "fixture": "headerless_plain_on_wrote.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "one message with NO MIME-Version and NO Content-Type: five fields, one blank line, then 'Thanks.', a blank line, an English 'On Mon, 3 Mar 2025 at 09:00, Ada wrote:' attribution and the '> earlier line' / '> another' block it carries",
+    "generator": "tools/make_fixtures.py _fixture_headerless_plain_on_wrote (Message-ID <headerless-on-wrote-6001@example.test>, pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "rfc_basis": "RFC 2045 section 5.2: a part with no Content-Type header has the default text/plain; charset=us-ascii. So this part is a text/plain body view exactly as a twin that declares 'text/plain; charset=us-ascii' would be, and the quote stage must read it: the attribution and its '>' block are the same on_wrote_en boundary the explicit twin gets.",
+    "labels_are_typed": "every value was typed by a model from the RFC rule (RFC 2045 section 5.2, the default text/plain) and read out of the fixture bytes (a byte/offset listing); never produced by running the library. The quote span and per-line prefix depths are the design's span conventions (a run to the end of the part keeps its final terminator; an attribution carries the contiguous block that follows it). labels_provenance is spec because a model wrote them, not a person.",
+    "phase_0_facts": "container.*, part.tree, part.gaps, decode.chain and body.content_sha256 -- what the skeleton walker measures today (it records content_type null, never an invented default, and its charset ladder runs the default us-ascii).",
+    "phase_1_facts": "document.axes, body.text, body.quote_boundaries, body.view_levels and body.selection; the quote facts are the point of the fixture.",
+    "not_yet_labelled": "headers.fields, part.regions and body.preamble_epilogue are not typed here: this turn fixates on the effective media type and labels the phase-1 facts the RFC fixes. statuses (phase 2), thread edges and TimeEvents (phase 3) are not exercised."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "9a34f61caa6f28351e88bfb28cdb1bb8ef012ded58377aee30f9a9d4c66e80d5"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 282
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, [0, 282], [0, 203], [203, 79]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, "7bit", "us-ascii", false, "ascii"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "d4ee81935eef235ff999f7db061a9c3558f5fc161bd1823f352cab03b552aaf4"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        ["1", "Thanks.\r\n\r\nOn Mon, 3 Mar 2025 at 09:00, Ada wrote:\r\n> earlier line\r\n> another\r\n", "exact", null]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", "on_wrote_en", "quote", 1, [0, 1, 1], 11, 68]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", 1, "on_wrote_en"]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1", "n/a"]
+      ]
+    }
+  }
+}

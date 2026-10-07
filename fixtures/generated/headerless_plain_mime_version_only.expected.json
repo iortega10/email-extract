@@ -1,0 +1,80 @@
+{
+  "fixture": "headerless_plain_mime_version_only.eml",
+  "labels_provenance": "spec",
+  "annotations": {
+    "shape": "the reproduction body with 'MIME-Version: 1.0' present and NO Content-Type header: the companion to headerless_plain_on_wrote, whose quote facts must be identical (MIME-Version alone changes nothing)",
+    "generator": "tools/make_fixtures.py _fixture_headerless_plain_mime_version_only (Message-ID <headerless-mime-only-6003@example.test>, pinned Date Tue, 4 Mar 2025 08:05:00 +0000)",
+    "rfc_basis": "RFC 2045 section 5.2: MIME-Version names the MIME version, not a media type; a part with no Content-Type header is text/plain; charset=us-ascii by default. So this part's quote facts are exactly headerless_plain_on_wrote's, and the twin test compares them as data.",
+    "labels_are_typed": "every value was typed by a model from the RFC rule and read out of the fixture bytes (a byte/offset listing); never produced by running the library. labels_provenance is spec because a model wrote them, not a person.",
+    "phase_0_facts": "container.*, part.tree, part.gaps, decode.chain and body.content_sha256.",
+    "phase_1_facts": "document.axes, body.text, body.quote_boundaries, body.view_levels and body.selection.",
+    "not_yet_labelled": "headers.fields, part.regions and body.preamble_epilogue are not typed here; phases 2 and 3 are not exercised."
+  },
+  "facts": {
+    "container.sha256": {
+      "phase": 0,
+      "value": "659ce6e29275d4db6d3cebdd6035bb75edf6b7b1fbf8647a444cfeb8251d3b70"
+    },
+    "container.size_bytes": {
+      "phase": 0,
+      "value": 311
+    },
+    "part.tree": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, [0, 311], [0, 232], [232, 79]]
+      ]
+    },
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        ["1", []]
+      ]
+    },
+    "decode.chain": {
+      "phase": 0,
+      "value": [
+        ["1", null, null, "7bit", "us-ascii", false, "ascii"]
+      ]
+    },
+    "body.content_sha256": {
+      "phase": 0,
+      "value": [
+        ["1", "d4ee81935eef235ff999f7db061a9c3558f5fc161bd1823f352cab03b552aaf4"]
+      ]
+    },
+    "document.axes": {
+      "phase": 1,
+      "value": [
+        ["document.times", "unknown", "not_built_in_phase1"],
+        ["document.thread_edges", "unknown", "not_built_in_phase1"],
+        ["document.children", "unknown", "not_built_in_phase1"],
+        ["document.same_message_candidates", "unknown", "not_built_in_phase1"]
+      ]
+    },
+    "body.text": {
+      "phase": 1,
+      "value": [
+        ["1", "Thanks.\r\n\r\nOn Mon, 3 Mar 2025 at 09:00, Ada wrote:\r\n> earlier line\r\n> another\r\n", "exact", null]
+      ]
+    },
+    "body.quote_boundaries": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", "on_wrote_en", "quote", 1, [0, 1, 1], 11, 68]
+      ]
+    },
+    "body.view_levels": {
+      "phase": 1,
+      "value": [
+        ["1", "plain", 1, "on_wrote_en"]
+      ]
+    },
+    "body.selection": {
+      "phase": 1,
+      "value": [
+        ["1", "n/a"]
+      ]
+    }
+  }
+}

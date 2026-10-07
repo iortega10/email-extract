@@ -497,7 +497,7 @@ print("interpreter", "%d.%d.%d" % sys.version_info[:3])
 #: The digest the script prints, recorded (with its command) in
 #: ``docs/design/phase1-empirical.md`` -- the same on both interpreters and both
 #: hash seeds.
-EXPECTED_DIGEST = "307fb742264a31b9f7726e79eb4f6831ae9cb29e031543d96cdd0145dbc18cac"
+EXPECTED_DIGEST = "76bea6e31264fb4b52c9a52ad9b6a8838d6bd1d0a15ae7e0e1e293fb93468c1d"
 
 
 def _second_interpreter() -> list[str] | None:
