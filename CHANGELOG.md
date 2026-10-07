@@ -4,7 +4,7 @@ All notable changes to `email-extract`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.1.0 (unreleased)
+## 0.1.0 (2026-10-07)
 
 The first public release: the **Phase 1 `.eml` parser** and the oracle that measures it. Everything
 is deterministic -- no LLM, no clock, no network, no third-party runtime dependency beyond
