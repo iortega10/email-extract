@@ -247,6 +247,53 @@ is resolved **once**, below:
   the existing **families** in the registry -- `headers.*`, `body.*`, `attach.*` -- and to a new **"Phase 1"**
   section of `phase0-gaps.md`, so a reader still finds every id in one place.
 
+## Revision 4 (Phase 1b Turn 1b.0a): the `.msg` reader's contract
+
+Owner decisions **O1-O8 recorded 2026-10-11**. Triggered by `docs/design/phase1b-build-spec.md` (revision 2)
+and its eight-round debate (`docs/design/phase1b-debate.md`). This is the **one** design revision for Phase 1b
+(spec: "the design is revised **once**, here"); no later Phase 1b turn revises it. Documents only: no code, no
+test, no fixture, no sidecar, no ledger file changes.
+
+What this revision changes, in one paragraph: **D1 is corrected** -- the `.msg` reader is the package's own
+`cfb.py`, and `olefile` is demoted to a tests-and-tools oracle (owner decision O7). **D13 is amended** to
+architecture **A''** (one walker over a deterministic virtual RFC 822 byte string, plus a serialized provenance
+layer: a span table and a pass-through for binary/8-bit leaves), to the **uniform `part_level` /
+`container_stream`** rule for every `.msg` leaf, to **read-through** of the extended DIFAT (owner decision O1,
+which **exceeds D13's letter**, `:784`), to the closed **hostile-CFB** vocabulary and the **class gate**, to
+**RTF decompress-and-record with de-encapsulation cut** (owner decision O2), to **no synthesized headers**
+(owner decision O6), and to `storage_tree_sha256` and the `time.*` facts. **D14** gains a note on the
+`max_input_bytes` asymmetry. The Phase 1b phasing paragraph becomes the **thirteen turns**. The registry
+gains **three `msg.*` ids** and `msg.rtf_encapsulation_refused` is **not created**. Open risks and "Blocked on
+the user" are updated. The exact brief for the later turns is `docs/design/phase1b-contract.md`,
+`phase1b-facts.md`, `phase1b-fixtures.md`, `phase1b-ledgers.md` and `phase1b-probes.md`.
+
+**Owner decisions (2026-10-11: the owner accepted the reviewer's recommendation on every question).**
+
+- **O1. Extended DIFAT: read through** the bounded extended chain; record `msg.cfb_difat_extended` as an
+  **observation**; fault only on a broken chain. This **exceeds D13's letter** ("a named gap, not a crash",
+  `:784`), reconciled below in D13.
+- **O2. RTF: de-encapsulation is cut; the decompress-and-record minimum stays** (LZFu/MELA, header size and CRC
+  checked, `container_facts.body_streams=rtf`, `msg.rtf_to_text_unsupported`, **no** body view).
+  `msg.rtf_encapsulation_refused` is **not created** and no `BodyView` member is added.
+- **O3. CFB cap reasons: three new `REASON_TABLE` members** (`sector_count_cap`, `directory_entries_cap`,
+  `difat_chain_length_cap`) under `Status.SKIPPED`, because a CFB limit stretched onto `part_count_cap` or
+  `depth_cap` would make a reader of the reason id infer the wrong cause.
+- **O4. `olefile` is a `[dev]` extra** (BSD-3-Clause, already named in `NOTICE`), used only by the tests-and-tools
+  oracle on well-formed fixtures; never imported by `emailextract/`.
+- **O5. Process: accepted.** Golden-first (Turn 1b.0c) and the split container turns; **thirteen turns**
+  including the three 1b.0 turns.
+- **O6. No synthesized headers** for a `.msg` without `0x007D` (unchanged default): `headers=[]`; the only gap is
+  `msg.transport_headers_absent`, once at document level.
+- **O7. D1 versus D13: resolved toward D13.** The package's own `cfb.py` is the reader; `olefile` is the oracle.
+  D1 is corrected below.
+- **O8. Signed and encrypted mail: class recorded, no body, never verified**, until probe P1 shows the real
+  layout. Hearth's proposed split (encrypted-only -> `Status.ENCRYPTED`; signed-only readable -> `PARSED`) is
+  **not adopted**.
+
+Honesty note: the eight debate rounds were read-only (the only code run was scratch experiments on hand-built
+bytes in a directory outside the repo); every Phase 1b shape is **specified here and built later**, and every
+`file:line` in the Phase 1b documents was re-opened in Turn 1b.0a.
+
 ## Goal
 
 Decompose one email message (v1: a `.eml` or `.msg` file, or a directory of them) into an
@@ -272,10 +319,11 @@ authentication headers are *claims*, never verified facts.
 Status key: **A** = agreed by both sides; **AC** = agreed with a change from the
 opening proposal (change stated); **D** = standing disagreement.
 
-### D1. Container parsing: `.eml` (stdlib) and `.msg` (own olefile reader) in v1 (AC, revised in Revision 2)
+### D1. Container parsing: `.eml` (stdlib) and `.msg` (own `cfb.py` reader) in v1 (AC, revised in Revision 2 and Revision 4)
 - Revision 1 text (`.eml` only; `.msg` a v2 GPL optional extra) is **superseded**: the owner's
   real corpus is `.msg` (open-inputs item 2), so Revision 1's promotion condition was met.
-- `.eml`: stdlib `email`, `policy.default`. `.msg`: an own reader over `olefile` (BSD) for a
+- `.eml`: stdlib `email`, `policy.default`. `.msg`: an own reader -- `emailextract/cfb.py` (container
+  primitives, no message knowledge; D13) with the MAPI layer above it -- for a
   stated subset (D13). **No GPL dependency at all**: not `extract-msg`, not `html2text`, not as
   an optional extra, not in `tests/` or dev-dependencies. Reasons: the owner intends to publish
   under Apache-2.0 and use the tool at work; an optional GPL extra still raises a
@@ -290,7 +338,8 @@ opening proposal (change stated); **D** = standing disagreement.
 - **Amendment (Revision 3, decision 10).** Fixed as `parse(data: bytes, container_kind=None, *,
   limits)`: `limits` has **no default** (a `Limits.untrusted()` constructor is provided for callers),
   because the function cannot know which bytes are untrusted. Sniffing is `D0CF11E0A1B11AE1` ->
-  `cfb_msg` (a named error in Phase 1: no reader, never a guess, never an exception from mid-parse),
+  `cfb_msg` (in Phase 1 a named error -- no reader -- but **opened** from Phase 1b on, revision 4; never a
+  guess, never an exception from mid-parse),
   else RFC 822 if the bytes begin, **after an optional UTF-8 BOM**, with at least one `name: value`
   line before a blank line or EOF, else a **named error** (closed reason id). The named error is kept
   -- "any other bytes are RFC 822" would parse garbage as a defectful message and drop D1's named
@@ -316,6 +365,14 @@ opening proposal (change stated); **D** = standing disagreement.
   **projected-text span** it covers and the **set of `cid:` references**.
 - Rejected: an optional GPL `emailextract[msg]`; keeping `.msg` in v2.
 - Status **AC** (hearth agreed to the own reader and tightened the no-GPL rule to include tests).
+- **Amendment (Revision 4, O4/O7).** "an own reader over `olefile`" is **corrected**: the reader is the
+  package's own `emailextract/cfb.py` (container primitives, 350-450 lines, D13), and **`olefile` is a
+  tests-and-tools oracle only** -- a `[dev]` extra on well-formed fixtures, never imported by `emailextract/`
+  (the import-scope test is the guard). Forced by C3 (a per-sector classification olefile does not expose) and
+  rule 4 (a chain walk the package owns): on a hostile-input check, `olefile` returned a full-size stream
+  for a cyclic FAT chain with an empty `parsing_issues` and clamped a `2**40` size claim to 0 bytes. The entry
+  point now **opens** a sniffed or claimed `cfb_msg` (revision 4, contract point 8); a non-`IPM.Note` CFB is
+  `Status.UNSUPPORTED` with the registered `msg.class_not_ipm_note` gap (nothing past the class is opened).
 
 ### D2. Model: headers are a *part* in the canonical address space (AC; hearth's
 most load-bearing correction)
@@ -773,7 +830,7 @@ Status is never derived from classification and never from size.
 - Retrieval and thread joins are scored only against **human** labels, reported
   and not gated until such labels exist.
 
-### D13. The `.msg` reader: subset, encodings, spans, fixtures (AC, Revision 2)
+### D13. The `.msg` reader: subset, encodings, spans, fixtures (AC, Revision 2; amended in Revision 4)
 - **Primitives vs MAPI split.** `emailextract/cfb.py` holds **container primitives only**
   (v3/v4 sectors, FAT **and miniFAT** (mandatory: property streams are mostly under 4096
   bytes), directory, case-insensitive lookup, stream read, `limits`) with **no** message
@@ -813,9 +870,48 @@ Status is never derived from classification and never from size.
   hardest component.
 - Gap family `msg`: `cfb_difat_extended`, `class_not_ipm_note`, `rtf_to_text_unsupported`,
   `property_tag_unknown`, `stream_truncated`, `codepage_unresolved_ladder_used`,
-  `embedded_depth_cap`, `named_property_unresolved`.
+  `embedded_depth_cap`, `named_property_unresolved`, and (Revision 4) the three new ids
+  `transport_headers_absent`, `attachment_method_unsupported`, `recipient_table_unreadable`.
+- **Amendment (Revision 4, A'').** The v1 subset above stands, with these amendments, all specified in
+  `docs/design/phase1b-contract.md`:
+  - **Architecture A''.** One walker over a deterministic **virtual RFC 822 byte string**, plus a serialized
+    provenance layer: a **span table** (`getattr(container, "span_provenance", None)`, one row per virtual
+    region, `axis in {stream, reencoded, synthetic}`) and a **pass-through** for binary/8-bit leaves (an HTML
+    body in `0x1013` is projected unchanged with CTE `binary`; its `size_bytes`/`sha256` are the stream's; only
+    `001F` text -- the `0x007D` headers, plain `0x1000` -- is re-encoded to UTF-8). One schema bump
+    (`OUTPUT_SCHEMA_VERSION` 5 -> 6) carries `ContainerStreamRef`, the CFB cap reasons and `EmbeddedSummary`.
+  - **Spans.** Every `.msg` leaf, pass-through included, is `part_level` with
+    `verbatim_reason: container_stream` (a fourth `text.VERBATIM_REASONS` member); no virtual offset is an input
+    to any identity or stored in any record (C2), and `part_id` is kind-gated over the **source** bytes. Header
+    text is decoded UTF-16 and re-encoded UTF-8 through a `value_codec` seam (default `latin-1`).
+  - **Extended DIFAT (O1).** Read **through** the bounded extended chain, record `msg.cfb_difat_extended` as an
+    **observation**, fault only on a broken chain. This **supersedes** D13's "a named gap, not a crash"
+    (`:784`): the gap id is an observation, not a refusal, and `phase0-gaps.md` is reconciled to match.
+  - **Hostile CFB (closed vocabulary).** Directory loop -> NamedError `cfb_directory_loop`; unsupported header
+    (sector shift outside {9,10,11,12} for v3, or v4 with shift != 12) -> NamedError `cfb_header_unsupported`;
+    CFB magic without `__properties_version1.0` -> the existing `not_a_message`; `cfb_msg_unsupported` is
+    deleted. Per-stream chain faults (cycle / out-of-range / short chain) are a **document** with
+    `Status.TRUNCATED`; `cfb.read_stream` never raises. A FAT cycle is a per-stream `msg.stream_truncated`, not
+    a gap id of its own.
+  - **Class gate.** Non-`IPM.Note*` -> `Status.UNSUPPORTED` (takes no reason), the class verbatim in
+    `container_facts.message_class`, the registered `msg.class_not_ipm_note` kept; nothing past the class is
+    opened.
+  - **RTF (O2).** Decompress-and-record only (`LZFu`/`MELA`, header size and CRC checked, a mismatch is
+    `msg.stream_truncated`); `container_facts.body_streams=rtf`; `msg.rtf_to_text_unsupported`; **no** body view
+    (RTF-to-text stays a gap, de-encapsulation is cut, `msg.rtf_encapsulation_refused` is not created).
+  - **No synthesized headers (O6).** Absent `0x007D` -> `headers=[]`; the header/date/address walkers do not run
+    over an empty synthesized block; the only gap is `msg.transport_headers_absent`, once at document level.
+  - **Embedded messages (depth <= 1)** are read and recorded (an `EmbeddedSummary` on the occurrence), not
+    recursed; a storage's identity is a **`storage_tree_sha256`** over a defined canonical walk, never claimed
+    to equal a `.msg` file's hash.
+  - **Time facts.** `container_facts` keys `time.<tag-hex>.filetime_hex` (lossless hex) and `time.<tag-hex>.utc`;
+    no `TimeEvent` is emitted in Phase 1b. The `Date` header and the MAPI properties stay distinct.
+  - **`container_facts` for `cfb_msg`** is the fixed list in `phase1b-contract.md` section 6,
+    `projection=virtual_rfc822`.
+  - Versions: `CFB_VERSION`, `MSG_READER_VERSION`, `MSG_PROJECTION_VERSION` (each a ledger component) and the
+    one `OUTPUT_SCHEMA_VERSION` bump; `EMAIL_PARSER_VERSION` must not move (rule 2).
 
-### D14. Container identity: one `EmailDocument`, honest about bytes (A, Revision 2)
+### D14. Container identity: one `EmailDocument`, honest about bytes (A, Revision 2; `max_input_bytes` note in Revision 4)
 - Measured: one real message exists as `.eml` and `.msg` with identical header names and
   identical HTML body bytes, but the `.eml` is `multipart/alternative` (plain + HTML) and the
   `.msg` kept only the HTML. **The container changes what a message contains**; the two cannot
@@ -830,6 +926,12 @@ Status is never derived from classification and never from size.
   different Message-ID -> a reported conflict. A plain-only versus HTML-only pair surfaces as
   **no candidate**, not "different". Quote and signature stripping are **never** in the digest
   key (the `.msg` lost the plain part).
+- **Note (Revision 4, the `max_input_bytes` asymmetry).** `max_input_bytes` is measured on the **file**, so a
+  `.msg` is gated on the CFB file's size while the same message as a base64 `.eml` twin is gated on its larger
+  base64 size: a 50 MB `.msg` **passes** the 64 MiB gate where its ~67 MB base64 `.eml` twin is refused
+  (`input_over_cap`). The `max_decoded_*` caps are measured on decoded bytes, so a cap **hit** is consistent
+  between the two containers. The asymmetry is honest (a `.msg`'s base64 inflation is not paid), is **recorded**
+  in the Phase 1b report, and is not concealed by adjusting either gate.
 
 ### D15. Time evidence and the deferred timeline layer (AC, Revision 2)
 Owner question: first build an "organizer" over email, Word, Excel and PDF that tracks what
@@ -951,7 +1053,7 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   partially filled. Two versions of one file are two occurrences with two
   citations and a `same_content_hash` boolean; never merged.
 
-## Known-gap ids (v1 registry; resolved by `docs/design/phase0-gaps.md` in Phase 0.6, extended in Phase 1 Turn 1.0a)
+## Known-gap ids (v1 registry; resolved by `docs/design/phase0-gaps.md` in Phase 0.6, extended in Phase 1 Turn 1.0a and Phase 1b Turn 1b.0a)
 
 - **headers**: `malformed_line`, `unknown_field`, `no_message_id`,
   `duplicate_message_id`, `no_date`, `invalid_date`, `date_no_zone`,
@@ -978,7 +1080,10 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   `thread_index_claimed_not_used_for_edges`, `same_message_candidate_across_containers`.
 - **msg** (Revision 2): `cfb_difat_extended`, `class_not_ipm_note`,
   `rtf_to_text_unsupported`, `property_tag_unknown`, `stream_truncated`,
-  `codepage_unresolved_ladder_used`, `embedded_depth_cap`, `named_property_unresolved`.
+  `codepage_unresolved_ladder_used`, `embedded_depth_cap`, `named_property_unresolved`,
+  `transport_headers_absent`, `attachment_method_unsupported`, `recipient_table_unreadable` (the last
+  three added in Revision 4). The de-encapsulation id msg.rtf_encapsulation_refused is **not created**
+  (Revision 4, O2).
 - **time** (Revision 2): `hop_timestamp_unparsable`, `calendar_rrule_unparsed`,
   `calendar_vtimezone_unresolved`, `calendar_floating_time`, `thread_index_undecodable`,
   `in_text_dates_not_extracted_v1`, `arrival_unknown_non_email`.
@@ -1002,6 +1107,13 @@ emit evidence from parsers, build a thin read-only layer later, with named polic
   `phase0-gaps.md` entry, a fixture and a mutation case (Revision 3, "the registry mechanics are
   named"). **None is emitted by any code in Turn 1.0a**: this turn only registers them, and the turn
   named beside each entry in `phase0-gaps.md` first emits it.
+- Phase 1b additions (Turn 1b.0a, Revision 4): the **three** ids `msg.transport_headers_absent`,
+  `msg.attachment_method_unsupported` and `msg.recipient_table_unreadable` join the `msg` family above, so the
+  registry goes from 85 to **88** ids. Each costs a registry line here, a `phase0-gaps.md` entry, a fixture and
+  a mutation case. **None is emitted by any code in Turn 1b.0a**; the turn named beside each entry in
+  `phase0-gaps.md` first emits it. The eight registered `msg.*` ids and `headers.mapi_header_property_disagree`
+  are **first emitted** in Phase 1b (their `phase0-gaps.md` entries gain the emitting turn and the committed
+  fixture names from `docs/design/phase1b-fixtures.md`).
 
 ## Triage of items surfaced beyond the opening list
 
@@ -1054,16 +1166,37 @@ blocked-on-user items are stale.
 boundary ordinal + rule id per boundary stored (the Phase 5 precondition); re-ingest
 is a no-op; no-silent-drop green.
 
-**Phase 1b (new, Revision 2): `.msg` reader.** Its own phase, **after** the container-neutral
-Phase 1 and **before** routing (Phase 2) and threading (Phase 3), so later phases see both
-containers. Deliver: `cfb.py` primitives, the MAPI layer, the `tools/` CFB writer, the sniffing
-entry, `container_kind`. Fixtures: `msg_headers_only`, `msg_headers_html`,
-`msg_html_only_no_plain`, `msg_rtf_compressed_body`, `msg_embedded_message`,
-`msg_attachment_with_cid`, `msg_non_ipm_note`, `msg_truncated_stream`,
-`msg_outlook_layout_handbuilt`, and a synthetic **cross-container pair** (same message as
-`.eml` and `.msg`). Exit: L1 100% over hand-typed sidecars; the pair yields one `EmailDocument`
-shape with the documented differences (`container_hash` differs, `body_digest` equal for the
-HTML view); sha256 freeze on writer output; no-silent-drop green on `.msg`.
+**Phase 1b (new, Revision 2; thirteen turns, Revision 4): `.msg` reader.** Its own phase, **after** the
+container-neutral Phase 1 and **before** routing (Phase 2) and threading (Phase 3), so later phases see both
+containers. Deliver: `emailextract/cfb.py` (primitives), `emailextract/mapi.py` (the property layer), and
+`emailextract/msgcontainer.py` (the `Container` for `cfb_msg`, the virtual bytes and the span table); the
+`tools/` CFB writer (`tools/cfb_writer.py`), the fixture builder (`tools/make_msg_fixtures.py`), the sniffing
+entry (the corrected `parse`) and `container_kind`. Fixtures: the ~47 `.msg` fixtures of
+`docs/design/phase1b-fixtures.md` (the design's nine plus the catalogue's additions) and the synthetic
+**cross-container pair** `pair_gmail_reply.eml` / `.msg` (same message; `container_hash` differs, `body_digest`
+equal for the HTML view). **The thirteen turns** (spec `phase1b-build-spec.md:292-306`):
+
+| turn | deliver |
+|---|---|
+| 1b.0a | **documents only** (this revision, the Phase 1b documents, the three registry ids) |
+| 1b.0b | the eight closed experiments on hand-built bytes (`docs/design/msg-architecture.md`) and `tools/msg_probe.py`; **no package code** |
+| 1b.0c | the **`.eml` golden** (`tests/golden/eml_golden.json`), captured before any frozen-module edit |
+| 1b.1 | the one schema bump, the eight provenance points and the `value_codec` seam, against `FakeMsgContainer` |
+| 1b.2 | `tools/cfb_writer.py`, the first fixtures, the hex pins and `SHA256SUMS`; the `olefile` oracle |
+| 1b.3 | `cfb.py`, caps, sector classification, the hostile set and the seeded fuzz |
+| 1b.4 | `mapi.py`: property tables, entry decode, the string ladder, the class gate, named properties, recipients |
+| 1b.5 | `msgcontainer.py` over real CFB: the projection, the span table, headers, bodies, sector accounting |
+| 1b.6 | message-level facts: subject, sender, recipients, `time.*`, the property-versus-header conflict pair |
+| 1b.7 | attachments: by-value, cid/hidden flags, the filename ladder, type verdicts, embedded messages |
+| 1b.8 | RTF minimum: decompress, record, `msg.rtf_to_text_unsupported` |
+| 1b.9 | the cross-container pair and D14, the Outlook-layout fixture, the encoding fixtures |
+| 1b.10 | gates over real output, the hostile run, the scope test, the ledger components, the report, `0.2.0` |
+
+Exit: L1 100% over the `.msg` sidecars with a per-fact floor declared before the turn; the pair yields one
+`EmailDocument` shape with the documented differences; sha256 freeze on writer output; no-silent-drop green on
+CFB **sectors**; the `.msg` documents byte-identical across runs, hash seeds, locales, time zones and both
+interpreters; the package imports with no sibling, no `olefile`, no `chardet`, no GPL; no real `.msg` in the
+repository.
 
 **Phase 2: routing, statuses, recursion, caps.** Fixtures: `type_lies`,
 `ole_container_ambiguous`, `nested_eml_single`, `nested_eml_depth_chain`,
@@ -1118,11 +1251,21 @@ citation and `source`/`tool` contracts above; ingest stays on the CLI.
    beyond.
 8. **Streaming caps** (`cap_hit_mid_stream`) are reserved but unreachable; a future
    streaming extractor changes the cap semantics.
-9. **`.msg` reader correctness** (Revision 2). Writer and reader share an author; frozen
-   digests prove stability, not interop; the only third-party signal is the owner running
-   `extract-msg` by hand. Property tags unverified until the Phase 0.0 spike. RTF-only
-   bodies, embedded messages and attachments in `.msg` are **not** exercised by any real
-   sample (the real `.msg` samples are HTML-only, attachment-less).
+9. **`.msg` reader correctness** (Revision 2; ranked up in Revision 4). Writer and reader share an author;
+   frozen digests prove stability, not interop; the only third-party signal is the owner running `extract-msg`
+   by hand (the `olefile` oracle is a tests-and-tools comparator on **well-formed** fixtures only -- it is
+   silent on a cyclic FAT chain and clamps a `2**40` size claim). Property tags are "verify" until a probe
+   confirms them; no doc freezes a tag. RTF-only bodies, embedded messages and attachments in `.msg` are **not**
+   exercised by any real sample (the real `.msg` samples are HTML-only, attachment-less). **Revision 4's
+   specific risks**, each with its named breaker: (a) *same-author agreement on a wrong layout* -- the `olefile`
+   oracle (well-formed only), the hand-built Outlook-layout fixture and the owner's probe; none is a proof;
+   (b) *a virtual offset leaking into an identity or a citation* -- C2, the two-framing-lengths test and the
+   uniform `part_level`/`container_stream` rule (the failure that sank revision 1's architecture); (c) *a silent
+   `.eml` change through the eight provenance points* -- rule 2, the golden, and "the default branch is the
+   current expression verbatim"; (d) *trusting `0x007D`'s structure headers* -- they describe the original
+   message, never the `.msg`; (e) *hostile CFB* (cycles, loops, size lies) -- the closed vocabulary,
+   `read_stream` never raising, the work-per-byte budget and the seeded fuzz; (f) *gates that cannot fail* --
+   floors declared in advance, the closed registry and named seeds, sector-level accounting.
 10. **`TimeEvent` shape is designed from one producer** (email) and its conflict fixtures are
     hand-typed by the contract's author; the word-extract second-producer gate in D15 is the
     check, and it is later.
@@ -1163,6 +1306,19 @@ citation and `source`/`tool` contracts above; ingest stays on the CLI.
   ordering policy (withdrawn); TimeEvent type email-local until a second producer; and a
   correction of hearth's one-line claim that CID is a Content-Location fact (different headers).
 
+### Revision 4
+- **hearth changed Claude on:** architecture C (a `MsgContainer` that builds `PartShape` itself) -> A''
+  (one walker + a serialized provenance layer), once the header-fields coupling and the store's virtual-offset
+  leak showed C reimplements the walker anyway; a named error for all cycles -> a per-stream document with
+  `Status.TRUNCATED`; pass-through for binary/8-bit leaves; the eight provenance chokepoints; the `.eml` golden
+  in its own turn before any frozen edit.
+- **Claude changed hearth on:** the extended-DIFAT stance ("follow D13 literally" -> "read through and flag
+  it") after the ~7 MB v3 ceiling was worked out; the removal of the un-evidenced "UTF-16 with BOM" claim; and
+  the correction that `msg.fat_cycle` is a fixture, not a registered gap id.
+- **Own decisions the owner made (2026-10-11):** O1 read-through; O2 RTF de-encapsulation cut; O3 new CFB cap
+  reasons; O4 `olefile` a `[dev]` extra; O5 golden-first and the thirteen turns; O6 no synthesized headers;
+  O7 D1 corrected toward D13; O8 signed/encrypted recorded by class only (P1 decides whether to re-open).
+
 ## Disagreements
 
 - **Revision 2: none standing.** Everything raised was settled in two rounds. One hearth tool
@@ -1185,13 +1341,17 @@ be built.
    thread join, i18n reply markers, whether the real corpus is `.msg`, and L2
    must-find labels with `labels_provenance: human`. Fallback: those paths are
    recorded unverified and the thread join is reported, not gated.
-2. **Is the real corpus `.msg`?** ANSWERED (Revision 2): yes; `.msg` is v1. Still needed:
-   `.msg` samples **with** attachments, an embedded message, an RTF-only body and a quoted
-   reply (redacted, outside the repo); the real `.msg` seen are HTML-only and attachment-less.
+2. **Is the real corpus `.msg`?** ANSWERED (Revision 2): yes; `.msg` is v1. Still needed (Revision 4):
+   `.msg` samples **with** attachments, an embedded message, an RTF-only body and a quoted reply (redacted,
+   outside the repo); the real `.msg` seen are HTML-only and attachment-less. The Phase 1b **probes P1-P6**
+   (`docs/design/phase1b-probes.md`) extract the structure-only aggregates for the signed-mail layout, the time
+   tags, the CFB layout (incl. whether the extended DIFAT ever occurs), the attachment/recipient tags, the 8-bit
+   prevalence and the vendor HTML classes.
 3. **`.msg` license policy.** Revision 2 **recommends** the own reader with no GPL dependency
    at all; it is the owner's call. Confirm: (a) no GPL import in code, tests or dev-deps,
    (b) running `extract-msg` by hand for spot checks is acceptable, (c) the Apache-2.0
-   publication intent.
+   publication intent. **Revision 4 / O4:** `olefile` (the tests-and-tools oracle) is BSD-3-Clause and becomes
+   a **`[dev]` extra**, never a runtime dependency; the owner is asked to confirm that split is acceptable.
 4. **Real term lists** (shared with word-extract; `open-inputs.md` there). Flag L2
    recall cannot be gated without human must-find labels from real documents.
    Build them from public sources or a list the owner is explicitly permitted to
@@ -1208,6 +1368,7 @@ be built.
    asserts, with a note); the tool cannot invent it. (c) Which named ordering policies come
    first. (d) Whether in-text date extraction is wanted at all, and the locale for ambiguous
    numeric dates (the owner's, never a guess).
-8. **More real `.msg` structure measurements** (structure-only, same privacy rule).
+8. **More real `.msg` structure measurements** (structure-only, same privacy rule). The Phase 1b
+   `tools/msg_probe.py` (probes P1-P6, `docs/design/phase1b-probes.md`) is the specified instrument.
 9. **Scope confirmations**: v1 ingest = single `.eml`/`.msg` or a directory; mbox a named
    gap; `.emlx`/`.mht`/PST out; RTF-to-text a named gap.

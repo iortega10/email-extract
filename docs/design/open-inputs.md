@@ -97,3 +97,24 @@ input arrives or a fallback changes.
 - **Deferred by the owner (none available):** non-English reply markers, encrypted or signed
   messages, auto-replies and bounces. Left for later; the design records them as named gaps.
 - Probes of real samples print structure only and are never given to hearth's model.
+
+## 9. Phase 1b owner decisions and pending probes: RECORDED
+
+- **Owner decisions O1-O8 (2026-10-11; recorded in design revision 4).** The owner accepted the reviewer's
+  recommendation on every question: **O1** read the extended DIFAT through (record `msg.cfb_difat_extended` as
+  an observation); **O2** cut RTF de-encapsulation (keep decompress-and-record); **O3** add three CFB cap
+  reasons (`sector_count_cap`, `directory_entries_cap`, `difat_chain_length_cap`) under `Status.SKIPPED`;
+  **O4** `olefile` becomes a `[dev]` extra, tests-and-tools only; **O5** golden-first and the thirteen Phase 1b
+  turns; **O6** no synthesized headers for a `.msg` without `0x007D`; **O7** correct D1 -- the package's own
+  `cfb.py` is the reader; **O8** signed/encrypted mail is recorded by class only (no body, never verified).
+  These are inputs the owner supplied; nothing here blocks Phase 1b.
+- **Pending probes P1-P6 (structure-only; the owner runs them, pastes aggregates).** `tools/msg_probe.py`
+  (built in Turn 1b.0b) implements them; their specification and output schema are
+  `docs/design/phase1b-probes.md`. They decide: **P1** the signed-mail layout (whether O8 is re-opened);
+  **P2** the time property tags (`0x0039`, `0x0E06`, `0x3007`, `0x3008`); **P3** the CFB layout aggregate
+  (whether the extended DIFAT ever occurs -- how much O1 matters); **P4** the attachment/recipient tag sets;
+  **P5** 8-bit prevalence; **P6** the vendor HTML classes. The probe refuses a path inside the repository and
+  prints only counts, sizes, tag sets and presence lines; its output is pasted by the owner, never read by
+  hearth's model from the owner's files, and never becomes a fixture.
+- **Still open** (unchanged from item 3): the owner's confirmation that the `olefile`-as-`[dev]`-extra split is
+  acceptable.

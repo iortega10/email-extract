@@ -8,7 +8,8 @@ the registry's ids **verbatim** -- none is invented, renamed or merged -- and
 Phase 0.6 **prunes two** (`attach.size_cap_hit`, `attach.nesting_cap_hit`), leaving **79** (see
 "The prune"); Phase 1 Turn 1.0a **adds seven** (see "Phase 1") and **removes one**
 (`body.plain_effectively_empty`, resolved as a **fact** -- see "`body.plain_effectively_empty` is a
-fact"), leaving **85** entries.
+fact"), leaving **85** entries; Phase 1b Turn 1b.0a **adds three** `msg.*` ids (see "Phase 1b"),
+leaving **88** entries.
 
 The file **keeps its name** `phase0-gaps.md`: its path is asserted by
 `tests/test_phase0_gaps.py` and by the design's registry heading, and renaming it would touch a
@@ -189,13 +190,13 @@ views, attachment manifest); **1b** the `.msg` reader; **2** routing, statuses a
   `fixtures/generated/thread_three_refs_chain` in their `gaps.later` rows (phase 3).
 
 ### `headers.mapi_header_property_disagree`
-- **Missing:** in a `.msg`, the MAPI transport-header property and a header written elsewhere
-  disagree; the transport header is selected for the canonical view (`value_source=transport_header`)
-  and the property is kept verbatim beside it (D2/D13).
+- **Missing:** in a `.msg`, the MAPI transport-header property (`0x007D`) and a header written elsewhere (a
+  MAPI property) disagree; the transport header is selected for the canonical view
+  (`value_source=transport_header`) and the property is kept verbatim beside it (D2/D13).
 - **A reader must not infer:** that one of the two is the truth, or that the disagreement was
   resolved. Both are recorded; the conflict stands (D2).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **First emitted by:** Phase 1b, Turn 1b.5 (`msgcontainer.py`, headers from the transport stream).
+- **Committed fixture:** `msg_property_vs_header_conflict`.
 
 ## body
 
@@ -613,68 +614,82 @@ registry id and `tests/test_phase0_gaps.py` would otherwise read it back as one.
 ## msg (Revision 2; the `.msg` reader)
 
 ### `msg.cfb_difat_extended`
-- **Missing:** the CFB container uses the extended DIFAT (more than 109 FAT sectors); the walker
-  records the extended form and reads through it (D13).
-- **A reader must not infer:** that the ordinary DIFAT suffices, or that the file is corrupt. The
-  extended form is a legal CFB state (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** the CFB container uses the **extended DIFAT** (more than 109 FAT sectors). The reader **reads
+  through** the bounded extended chain and records this id as an **observation** (owner decision O1, design
+  revision 4; this **supersedes** the earlier D13 reading "a named gap, not a crash" and reconciles
+  `phase0-gaps.md` with revised D13). The reader faults only on a **broken** chain (a per-stream
+  `msg.stream_truncated`).
+- **A reader must not infer:** that the ordinary 109-slot header DIFAT suffices, or that the file is corrupt.
+  The extended form is a legal CFB state, read through, and the id says the chain was present.
+- **First emitted by:** Phase 1b, Turn 1b.3 (`cfb.py`, the DIFAT walk).
+- **Committed fixture:** `msg_difat_extended` (a file large enough to need the extended chain).
 
 ### `msg.class_not_ipm_note`
-- **Missing:** the message class is not `IPM.Note` (a contact, appointment or other item); the class
-  is recorded and the message is not read as ordinary mail (D13).
-- **A reader must not infer:** that the item has no body, or that it is junk. The class is a fact
-  (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** the message class is not `IPM.Note*` (a contact, appointment, signed/encrypted item or other
+  item); the class is recorded **verbatim** in `container_facts.message_class` and nothing past the class is
+  opened. The document's `Status` is `UNSUPPORTED` (which takes no reason); the gap says what was not read.
+- **A reader must not infer:** that the item has no body, or that it is junk. The class is a fact (D13).
+- **First emitted by:** Phase 1b, Turn 1b.4 (`mapi.py`, the class gate).
+- **Committed fixture:** `msg_non_ipm_note` (an appointment); `msg_signed_class` is the signed-class case.
 
 ### `msg.rtf_to_text_unsupported`
-- **Missing:** the body is RTF-only (compressed-RTF); RTF-to-text is a named gap and the body is
-  not rendered (D13/D4).
-- **A reader must not infer:** that the message has no body, or that the RTF is the text. The body
-  is present but not converted (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** the body carries compressed RTF (`0x1009`); the reader **decompresses and records** it (`LZFu`
+  and uncompressed `MELA`, header size and CRC checked) but does **not** render RTF-to-text (a named gap), and
+  an RTF-only body yields **no body view** (`BodyView` is `HTML`/`PLAIN` only). Owner decision O2: RTF
+  de-encapsulation is **cut**; `msg.rtf_encapsulation_refused` is **not created**.
+- **A reader must not infer:** that the message has no body, or that the RTF is the text. The body is present
+  but not converted (revised D13).
+- **First emitted by:** Phase 1b, Turn 1b.8 (the RTF decompress-and-record minimum).
+- **Committed fixture:** `msg_rtf_compressed_body` (`LZFu`, `\fromtext`) and `msg_rtf_only` (RTF-only).
 
 ### `msg.property_tag_unknown`
-- **Missing:** a MAPI property tag the reader does not recognise; the property is recorded as
-  unknown rather than interpreted (D13).
-- **A reader must not infer:** that the property is absent, or that a guess is its value. Unknown
-  tags are kept verbatim (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** a MAPI property tag the reader does not recognise; the property is recorded as unknown, **hex
+  only**, rather than interpreted. **No tag is frozen by a doc**: every tag is "verify" until a probe (P2/P4)
+  confirms it.
+- **A reader must not infer:** that the property is absent, or that a guess is its value. Unknown tags are kept
+  verbatim (D13).
+- **First emitted by:** Phase 1b, Turn 1b.4 (`mapi.py`, the property table decode).
+- **Committed fixture:** `msg_unknown_tags`.
 
 ### `msg.stream_truncated`
-- **Missing:** a CFB stream is shorter than its declared size; the bytes present are kept and the
-  truncation is recorded (D13).
-- **A reader must not infer:** that the stream is complete, or that absent bytes were padding. The
-  declared length is not fabricated (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** a CFB stream is shorter than its declared size, or its chain is broken (a cycle, an out-of-range
+  sector, or a short chain); the bytes present are kept and the per-stream fault is recorded. The document's
+  `Status` is `TRUNCATED` with the mapped reason (`declared_length_mismatch` for a cycle, `stream_ended_early`
+  for out-of-range and short chain). **A FAT cycle is a per-stream `msg.stream_truncated`, not a gap id of its
+  own** (`msg.fat_cycle` is a hostile **fixture**, never an id); likewise a directory loop is the NamedError
+  `cfb_directory_loop`, not a gap id.
+- **A reader must not infer:** that the stream is complete, or that absent bytes were padding. The declared
+  length is not fabricated (D13).
+- **First emitted by:** Phase 1b, Turn 1b.3 (`cfb.py`, the stream read contract).
+- **Committed fixture:** `msg_truncated_stream`, `msg_fat_cycle` (a cycle) and `msg_rtf_bad_crc`.
 
 ### `msg.codepage_unresolved_ladder_used`
-- **Missing:** neither the internet codepage nor the message codepage resolved the bytes, so the
-  encoding ladder's later rungs were used; the source of the decision is recorded (D13).
-- **A reader must not infer:** that the declared codepage applied, or that the text is wrong. The
-  ladder rung that fired is recorded (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** neither the internet code page (`0x3FDE`) nor the message code page (`0x3FFD`) resolved the
+  bytes, so the encoding ladder's later rungs (all-ASCII, strict UTF-8, windows-1252) were used; the rung that
+  fired is recorded as `encoding_source`.
+- **A reader must not infer:** that the declared code page applied, or that the text is wrong. The ladder rung
+  that fired is recorded (D13).
+- **First emitted by:** Phase 1b, Turn 1b.4 (`mapi.py`, the string ladder).
+- **Committed fixture:** `msg_codepage_disagree` (the internet/message code pages disagree) and the
+  `msg_string8_*` encodings family.
 
 ### `msg.embedded_depth_cap`
-- **Missing:** embedded messages nest deeper than the configured cap; the embed is recorded and not
-  descended past the cap (D13/D6).
-- **A reader must not infer:** that the embed is empty, or that the rule was applied mid-stream.
-  The cap and the declared depth are recorded on the run (D6).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** embedded messages nest deeper than the configured cap (depth 1); the embed is recorded and not
+  descended past the cap. The occurrence carries an `EmbeddedSummary` (class, subject, `has_transport_headers`,
+  recipient and attachment counts) and a `storage_tree_sha256`.
+- **A reader must not infer:** that the embed is empty, or that the rule was applied mid-stream. The cap and
+  the declared depth are recorded on the run (D6).
+- **First emitted by:** Phase 1b, Turn 1b.7 (the attachment/embedded layer).
+- **Committed fixture:** `msg_embedded_depth_two`.
 
 ### `msg.named_property_unresolved`
-- **Missing:** a named MAPI property's name-to-id mapping could not be resolved; the property is
-  recorded as unresolved rather than dropped (D13).
-- **A reader must not infer:** that the property is absent, or that an id stands for a name. The
-  unresolved mapping is recorded (D13).
-- **First emitted by:** Phase 1b (the `.msg` reader).
-- **Committed fixture:** none yet.
+- **Missing:** a named MAPI property's name-to-id mapping (`__nameid_version1.0`) could not be resolved; the
+  property is recorded as unresolved rather than dropped. Named properties are **never** resolved by a tag
+  number (their tag numbers are per-message, `email-spike.md` B1).
+- **A reader must not infer:** that the property is absent, or that an id stands for a name. The unresolved
+  mapping is recorded (D13).
+- **First emitted by:** Phase 1b, Turn 1b.4 (`mapi.py`, named-property recognition).
+- **Committed fixture:** `msg_named_properties`.
 
 ## time (Revision 2)
 
@@ -889,3 +904,41 @@ triple (the patch exists, was **reached**, and the observation differs from the 
 - **First emitted by:** Phase 1, Turn 1.8 (`attach.py`: the manifest, identity, occurrences,
   classification, the three verdicts, cid sets, hints).
 - **Committed fixture:** none yet, fixture named in the catalogue (`duplicate_content_id`).
+
+## Phase 1b (Turn 1b.0a)
+
+The **three** ids Phase 1b adds to the registry (design revision 4, `phase0-gaps.md`'s `msg` family, spec
+"New gap ids"). Each keeps the `msg.` prefix, is registered here in Turn 1b.0a but **first emitted** by the
+turn named below, and is exercised by the fixture named in `docs/design/phase1b-fixtures.md`. **None is emitted
+by any code in Turn 1b.0a.** The Phase 1b gap gate (Turn 1b.10) gives each a mutation case in the tightened
+anti-vacuity triple over the **closed registry**.
+
+### `msg.transport_headers_absent`
+- **Missing:** a `.msg` has no `0x007D` transport-header stream. The reader **does not synthesize** headers
+  (owner decision O6): `headers=[]`, and the header/date/address walkers do not run over an empty block, so
+  `headers.no_date`/`headers.no_from` are not emitted as noise. The subject, sender, recipients and times are
+  still recorded as `value_source=mapi_property` facts.
+- **A reader must not infer:** that the message has no headers, or that it has no sender/subject/date. The
+  header stream is absent; the properties may carry the same information as facts, and the gap is recorded
+  **once at document level**.
+- **First emitted by:** Phase 1b, Turn 1b.5 (`msgcontainer.py`, the header stage over the transport stream).
+- **Committed fixture:** `msg_no_transport_headers`.
+
+### `msg.attachment_method_unsupported`
+- **Missing:** an attachment's MAPI method is a **reference** method (`2`, `3` or `4`) or a web reference, not a
+  by-value (`1`), embedded-message (`5`) or OLE (`6`) attachment. The occurrence is recorded (class, size,
+  name) and **no path is ever followed or used**.
+- **A reader must not infer:** that the attachment's bytes were read, or that a referenced location is safe to
+  fetch. The method is recorded and the bytes are not read.
+- **First emitted by:** Phase 1b, Turn 1b.7 (the attachment layer).
+- **Committed fixture:** `msg_attachment_by_reference`.
+
+### `msg.recipient_table_unreadable`
+- **Missing:** a recipient storage's `__properties_version1.0` table could not be read (a broken chain, a
+  truncated table, or a count that disagrees with the real rows). The reader trusts the **directory** for the
+  recipient rows and records this id rather than guessing.
+- **A reader must not infer:** that a declared recipient count is the truth, or that a recipient is absent. The
+  disagreement is recorded.
+- **First emitted by:** Phase 1b, Turn 1b.4 (`mapi.py`, the recipient tables).
+- **Committed fixture:** `msg_recipients_display_only` (with the `seed_recipient_count_mismatch` hostile seed as
+  its mutation case).

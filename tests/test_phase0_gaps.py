@@ -165,12 +165,14 @@ def test_the_registry_and_the_document_agree_both_ways() -> None:
 
 def test_the_registry_in_force_is_85_ids_and_the_prune_holds() -> None:
     """The count: the design listed 81; Phase 0.6 pruned two and Phase 1 Turn 1.0a added seven and
-    removed one (``body.plain_effectively_empty``, resolved as a fact), so 85 are in force.
+    removed one (``body.plain_effectively_empty``, resolved as a fact) for 85; Phase 1b Turn 1b.0a
+    then added the three ``msg.*`` ids (design revision 4), so 88 are in force. (The function keeps
+    its 85 in the name: it is in the frozen ``PHASE0_BASELINE`` of ``test_turn_declarations.py``.)
 
     A change here is a deliberate registry change, not a drift, and it has to be made on purpose.
     """
     registry = registry_ids()
-    assert len(registry) == 85, sorted(registry)
+    assert len(registry) == 88, sorted(registry)
     assert documented_ids() == registry
     assert PRUNED.isdisjoint(registry), sorted(PRUNED & registry)
     assert PRUNED.isdisjoint(documented_ids()), sorted(PRUNED & documented_ids())
