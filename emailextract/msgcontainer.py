@@ -51,6 +51,8 @@ string. The container publishes only what it read; every fact value is a ``str``
 from __future__ import annotations
 
 import datetime
+import hashlib
+import struct
 from dataclasses import replace
 from typing import Mapping, NamedTuple, Sequence
 
@@ -60,12 +62,14 @@ from .ids import sha256_hex
 from .model import (
     ContainerKind,
     ContainerStreamAxis,
+    EmbeddedSummary,
     EncodingSource,
     Status,
     StatusOutcome,
 )
 
 __all__ = [
+    "AttachmentFact",
     "ContainerGap",
     "LABEL_BY_CODEPAGE",
     "LABEL_BY_RUNG",
@@ -129,6 +133,32 @@ UNREPRESENTABLE = "unrepresentable"
 GAP_TRANSPORT_HEADERS_ABSENT = "msg.transport_headers_absent"
 GAP_MAPI_HEADER_PROPERTY_DISAGREE = "headers.mapi_header_property_disagree"
 GAP_STREAM_TRUNCATED = "msg.stream_truncated"
+GAP_ATTACHMENT_METHOD_UNSUPPORTED = "msg.attachment_method_unsupported"
+GAP_EMBEDDED_DEPTH_CAP = "msg.embedded_depth_cap"
+
+#: The attachment storage prefix and its embedded-message storage name (D2/D4).
+ATTACH_PREFIX = "__attach_version1.0_#"
+EMBEDDED_STORAGE_NAME = "__substg1.0_3701000D"
+#: The attachment's own ``__properties_version1.0`` stream (an 8-byte-header table).
+PROPERTIES_STREAM = "__properties_version1.0"
+#: The by-value data stream name (``0x3701`` ``PT_BINARY``), relative to the storage.
+BY_VALUE_STREAM = "__substg1.0_37010102"
+#: D4: the embedded leaf and the reference/OLE leaves carry no readable bytes.
+OCTET_STREAM = "application/octet-stream"
+
+#: A stream fault's mapped ``Status.TRUNCATED`` reason (contract section 2): a cycle is a
+#: declared-length mismatch, everything else ended the stream early. A decode fault (a body
+#: stream whose bytes cannot be decoded) is not a chain fault and reads as ``stream_ended_early``.
+_FAULT_REASONS: Mapping[str, str] = {
+    mapi.FAULT_STREAM_CYCLE: "declared_length_mismatch",
+    mapi.FAULT_STREAM_OUT_OF_RANGE: "stream_ended_early",
+    mapi.FAULT_STREAM_SHORT_CHAIN: "stream_ended_early",
+}
+
+
+def _fault_reason(fault: str) -> str:
+    return _FAULT_REASONS.get(fault, "stream_ended_early")
+
 
 _SUB = "__substg1.0_"
 #: The synthetic boundary's alphabet: a boundary must not occur in any body, so it is built
@@ -230,6 +260,86 @@ class _Body(NamedTuple):
     present: bool
     text: "str | None"
     fault: "str | None"
+
+
+class AttachmentFact(NamedTuple):
+    """One attachment storage, as plain data (D6); no ``Property`` object is published.
+
+    ``filename_raw`` is the property text exactly as stored; the attach stage derives the
+    decoded name from the projected header (D3). ``size``/``sha256`` are the by-value data
+    stream's own, ``None`` for the synthetic leaves. ``source_stream`` is the span row's
+    ``source_stream`` (the CFB path that joins the record to its span).
+    """
+
+    index: int
+    method: "int | None"
+    filename_raw: "str | None"
+    filename_source: str
+    mime_tag: "str | None"
+    cid: "str | None"
+    hidden: bool
+    inline: bool
+    size: "int | None"
+    sha256: "str | None"
+    embedded_summary: "EmbeddedSummary | None"
+    storage_tree_sha256: "str | None"
+    fault: "str | None"
+    source_stream: str
+
+
+def _filename_parameter(name: str) -> str:
+    """The ``Content-Disposition`` filename parameter that recovers ``name`` byte-for-byte (D3).
+
+    A name that is printable ASCII outside ``"`` ``\\`` ``/`` ``;`` is a plain quoted string;
+    anything else (a control character, NUL, a path separator, a quote) is RFC 2231's
+    ``filename*=utf-8''<percent-encoded>`` form. The name is **data**: no ``Path``/``open``/
+    ``os.*`` call touches it.
+    """
+    if all(0x20 <= ord(ch) <= 0x7E for ch in name) and not any(ch in '"\\/;' for ch in name):
+        return f'filename="{name}"'
+    from urllib.parse import quote
+
+    return "filename*=utf-8''" + quote(name, safe="")
+
+
+def _storage_tree_sha256(cfb_file: "cfb.CfbFile", storage: str) -> "str | None":
+    """The canonical digest over every entry under ``storage`` (D4).
+
+    The entries (not the storage entry itself) are sorted ascending by their full relative
+    path as UTF-8 bytes; for each entry the walk appends ``b"S"`` (storage) or ``b"T"``
+    (stream), the path's length as 4-byte big-endian, the path UTF-8, and for a stream the
+    stream size as 8-byte big-endian (0 for a storage) and its bytes. A stream that faults
+    publishes no digest.
+    """
+    marker = f"{storage}/"
+    under: list[tuple[str, cfb.CfbEntry]] = []
+    for entry in cfb_file.entries:
+        path = entry.path
+        if not path or not path.upper().startswith(marker.upper()):
+            continue
+        relative = path[len(marker):]
+        if not relative:
+            continue
+        under.append((relative, entry))
+    under.sort(key=lambda pair: pair[0].encode("utf-8"))
+    digest = hashlib.sha256()
+    for relative, entry in under:
+        name = relative.encode("utf-8")
+        if entry.is_stream:
+            payload, status = cfb.read_stream(cfb_file, entry)
+            if status != cfb.FAULT_OK:
+                return None
+            digest.update(b"T")
+            digest.update(struct.pack(">I", len(name)))
+            digest.update(name)
+            digest.update(struct.pack(">Q", entry.size))
+            digest.update(payload)
+        else:
+            digest.update(b"S")
+            digest.update(struct.pack(">I", len(name)))
+            digest.update(name)
+            digest.update(struct.pack(">Q", 0))
+    return digest.hexdigest()
 
 
 def _stream_name(tag: int, prop_type: int) -> str:
@@ -339,6 +449,9 @@ class MsgContainer:
         self.status_outcome: "StatusOutcome | None" = None
         self.container_gaps: tuple[ContainerGap, ...] = ()
         self.message_facts: MessageFacts = MessageFacts(None, None, (), ())
+        self.attachment_facts: tuple[AttachmentFact, ...] = ()
+        self._attachment_rows: tuple["mapi.AttachmentRow", ...] = ()
+        self._depth_cap_gaps: tuple[ContainerGap, ...] = ()
         self.span_provenance: tuple[SpanRow, ...] = ()
         self.charset_sources: Mapping[str, CharsetOrigin] = {}
         self.cap_observations: Mapping[str, int] = {}
@@ -354,14 +467,25 @@ class MsgContainer:
                 f"sectors.{name}": value for name, value in opened.accounting
             }
             self._project()
-            if opened.faults and self.status_outcome is None:
+            if opened.faults:
                 # A per-stream chain fault (D7): the document is TRUNCATED with the mapped
-                # reason, and the registered gap names the faulted stream and its fault.
-                path, fault, reason = opened.faults[0]
-                self.status_outcome = StatusOutcome(status=Status.TRUNCATED, reason=reason)
-                self.container_gaps = self.container_gaps + (
-                    ContainerGap(GAP_STREAM_TRUNCATED, f"{path}:{fault}"),
+                # reason, and the registered gap names the faulted stream and its fault. The
+                # projection may already have recorded the same `(id, detail)` for a body or
+                # transport stream (D0.1), so the pair is not repeated.
+                if self.status_outcome is None:
+                    _ignored, _ignored, reason = opened.faults[0]
+                    self.status_outcome = StatusOutcome(status=Status.TRUNCATED, reason=reason)
+                path, fault, _ignored = opened.faults[0]
+                detail = f"{path}:{fault}"
+                covered = any(
+                    gap.gap_id == GAP_STREAM_TRUNCATED
+                    and gap.detail.split(":", 1)[0] == path
+                    for gap in self.container_gaps
                 )
+                if not covered:
+                    self.container_gaps = self.container_gaps + (
+                        ContainerGap(GAP_STREAM_TRUNCATED, detail),
+                    )
         else:
             self.cap_observation = opened.observation
             self._facts["refusal"] = opened.reason
@@ -425,10 +549,29 @@ class MsgContainer:
         transport = self._read_transport()
         transport_text = transport.text if transport.present else None
         gaps: list[ContainerGap] = []
-        if plain.fault is not None:
-            gaps.append(ContainerGap(plain.fault))
-        if html_fault is not None:
-            gaps.append(ContainerGap(html_fault))
+        # A body or transport stream that could not be read (D0.1) is the registered
+        # `msg.stream_truncated`, the stream and fault in the detail -- never the bare fault
+        # name as a gap id. The document is TRUNCATED (contract section 2).
+        for stream_name, fault in (
+            (self._stream_name_for(BODY_PLAIN), plain.fault),
+            (_stream_name(BODY_HTML, mapi.PT_BINARY), html_fault),
+            (self._stream_name_for(TRANSPORT_HEADERS), transport.fault),
+        ):
+            if fault is None:
+                continue
+            detail = f"{stream_name}:{fault}"
+            if any(
+                gap.gap_id == GAP_STREAM_TRUNCATED and gap.detail == detail for gap in gaps
+            ):
+                continue
+            gaps.append(ContainerGap(GAP_STREAM_TRUNCATED, detail))
+            if self.status_outcome is None:
+                self.status_outcome = StatusOutcome(
+                    status=Status.TRUNCATED, reason=_fault_reason(fault)
+                )
+
+        self.attachment_facts, attachment_payloads = self._build_attachment_facts()
+        gaps.extend(self._attachment_gaps())
 
         chunks: list[bytes] = []
         size = 0
@@ -464,7 +607,13 @@ class MsgContainer:
                 ),
             )
 
-        boundary = self._choose_boundary((plain.text or "").encode("utf-8"), html or b"")
+        body_parts = ((plain.text or "").encode("utf-8"), html or b"")
+        boundary = self._choose_boundary(*body_parts)
+        mixed = bool(self.attachment_facts)
+        payload_parts = tuple(payload for payload in attachment_payloads if payload is not None)
+        mixed_boundary = (
+            self._choose_boundary(*body_parts, *payload_parts) if mixed else b""
+        )
         ordinal = 0
         if transport_text is not None and transport_text.startswith("\ufeff"):
             # A UTF-8 BOM at the head of the transport-header text is the tolerated leading
@@ -472,7 +621,9 @@ class MsgContainer:
             # region, so ``headers.leading_bom`` fires exactly as it does for an ``.eml``.
             synthetic("prelude", 1, "\ufeff".encode("utf-8"))
             transport_text = transport_text[1:]
-        for line in self._structural_lines(plain.present, html is not None, boundary, html):
+        for line in self._structural_lines(
+            plain.present, html is not None, boundary, html, mixed=mixed, mixed_boundary=mixed_boundary
+        ):
             ordinal += 1
             synthetic("structure", ordinal, line)
         if self._framing:
@@ -481,9 +632,9 @@ class MsgContainer:
             # require identical ``part_id``s at two framing lengths.
             synthetic("pad", 1, b"X-Pad: " + b"P" * self._framing + b"\r\n")
 
-        if transport_text is None:
+        if transport_text is None and transport.fault is None:
             gaps.append(ContainerGap(GAP_TRANSPORT_HEADERS_ABSENT))
-        else:
+        elif transport_text is not None:
             # The transport text's own trailing blank line is replaced by the projection's
             # synthetic separator, so the header region ends at exactly one blank line and
             # the body leaf begins at its first byte.
@@ -492,22 +643,97 @@ class MsgContainer:
         synthetic("separator", 1, _BLANK)
 
         charset_sources: dict[str, CharsetOrigin] = {}
-        if plain.present and html is not None:
-            synthetic("delimiter", 1, b"--" + boundary + b"\r\n")
+        delimiter = 0
+
+        def delimit(chunk: bytes) -> None:
+            nonlocal delimiter
+            delimiter += 1
+            synthetic("delimiter", delimiter, chunk)
+
+        def emit_body_child() -> None:
+            """The body as the multipart/mixed's first child, carrying its own leaf headers."""
+            if plain.present and html is not None:
+                synthetic(
+                    "structure",
+                    ordinal + 1,
+                    b'Content-Type: multipart/alternative; boundary="' + boundary + b'"\r\n\r\n',
+                )
+                delimit(b"--" + boundary + b"\r\n")
+                emit(
+                    b"Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
+                    + (plain.text or "").encode("utf-8"),
+                    self._reencoded_row(
+                        self._stream_name_for(BODY_PLAIN), decoded=plain.text or ""
+                    ),
+                )
+                charset_sources["1.1"] = self._plain_origin()
+                delimit(b"\r\n--" + boundary + b"\r\n")
+                emit_segments(
+                    self._stream_row(self._stream_name_for(BODY_HTML), exact=True, payload=html),
+                    self._html_leaf_header(html),
+                    html,
+                )
+                charset_sources["1.2"] = self._html_origin(html)
+                delimit(b"\r\n--" + boundary + b"--\r\n")
+            elif html is not None:
+                emit_segments(
+                    self._stream_row(self._stream_name_for(BODY_HTML), exact=True, payload=html),
+                    self._html_leaf_header(html),
+                    html,
+                )
+                charset_sources["1"] = self._html_origin(html)
+            elif plain.present:
+                emit(
+                    b"Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
+                    + (plain.text or "").encode("utf-8"),
+                    self._reencoded_row(
+                        self._stream_name_for(BODY_PLAIN), decoded=plain.text or ""
+                    ),
+                )
+                charset_sources["1"] = self._plain_origin()
+            else:
+                synthetic(
+                    "leaf",
+                    1,
+                    b"Content-Type: text/plain; charset=us-ascii\r\n"
+                    b"Content-Transfer-Encoding: 7bit\r\n\r\n",
+                )
+
+        if mixed:
+            delimit(b"--" + mixed_boundary + b"\r\n")
+            emit_body_child()
+            for fact in self.attachment_facts:
+                delimit(b"\r\n--" + mixed_boundary + b"\r\n")
+                payload = attachment_payloads[fact.index]
+                headers = self._attachment_headers(fact)
+                if payload is not None:
+                    # The leaf header lines fold into the STREAM row (as the HTML leaf of
+                    # Turn 1b.5 does), so the record's span-table join, stream_ref and the
+                    # pass-through size/digest all come from one row.
+                    emit_segments(
+                        self._stream_row(fact.source_stream, exact=True, payload=payload),
+                        headers,
+                        payload,
+                    )
+                else:
+                    synthetic("attachment", fact.index + 1, headers)
+            delimit(b"\r\n--" + mixed_boundary + b"--\r\n")
+        elif plain.present and html is not None:
+            delimit(b"--" + boundary + b"\r\n")
             emit(
                 b"Content-Type: text/plain; charset=utf-8\r\nContent-Transfer-Encoding: 8bit\r\n\r\n"
                 + (plain.text or "").encode("utf-8"),
                 self._reencoded_row(self._stream_name_for(BODY_PLAIN), decoded=plain.text or ""),
             )
             charset_sources["1.1"] = self._plain_origin()
-            synthetic("delimiter", 2, b"\r\n--" + boundary + b"\r\n")
+            delimit(b"\r\n--" + boundary + b"\r\n")
             emit_segments(
                 self._stream_row(self._stream_name_for(BODY_HTML), exact=True, payload=html),
                 self._html_leaf_header(html),
                 html,
             )
             charset_sources["1.2"] = self._html_origin(html)
-            synthetic("delimiter", 3, b"\r\n--" + boundary + b"--\r\n")
+            delimit(b"\r\n--" + boundary + b"--\r\n")
         elif html is not None:
             emit(
                 html,
@@ -647,8 +873,22 @@ class MsgContainer:
     # --------------------------------------------------------- the structural lines
 
     def _structural_lines(
-        self, plain: bool, html: bool, boundary: bytes, html_bytes: "bytes | None"
+        self,
+        plain: bool,
+        html: bool,
+        boundary: bytes,
+        html_bytes: "bytes | None",
+        *,
+        mixed: bool = False,
+        mixed_boundary: bytes = b"",
     ) -> list[bytes]:
+        if mixed:
+            # D1: a message with at least one attachment is a multipart/mixed whose first
+            # child is the body. The top-level Content-Type line is still first (first-wins).
+            return [
+                b"MIME-Version: 1.0\r\n",
+                b'Content-Type: multipart/mixed; boundary="' + mixed_boundary + b'"\r\n',
+            ]
         if plain and html:
             return [
                 b"MIME-Version: 1.0\r\n",
@@ -797,6 +1037,141 @@ class MsgContainer:
             source = EncodingSource.DECLARED_CHARSET
         return CharsetOrigin(used_charset="utf-8", declared_charset="utf-8", encoding_source=source)
 
+    # --------------------------------------------------------------- the attachments
+
+    @staticmethod
+    def _filename_ladder(row: "mapi.AttachmentRow") -> "tuple[str | None, str]":
+        """D3's ladder: the long name over the short name over the display name.
+
+        The first value that is present and non-empty wins; its rung (``long``/``short``/
+        ``display``/``none``) is recorded. The property text is kept verbatim.
+        """
+        for rung, value in (
+            ("long", row.filename_long),
+            ("short", row.filename_short),
+            ("display", row.filename_display),
+        ):
+            if value is not None and value.text:
+                return value.text, rung
+        return None, "none"
+
+    def _build_attachment_facts(
+        self,
+    ) -> "tuple[tuple[AttachmentFact, ...], list[bytes | None]]":
+        """Read every attachment row and build its fact (D2-D6); returns the payloads too."""
+        assert self._cfb is not None and self._message is not None
+        rows = mapi.read_attachments(
+            self._cfb,
+            internet_codepage=self._message.internet_cp,
+            message_codepage=self._message.message_cp,
+        )
+        self._attachment_rows = rows
+        facts: list[AttachmentFact] = []
+        payloads: "list[bytes | None]" = []
+        depth_gaps: list[ContainerGap] = []
+        for position, row in enumerate(rows):
+            raw, source = self._filename_ladder(row)
+            size: "int | None" = None
+            digest: "str | None" = None
+            fault = row.fault
+            leaf_stream = f"synthetic:attachment:{position + 1}"
+            payload: "bytes | None" = None
+            if row.method == mapi.METHOD_BY_VALUE:
+                if row.data_stream is None:
+                    fault = fault or mapi.FAULT_STREAM_ABSENT
+                else:
+                    leaf_stream = f"{row.name}/{row.data_stream}"
+                    payload, status = cfb.read_stream(self._cfb, leaf_stream)
+                    if status == cfb.FAULT_OK:
+                        size = len(payload)
+                        digest = sha256_hex(payload)
+                    else:
+                        payload = None
+                        fault = fault or mapi.STREAM_FAULTS.get(
+                            status, mapi.FAULT_STREAM_OUT_OF_RANGE
+                        )
+            summary: "EmbeddedSummary | None" = None
+            tree: "str | None" = None
+            if row.method == mapi.METHOD_EMBEDDED_MESSAGE and row.embedded is not None:
+                summary = EmbeddedSummary(
+                    message_class=row.embedded.message_class or "absent",
+                    has_transport_headers=row.embedded.has_transport_headers,
+                    subject=row.embedded.subject,
+                    recipient_count=row.embedded.recipient_count,
+                    attachment_count=row.embedded.attachment_count,
+                )
+                tree = _storage_tree_sha256(self._cfb, f"{row.name}/{EMBEDDED_STORAGE_NAME}")
+                nested = row.embedded.nested_embedded_index
+                if nested is not None:
+                    depth_gaps.append(
+                        ContainerGap(GAP_EMBEDDED_DEPTH_CAP, f"{position + 2}>{nested}")
+                    )
+            facts.append(
+                AttachmentFact(
+                    index=position,
+                    method=row.method,
+                    filename_raw=raw,
+                    filename_source=source,
+                    mime_tag=row.mime_tag.text if row.mime_tag is not None else None,
+                    cid=row.cid.text if row.cid is not None else None,
+                    hidden=row.hidden,
+                    inline=row.inline,
+                    size=size,
+                    sha256=digest,
+                    embedded_summary=summary,
+                    storage_tree_sha256=tree,
+                    fault=fault,
+                    source_stream=leaf_stream,
+                )
+            )
+            payloads.append(payload)
+        self._depth_cap_gaps = tuple(depth_gaps)
+        return tuple(facts), payloads
+
+    def _attachment_headers(self, fact: AttachmentFact) -> bytes:
+        """The synthetic ``Content-*`` line block for one attachment leaf (D2/D3/D4)."""
+        media = fact.mime_tag or OCTET_STREAM
+        lines = [f"Content-Type: {media}\r\n"]
+        disposition = "inline" if fact.inline else "attachment"
+        if fact.filename_raw is not None:
+            lines.append(
+                f"Content-Disposition: {disposition}; {_filename_parameter(fact.filename_raw)}\r\n"
+            )
+        else:
+            lines.append(f"Content-Disposition: {disposition}\r\n")
+        if fact.cid is not None:
+            cid = fact.cid
+            if not (cid.startswith("<") and cid.endswith(">")):
+                cid = f"<{cid}>"
+            lines.append(f"Content-ID: {cid}\r\n")
+        lines.append("Content-Transfer-Encoding: binary\r\n")
+        lines.append("\r\n")
+        return "".join(lines).encode("utf-8")
+
+    def _attachment_gaps(self) -> "list[ContainerGap]":
+        """The attachment-level gaps (D4/D5): the unsupported methods, the faults, the cap."""
+        gaps: list[ContainerGap] = []
+        for fact in self.attachment_facts:
+            method = fact.method
+            if method is not None and method not in (
+                mapi.METHOD_BY_VALUE,
+                mapi.METHOD_EMBEDDED_MESSAGE,
+                mapi.METHOD_OLE,
+            ):
+                gaps.append(
+                    ContainerGap(GAP_ATTACHMENT_METHOD_UNSUPPORTED, f"{fact.index}:{method}")
+                )
+            if fact.fault is not None:
+                gaps.append(
+                    ContainerGap(GAP_STREAM_TRUNCATED, f"attach:{fact.index}:{fact.fault}")
+                )
+                if self.status_outcome is None:
+                    self.status_outcome = StatusOutcome(
+                        status=Status.TRUNCATED, reason=_fault_reason(fact.fault)
+                    )
+        gaps.extend(self._depth_cap_gaps)
+        return gaps
+
     # ---------------------------------------------------------- the D8 conflict
 
     def _header_conflict(self, transport_text: "str | None") -> "str | None":
@@ -901,6 +1276,8 @@ class MsgContainer:
         facts = self.message_facts
         if facts.recipients:
             self._facts["recipient_count"] = str(len(facts.recipients))
+        if self.attachment_facts:
+            self._facts["attachment_count"] = str(len(self.attachment_facts))
         for row in facts.times:
             self._facts[f"time.{row.tag_hex}.filetime_hex"] = row.filetime_hex
             self._facts[f"time.{row.tag_hex}.utc"] = row.utc
@@ -911,14 +1288,20 @@ class MsgContainer:
         """``mapi``'s message-level observations as gaps, in ``OBSERVATION_IDS`` order."""
         assert self._message is not None
         message = self._message
+        attachment_unknown = tuple(
+            sorted({pair for row in self._attachment_rows for pair in row.unknown_tags})
+        )
         gaps: list[ContainerGap] = []
         for observation in mapi.OBSERVATION_IDS:
-            if observation not in message.observations:
+            if observation == mapi.MSG_PROPERTY_TAG_UNKNOWN:
+                if observation not in message.observations and not attachment_unknown:
+                    continue
+            elif observation not in message.observations:
                 continue
             if observation == mapi.MSG_CLASS_NOT_IPM_NOTE:
                 continue  # the class gate's own, emitted where the gate stops (1b.5)
             if observation == mapi.MSG_PROPERTY_TAG_UNKNOWN:
-                detail = ",".join(message.unknown_tags)
+                detail = ",".join(sorted(set(message.unknown_tags) | set(attachment_unknown)))
             elif observation == mapi.MSG_NAMED_PROPERTY_UNRESOLVED:
                 detail = ",".join(message.named_tags)
             elif observation == mapi.MSG_CODEPAGE_UNRESOLVED_LADDER_USED:

@@ -113,6 +113,24 @@ PROP_ATTACH_MIME = 0x370E
 PROP_ATTACH_FILENAME = 0x3707
 PROP_ATTACH_RENDERING = 0x370B
 PROP_ATTACH_DATA = 0x3701
+# Turn 1b.7's attachment tags ([MS-OXPROPS]).
+PROP_ATTACH_FILENAME_SHORT = 0x3704
+PROP_ATTACH_FILENAME_DISPLAY = 0x3001
+PROP_ATTACH_CONTENT_ID = 0x3712
+PROP_ATTACH_FLAGS = 0x3714
+PROP_ATTACH_HIDDEN = 0x7FFE
+#: The embedded-message storage (``0x3701`` ``PT_OBJECT``) and its property-table header.
+EMBEDDED_STORAGE = "__substg1.0_3701000D"
+EMBEDDED_HEADER_BYTES = 24
+#: ``0x3714``'s ``ATT_MHTML_REF`` bit (the body references the attachment, D2).
+ATT_MHTML_REF = 0x4
+#: The attachment methods Turn 1b.7 exercises (D2/D4/D5).
+METHOD_BY_VALUE = 1
+METHOD_BY_REFERENCE = 2
+METHOD_BY_REFERENCE_RESOLVE = 3
+METHOD_BY_REFERENCE_ONLY = 4
+METHOD_EMBEDDED_MESSAGE = 5
+METHOD_OLE = 6
 
 
 def _utf16(text: str, size: int) -> bytes:
@@ -891,6 +909,278 @@ def _fixture_unicode_subject() -> bytes:
     return _t16_fixture(transport=T16_TRANSPORT_NO_SUBJECT, subject=T16_UNICODE_SUBJECT)
 
 
+# ------------------------------------------------ Turn 1b.7: the Family G fixtures
+
+
+G_TRANSPORT_TEXT = (
+    "Subject: synthetic turn 1b.7 fixture\r\n"
+    "From: Ada Lovelace <ada@example.test>\r\n"
+    "To: Grace Hopper <grace@example.test>\r\n"
+    "Date: Tue, 4 Mar 2025 08:00:00 +0000\r\n"
+    "Message-ID: <turn-1b7-0001@example.test>\r\n"
+    "\r\n"
+)
+G_HTML_BODY = b"<html><body><p>synthetic turn 1b.7 body</p></body></html>\r\n"
+#: A by-value attachment's bytes, typed so its digest is checkable.
+G_ATTACH_BYTES = b"turn 1b.7 synthetic attachment bytes\r\n"
+
+
+def _embedded_table(entries) -> bytes:
+    """An embedded message's property stream: the 24-byte header plus ``entries`` (D4)."""
+    return b"\x00" * EMBEDDED_HEADER_BYTES + b"".join(entries)
+
+
+def _embedded_storage(
+    *,
+    message_class: str = CLASS_IPM_NOTE,
+    subject: str | None = None,
+    transport: str | None = None,
+    recipient_storages=(),
+    attachment_storages=(),
+) -> Storage:
+    """One embedded message's storage (``0x3701`` ``PT_OBJECT``): read at depth 1, never recursed."""
+    entries = [_class_entry(message_class)]
+    body = [stream(_class_stream_name(), _class_bytes(message_class))]
+    if subject is not None:
+        payload = subject.encode("utf-16-le")
+        entries.append(
+            mapi_table.variable_entry(mapi_table.PROP_SUBJECT, mapi_table.PT_UNICODE, len(payload))
+        )
+        body.append(stream("__substg1.0_0037001F", payload))
+    children = [stream("__properties_version1.0", _embedded_table(entries)), *body]
+    if transport is not None:
+        children.append(stream("__substg1.0_007D001F", transport.encode("utf-16-le")))
+    children.extend(recipient_storages)
+    children.extend(attachment_storages)
+    return storage(EMBEDDED_STORAGE, *children)
+
+
+def _embedded_recipient(index: int, *, kind: int, display: str, address_type: str, email: str = "") -> Storage:
+    """A minimal ``__recip_version1.0_#XXXXXXXX`` row for an embedded message's summary."""
+    entries = [mapi_table.long_entry(mapi_table.PROP_RECIPIENT_TYPE, kind)]
+    children = []
+    for tag, text in (
+        (mapi_table.PROP_RECIPIENT_DISPLAY, display),
+        (mapi_table.PROP_RECIPIENT_ADDRESS_TYPE, address_type),
+        (mapi_table.PROP_RECIPIENT_EMAIL, email),
+    ):
+        payload = text.encode("utf-16-le")
+        entries.append(mapi_table.variable_entry(tag, mapi_table.PT_UNICODE, len(payload)))
+        children.append(stream(mapi_table.substg_name(tag, mapi_table.PT_UNICODE), payload))
+    return storage(
+        f"__recip_version1.0_#{index:08X}",
+        stream("__properties_version1.0", mapi_table.sub_table(entries)),
+        *children,
+    )
+
+
+def _attach_storage(
+    index: int,
+    *,
+    method: int,
+    long: str | None = None,
+    short: str | None = None,
+    display: str | None = None,
+    mime: str | None = None,
+    cid: str | None = None,
+    hidden: bool | None = None,
+    flags: int | None = None,
+    data: bytes | None = None,
+    embedded: Storage | None = None,
+) -> Storage:
+    """One ``__attach_version1.0_#XXXXXXXX`` storage (D2-D5)."""
+    entries = [mapi_table.long_entry(PROP_ATTACH_METHOD, method)]
+    children = []
+
+    def add_text(tag: int, text: str | None) -> None:
+        if text is None:
+            return
+        payload = text.encode("utf-16-le")
+        entries.append(mapi_table.variable_entry(tag, mapi_table.PT_UNICODE, len(payload)))
+        children.append(stream(mapi_table.substg_name(tag, mapi_table.PT_UNICODE), payload))
+
+    add_text(PROP_ATTACH_FILENAME, long)
+    add_text(PROP_ATTACH_FILENAME_SHORT, short)
+    add_text(PROP_ATTACH_FILENAME_DISPLAY, display)
+    add_text(PROP_ATTACH_MIME, mime)
+    add_text(PROP_ATTACH_CONTENT_ID, cid)
+    if hidden is not None:
+        entries.append(
+            mapi_table.fixed_entry(
+                PROP_ATTACH_HIDDEN, mapi_table.PT_BOOLEAN, struct.pack("<H", 1 if hidden else 0)
+            )
+        )
+    if flags is not None:
+        entries.append(mapi_table.long_entry(PROP_ATTACH_FLAGS, flags))
+    if data is not None:
+        entries.append(mapi_table.variable_entry(PROP_ATTACH_DATA, mapi_table.PT_BINARY, len(data)))
+        children.append(stream("__substg1.0_37010102", data))
+    if embedded is not None:
+        entries.append(mapi_table.storage_entry(PROP_ATTACH_DATA))
+        children.append(embedded)
+    return storage(
+        f"__attach_version1.0_#{index:08X}",
+        stream("__properties_version1.0", mapi_table.sub_table(entries)),
+        *children,
+    )
+
+
+def _g_fixture(*, attachments=(), attachment_count: "int | None" = None, html: "bytes | None" = G_HTML_BODY) -> bytes:
+    """One Turn 1b.7 fixture: an ``IPM.Note`` with a transport header, a body and attachments."""
+    count = len(attachments) if attachment_count is None else attachment_count
+    table = _property_stream(
+        [_class_entry(CLASS_IPM_NOTE)], attachments=count
+    )
+    children = [
+        stream("__properties_version1.0", table),
+        stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+        stream("__substg1.0_007D001F", G_TRANSPORT_TEXT.encode("utf-16-le")),
+    ]
+    if html is not None:
+        children.append(stream("__substg1.0_10130102", html))
+    children.extend(attachments)
+    return build_cfb(storage("Root Entry", *children))
+
+
+def _fixture_embedded_message() -> bytes:
+    """One method-5 attachment whose embedded message carries a subject and a recipient (D4)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(
+                0,
+                method=METHOD_EMBEDDED_MESSAGE,
+                long="forwarded.msg",
+                embedded=_embedded_storage(
+                    subject="Fwd: hello",
+                    transport=G_TRANSPORT_TEXT,
+                    recipient_storages=(
+                        _embedded_recipient(0, kind=1, display="Ada Lovelace", address_type="SMTP", email="ada@example.test"),
+                    ),
+                ),
+            ),
+        )
+    )
+
+
+def _fixture_embedded_depth_two() -> bytes:
+    """An embedded message that itself embeds one: depth 1 read, the nested embed capped (D4)."""
+    inner = _embedded_storage(
+        subject="inner",
+        attachment_storages=(
+            _attach_storage(0, method=METHOD_EMBEDDED_MESSAGE, long="nested.msg", embedded=_embedded_storage(subject="deepest")),
+        ),
+    )
+    return _g_fixture(
+        attachments=(
+            _attach_storage(0, method=METHOD_EMBEDDED_MESSAGE, long="outer.msg", embedded=inner),
+        )
+    )
+
+
+def _fixture_attachment_with_cid() -> bytes:
+    """A by-value attachment carrying a ``0x3712`` Content-ID (D2)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(
+                0,
+                method=METHOD_BY_VALUE,
+                long="report.pdf",
+                mime="application/pdf",
+                cid="cid1@example.test",
+                data=G_ATTACH_BYTES,
+            ),
+        )
+    )
+
+
+def _fixture_attachment_hidden() -> bytes:
+    """A by-value attachment with the hidden flag and the ``ATT_MHTML_REF`` bit (D2)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(
+                0,
+                method=METHOD_BY_VALUE,
+                long="inline-image.png",
+                mime="image/png",
+                hidden=True,
+                flags=ATT_MHTML_REF,
+                data=b"\x89PNG\r\n\x1a\nsynthetic",
+            ),
+        )
+    )
+
+
+def _fixture_attachment_ole() -> bytes:
+    """A method-6 OLE object, recorded without parsing it (D4)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(
+                0,
+                method=METHOD_OLE,
+                long="object.bin",
+                mime="application/octet-stream",
+                embedded=storage(EMBEDDED_STORAGE, stream("__substg1.0_37010102", b"\xd0\xcf\x11\xe0synthetic ole")),
+            ),
+        )
+    )
+
+
+def _fixture_attachment_by_reference() -> bytes:
+    """Methods 2/3/4: recorded and dropped, no path followed (D5)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(0, method=METHOD_BY_REFERENCE, long="ref-2.txt", mime="text/plain"),
+            _attach_storage(1, method=METHOD_BY_REFERENCE_RESOLVE, long="ref-3.txt", mime="text/plain"),
+            _attach_storage(2, method=METHOD_BY_REFERENCE_ONLY, long="ref-4.txt", mime="text/plain"),
+        )
+    )
+
+
+def _fixture_attachment_hostile_name() -> bytes:
+    """A hostile filename (path separators, ``..``, NUL): data, never a path (D3)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(
+                0,
+                method=METHOD_BY_VALUE,
+                long="..\\evil/../../x\x00y",
+                mime="application/octet-stream",
+                data=b"hostile",
+            ),
+        )
+    )
+
+
+def _fixture_attachment_zero_size() -> bytes:
+    """A zero-length by-value attachment (D2)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(0, method=METHOD_BY_VALUE, long="empty.bin", mime="application/octet-stream", data=b""),
+        )
+    )
+
+
+def _fixture_attachments_4095_4096_4097() -> bytes:
+    """Three by-value attachments at the mini-cutoff sizes (D2)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(0, method=METHOD_BY_VALUE, long="a.bin", mime="application/octet-stream", data=_filler(4095, seed=1)),
+            _attach_storage(1, method=METHOD_BY_VALUE, long="b.bin", mime="application/octet-stream", data=_filler(4096, seed=2)),
+            _attach_storage(2, method=METHOD_BY_VALUE, long="c.bin", mime="application/octet-stream", data=_filler(4097, seed=3)),
+        )
+    )
+
+
+def _fixture_duplicate_filenames() -> bytes:
+    """Two attachments with the same filename (D2; the attach stage's duplicate gaps)."""
+    return _g_fixture(
+        attachments=(
+            _attach_storage(0, method=METHOD_BY_VALUE, long="same.txt", mime="text/plain", data=b"first"),
+            _attach_storage(1, method=METHOD_BY_VALUE, long="same.txt", mime="text/plain", data=b"second"),
+        )
+    )
+
+
 FIXTURES = {
     "msg_headers_only": _fixture_headers_only,
     "msg_headers_html": _fixture_headers_html,
@@ -920,6 +1210,16 @@ FIXTURES = {
     "msg_recipients_bcc_duplicates": _fixture_recipients_bcc_duplicates,
     "msg_time_property_vs_date_header": _fixture_time_property_vs_date_header,
     "msg_unicode_subject": _fixture_unicode_subject,
+    "msg_embedded_message": _fixture_embedded_message,
+    "msg_embedded_depth_two": _fixture_embedded_depth_two,
+    "msg_attachment_with_cid": _fixture_attachment_with_cid,
+    "msg_attachment_hidden": _fixture_attachment_hidden,
+    "msg_attachment_ole": _fixture_attachment_ole,
+    "msg_attachment_by_reference": _fixture_attachment_by_reference,
+    "msg_attachment_hostile_name": _fixture_attachment_hostile_name,
+    "msg_attachment_zero_size": _fixture_attachment_zero_size,
+    "msg_attachments_4095_4096_4097": _fixture_attachments_4095_4096_4097,
+    "msg_duplicate_filenames": _fixture_duplicate_filenames,
 }
 
 #: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,

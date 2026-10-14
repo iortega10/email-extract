@@ -435,12 +435,33 @@ test: tests/test_msg_attachments.py::test_zero_size_and_the_mini_cutoff_trio
 test: tests/test_msg_embedded.py::test_an_embedded_message_carries_an_embedded_summary
 test: tests/test_msg_embedded.py::test_the_storage_tree_sha256_is_a_canonical_walk
 test: tests/test_msg_embedded.py::test_beyond_depth_one_is_the_depth_cap
+test: tests/test_msgcontainer.py::test_a_body_or_transport_stream_fault_is_the_registered_truncated_gap
+test: tests/test_msg_attachments.py::test_a_message_without_attachments_projects_as_before
+test: tests/test_msg_attachments.py::test_two_framing_lengths_give_identical_part_ids_and_records_with_an_attachment
+test: tests/test_msg_attachments.py::test_the_cross_container_pair_differs_only_where_d14_says
+test: tests/test_msg_attachments.py::test_every_attachment_stream_row_agrees_with_the_read_stream
+test: tests/test_msg_attachments.py::test_the_filename_round_trips_through_the_attach_stage
+test: tests/test_msg_attachments.py::test_duplicate_filenames_and_cids_reach_the_existing_gaps
+test: tests/test_msg_attachments.py::test_the_hostile_attachment_cases_go_through_the_container
+test: tests/test_msg_attachments.py::test_no_reference_is_followed
+test: tests/test_msg_attachments.py::test_the_attachment_facts_are_deterministic_across_hash_seeds
+test: tests/test_msg_attachments.py::test_a_seeded_fuzz_of_the_attachment_tables_closes
+test: tests/test_msg_embedded.py::test_the_embedded_table_header_size_is_the_oxmsg_24
+test: tests/test_msg_embedded.py::test_no_deeper_embedded_table_is_read
 stop: after attachments and the embedded summary
 ```
 
 Allow-list (`turn=1b.7`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `emailextract/attach.py`,
 `fixtures/msg/`, `tests/test_msg_attachments.py`, `tests/test_msg_embedded.py`,
-`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md`.
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `emailextract/assemble.py` (the D6 gated edit only),
+`tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`, `tests/support/mapi_table.py`,
+`tests/support/olefile_oracle.py`, `tests/test_mapi.py`, `tests/test_msg_fixtures.py`,
+`tests/test_msgcontainer.py` and `tests/test_msg_body.py` (**only** for the D0.1 fault-gap id fix,
+each line named), `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
+`docs/design/phase1b-ledgers.md`, `docs/design/phase1b-facts.md` (the method-2 sentence only),
+`docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md` (only if a registry sentence is wrong).
 
 ```declaration turn=1b.8
 module: emailextract/mapi.py
@@ -1486,3 +1507,198 @@ covered automatically.
   projects them (the `msg.recipients` sidecar shape drops `smtp_address`/`fault`/`value_source`;
   `msg.time_facts` is the `TimeFact` triple). The `Date` header and the MAPI times are still
   distinct and unreconciled (Phase 3).
+
+## Turn 1b.7 -- outcome (attachments: the MIME projection, the MAPI attachment facts, the depth cap)
+
+Built on `d50b3e2` (Turn 1b.6). Not committed (the brief's instruction). The turn's code
+(`mapi.read_attachments`, the `msgcontainer` projection and facts, the one `assemble.py` gate)
+landed in the working tree; this note is its outcome.
+
+### D0-D8: the reviewer's decisions, applied (no decision changed)
+
+- **D0.1 -- the body/transport fault-gap id, fixed.** `_project` no longer emits
+  `ContainerGap(fault_name)`; a body, HTML or transport stream fault is now
+  `msg.stream_truncated` with `<stream>:<fault>` in the detail, and the document is `TRUNCATED`
+  with the mapped reason (`stream_cycle` -> `declared_length_mismatch`, else `stream_ended_early`,
+  contract section 2). A `0x007D` transport fault that was dropped silently now raises the same
+  gap. Pinned by `tests/test_msgcontainer.py::test_a_body_or_transport_stream_fault_is_the_registered_truncated_gap`
+  (three patched streams, exactly one gap each, no duplicate from the cfb-level scan).
+- **D0.2 -- the facts-doc typo, corrected.** `phase1b-facts.md` (`msg.attachments`) now reads
+  `1` by-value, `2` by-reference, `3` by-reference-resolve, `4` by-reference-only, `5` embedded,
+  `6` OLE (the build spec / registry / MS-OXCMSG reading). One sentence, as directed.
+- **D0.3 -- the pin.** Every committed `.msg` fixture's virtual bytes and span rows were pinned
+  before the projection changed (`.scratch/pins_1b7_pre.json`); the pre-turn virtual sha256 of
+  **every openable fixture with no attachment storage** is now a hand-typed dict in
+  `tests/test_msg_attachments.py::test_a_message_without_attachments_projects_as_before` (27
+  entries). All 25 no-attachment fixtures are **byte-identical** after the turn. The one earlier
+  fixture that *has* an attachment, `msg_outlook_layout_handbuilt`, changes by design (D1) and is
+  excluded from the pin; a line in that test asserts its `attachment_count == "1"`.
+- **D1 -- the multipart/mixed projection.** Re-measured: the virtual message opens
+  `MIME-Version: 1.0` / `Content-Type: multipart/mixed; boundary="=_msg_alt_0"` / the transport
+  headers, and the root part's `content_type` is `multipart/mixed`, so the 1b.5 first-wins layout
+  holds. A message with no attachment storage still produces exactly the 1b.5 bytes.
+- **D2 -- a by-value leaf.** The data stream's bytes are the leaf body (pass-through `binary`),
+  `PartRecord.size_bytes`/`sha256` are the stream's, and one `STREAM` span row carries the
+  stream's digest. The headers are as D2 says. **Defaulted versus declared MIME:** with no
+  `0x370E`, the projected `Content-Type` is `application/octet-stream` and `mime_tag` is `None`
+  in the facts; the attach stage's `declared_mime` verdict reads
+  `application/octet-stream` **either way** (measured on `msg_outlook_layout_handbuilt`'s
+  attachment, whose tag is absent: `declared_mime=VALUE application/octet-stream`), so only the
+  container fact distinguishes defaulted from declared -- reported below.
+- **D3 -- the filename ladder and the raw/decoded pair.** Long over short over display, first
+  present non-empty wins; the rung is recorded. The parameter is a plain quoted string only for
+  printable ASCII outside `"` `\` `/` `;`, else RFC 2231. The hostile fixture round-trips:
+  property text `..\evil/../../x\x00y` -> header `filename*=utf-8''..%5Cevil%2F..%2F..%2Fx%00y`
+  -> `attach.py` recovers `..\evil/../../x\x00y` (the occurrence's `filename_decoded`). No
+  `Path`/`open`/`os.*`/network call is made while it is read (the guard test patches them and
+  records nothing). The name is never sanitised.
+- **D4 -- embedded, OLE, the digest, the cap.** An embedded message gets an `EmbeddedSummary`
+  on `AttachmentOccurrence.embedded` (non-`None` only for method 5) and a `storage_tree_sha256`;
+  the embedded table's header measured **24 bytes** (below). OLE (6) is recorded (method, name,
+  `mime_tag`, no bytes) with no parsing; **`cfb.CfbEntry` exposes no CLSID** (its fields are
+  index/name/entry_type/colour/left/right/child/start/size/path/faults), so no class is recorded
+  -- reported as D4 allows. The depth cap fires `msg.embedded_depth_cap` (detail `2>0`); the
+  nested row still counts in the embedded message's `attachment_count`.
+- **D5 -- the reference methods and the faults.** Methods 2/3/4 are recorded (method, ladder, no
+  bytes) and emit `msg.attachment_method_unsupported` (detail `<index>:<method>`); no path or URL
+  property is read (`0x3701` is never looked for: the fixture has no data stream). A by-value
+  attachment with **no** data stream (`stream_absent`) or a **faulted** one (`stream_out_of_range`)
+  emits `msg.stream_truncated` with detail `attach:<index>:<fault>` and gives the document
+  `Status.TRUNCATED` (`stream_ended_early`) -- the per-document default the brief named, no new
+  id.
+- **D6 -- where the facts live.** `MsgContainer.attachment_facts`, a frozen tuple of
+  `AttachmentFact` named tuples (plain data; no `Property`/`TextValue`), one per directory row in
+  index order; `container_facts["attachment_count"]` published only when at least 1 (the 1b.6
+  rule). `assemble.py`'s one `cfb_msg`-gated edit fills `AttachmentOccurrence.embedded` from the
+  facts, joined through the span table; every `.eml` container keeps the current expression.
+- **D7 -- `mapi.py`.** Nine `KNOWN_TAGS` rows added (`0x3701/0x3703/0x3704/0x3705/0x3707/0x370E/
+  0x3712/0x3714/0x7FFE`, `source = "MS-OXPROPS"`, P4 not run on real mail) and `read_attachments`
+  reads one row per directory storage (8-byte sub-table, same fault discipline, never raises, a
+  work tick per row). `mapi.py` stays free of `olefile`. Attachment-row unknown tags feed
+  `msg.property_tag_unknown` through the 1b.6 mapping (so `msg_outlook_layout_handbuilt`'s
+  attachment `0x370B` now appears in that observation's detail: `370b:0003`).
+- **D8 -- E4 with an attachment.** See the E4 numbers (6x budget held).
+
+### The embedded table's header size (D4), measured
+
+The embedded `__properties_version1.0` under `msg_embedded_message` is 56 bytes. `(56 - 24) % 16
+== 0` leaves exactly the two constructed entries (`001A` class, `0037` subject); `(56 - 8) % 16`
+also divides, but an 8-byte header injects a spurious `0000:0000` entry
+(`mapi.parse_property_table(..., header_size=8)` yields three entries). **24** is taken as the
+`[MS-OXMSG]` embedded-message header and pinned by
+`tests/test_msg_embedded.py::test_the_embedded_table_header_size_is_the_oxmsg_24`, which reads the
+constructing table's size from `tests/support/msg_construction.py` independently.
+
+### The ten fixtures, hand-typed beside what the code produced
+
+All are version 3, 512-byte sectors, a 4096-byte mini cutoff. `method`/`size`/`sha256` are the
+fact's; the header is the projected leaf's first line.
+
+| fixture | method | filename (rung) | mime | size / sha256 (8) | gap |
+|---|---|---|---|---|---|
+| `msg_embedded_message` | 5 | forwarded.msg (long) | - | - / - | none; `EmbeddedSummary(IPM.Note, ts=True, "Fwd: hello", 1, 0)` |
+| `msg_embedded_depth_two` | 5 | outer.msg (long) | - | - / - | `msg.embedded_depth_cap` `2>0` |
+| `msg_attachment_with_cid` | 1 | report.pdf (long) | application/pdf | 38 / 21f4757e | none |
+| `msg_attachment_hidden` | 1 | inline-image.png (long) | image/png | 17 / 1f967b6f | none (hidden=True, inline=True) |
+| `msg_attachment_ole` | 6 | object.bin (long) | application/octet-stream | - / - | none |
+| `msg_attachment_by_reference` | 2,3,4 | ref-2/3/4.txt | text/plain | - / - | three `msg.attachment_method_unsupported` |
+| `msg_attachment_hostile_name` | 1 | `..\evil/../../x\x00y` | application/octet-stream | 7 / 8f383ccd | none |
+| `msg_attachment_zero_size` | 1 | empty.bin | application/octet-stream | 0 / e3b0c442 | none |
+| `msg_attachments_4095_4096_4097` | 1 x3 | a/b/c.bin | application/octet-stream | 4095/4096/4097 | none |
+| `msg_duplicate_filenames` | 1 x2 | same.txt x2 | text/plain | 5 / 6 | none |
+
+`msg_embedded_message`'s tree digest is `8681c596...`; `msg_embedded_depth_two`'s is
+`a943515e...` (both recomputed by an independent canonical walk in the test).
+
+### The three mutations (run, restored, each fails by name)
+
+1. **Read a reference method (2) as by-value** (`if row.method in (1, 2)`) ->
+   `tests/test_msg_attachments.py::test_reference_methods_are_recorded_and_dropped_unsupported`
+   fails (a spurious `msg.stream_truncated` `attach:0:stream_absent` replaces the unsupported gap).
+2. **Take the short name before the long name** (swap the ladder rungs) ->
+   `tests/test_msg_attachments.py::test_the_filename_ladder_is_long_over_short_over_display`
+   fails (`'S.txt' != 'L.txt'`).
+3. **Hash the storage tree without sorting** (drop `under.sort(...)`) ->
+   `tests/test_msg_embedded.py::test_the_storage_tree_sha256_is_a_canonical_walk` fails (the
+   digest moves to `ba774a37...`).
+
+### The E4 numbers (D8), 40 MiB by-value attachment, 6x budget
+
+| step | peak-WS delta | x stream |
+|---|---|---|
+| container only | 85,020,672 | 2.03 |
+| container + walk | 104,435,712 | 2.49 |
+| container + walk + assemble | 129,208,320 | 3.08 |
+| with the built `.msg` in the delta | 172,158,976 | 4.10 |
+
+All within the 6x budget. Copy inventory: (1) the `.msg` bytes (the container's input, like a file
+on disk), (2) `cfb.read_stream`'s returned payload -- one full copy of the stream, (3)
+`raw_bytes()`'s `b"".join(chunks)` -- the virtual message, one more full copy, (4) the span row
+holds a **reference** to the payload (no copy), (5) `sha256_hex` retains nothing. The dominant
+extra copies are (2) and (3); the lazy `raw_bytes()` view the brief reserves for the owner would
+address (3).
+
+### Existing tests edited, and why
+
+- `tests/test_msgcontainer.py` -- **one added test** (the D0.1 fault-gap id fix). No existing line
+  touched; `FACT_KEYS` unchanged (the `recipient_count`/`attachment_count` "only when >= 1" rule
+  keeps the 1b.5 pin literally true).
+- `tests/test_fixture_census.py` -- the `Family G` rows and the `built_in_1b7 == 10` count added.
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `"1b.7"`.
+- `tests/support/msg_construction.py` -- the ten `MSG_*` layout tables and their `CONSTRUCTION`
+  rows (typed from the built bytes and the [MS-CFB] layout, not from the reader); its hand-edited
+  `label_ledger.json` hash was updated in the same change (the ledger's additions-only rule).
+- `tools/make_msg_fixtures.py` -- the ten Family G builders and their `FIXTURES` rows.
+- `fixtures/msg/SHA256SUMS` -- the ten new lines.
+- `tests/ledger/label_ledger.json` -- the `tests/support/msg_construction.py` fingerprint only.
+- `docs/design/phase1-turn-declarations.md` / `phase1b-ledgers.md` -- the `turn=1b.7` block
+  (declared tests plus the extras) and the allow-list additions.
+- `docs/design/msg-architecture.md` -- new section 11 (the layout, the ladder, the digest, the
+  embedded header, the facts).
+- `docs/design/phase1b-facts.md` -- the one D0.2 sentence.
+
+### Reported, not bent
+
+- **The depth-cap detail form.** The brief's example is `1.2>1` (the occurrence path of the outer
+  embed); `msgcontainer._build_attachment_facts` emits `<leaf ordinal>><nested index>` (`2>0`).
+  The occurrence path is a walker-layer name not known at the container layer; the emitted form
+  names the nested storage by leaf ordinal. A one-line change if the owner wants the path printed
+  by 1b.10 instead.
+- **"the nested storage's stream bytes were never requested" is not attainable as written.** The
+  canonical digest (D4) covers every entry under the embedded storage, so computing it **must**
+  read the nested embedded message's streams; the cap stops the *summary* descent, not the digest
+  walk. `tests/test_msg_embedded.py::test_no_deeper_embedded_table_is_read` asserts instead that
+  `mapi._embedded_table` is called exactly once (the depth-1 summary, no depth-2 descent).
+- **`declared_mime` cannot tell defaulted from declared.** For an absent `0x370E`, the attach
+  stage reports `declared_mime = application/octet-stream` exactly as for a declared one; only the
+  container's `mime_tag = None` distinguishes them (the D2 reason for recording it).
+- **`verbatim_reason = container_stream` is a text-stage field.** It lives on `text.py`'s
+  `TextRecord` (surfaced in 1b.10's `body.text` rows), not on `PartRecord`; the test asserts the
+  observable part: `size_bytes`/`sha256` are the stream's and the span row is `STREAM`/`exact`.
+- **`hidden` reaches nothing at the attach stage.** `0x7FFE` has no MIME equivalent; the fact
+  records it, the occurrence carries no `hidden` field and the leaf invents no header. The
+  declared test name `test_cid_and_hidden_flags_feed_the_attach_stage` is kept, and the test
+  documents that only the cid and the `0x3714` inline bit reach the stage.
+- **A `phase0-gaps.md` sentence left alone.** `msg.embedded_depth_cap`'s entry says "the cap and
+  the declared depth are recorded on the run (D6)"; this turn emits the gap into `container_gaps`
+  (persisted by 1b.10) and nothing records a "declared depth" anywhere. No registry sentence is
+  wrong enough to edit; reported.
+- **`msg_outlook_layout_handbuilt`'s gaps moved.** Its attachment (`0x370B` rendering position)
+  now raises `msg.property_tag_unknown` `370b:0003` through the attachment-row mapping (D7), and
+  its projection grows the mixed leaf. No test pinned either; both are the turn's intended
+  behaviour.
+
+### What Turn 1b.8, 1b.9 and 1b.10 need from this turn
+
+- **1b.8 (RTF):** the attachment layer is method/leaf-complete; the RTF body (`0x1009`) is a body
+  stream and stays the 1b.5 surface. An RTF *attachment* would be method 1 and needs nothing new.
+- **1b.9 (encodings, the cross-container pair):** `storage_tree_sha256` and the ladder are ready
+  for the pair; the C5 extra in this turn is the template (the same message as `.eml`/`.msg`,
+  differing only in container kind/hash/facts, the projection-owned headers, and the stream refs).
+- **1b.10 (measurers, persistence, the three `msg` components):** `attachment_facts` is the
+  hook, exactly as `message_facts` was for 1b.6. It must project the facts into the `msg.attachments`
+  sidecar (`phase1b-facts.md`'s shape: `[part, method, filename_raw, filename_decoded, mime_tag,
+  cid, hidden, inline, size, sha256]`, one row per occurrence), persist `container_gaps` (the
+  attachment gaps included) under `part.gaps`/`gaps.later`, and join each row through the span
+  table. The `msg.embedded_summary` / `msg.storage_tree_sha256` facts are the two new value shapes.
+  No `.msg` sidecar exists yet (as directed); `evals/labels.py` still accepts `.eml` only.

@@ -515,3 +515,67 @@ consumer: it projects `MessageFacts.subject`/`sender`/`recipients`/`times` into 
 `part.gaps`/`gaps.later`. Nothing in this turn persists them: the attribute is the hook, exactly as
 `cap_observations` was for Turn 1b.1.
 
+
+## 11. Turn 1b.7: the attachment layout and the storage-tree digest
+
+A `.msg` with at least one `__attach_version1.0_#XXXXXXXX` storage projects as a
+`multipart/mixed` (D1): the first child is the body as Turn 1b.5 builds it (plain, HTML, the
+`multipart/alternative` of both, or an empty `text/plain` leaf when there is no body), then one
+leaf per attachment in **attachment-storage index order** (the directory's `#XXXXXXXX` order,
+never a declared count). A message with **no** attachment storage produces exactly the 1b.5 bytes.
+The top-level `Content-Type` structure line is still first, so the 1b.5 first-wins layout holds:
+re-measured with `multipart/mixed`, the virtual message opens
+`MIME-Version: 1.0` / `Content-Type: multipart/mixed; boundary="..."` / then the transport headers,
+and the root part's `content_type` is `multipart/mixed`.
+
+Each leaf's part-header lines are `SYNTHETIC` rows (`synthetic:attachment:<ordinal>` for a leaf
+with no readable bytes); a by-value leaf (method 1, `0x3701:0102`) folds its header lines into the
+`STREAM` row the way the HTML leaf of 1b.5 does, so the record's span-table join, `stream_ref`, and
+the pass-through size/digest all come from one row (`source_sha256` is the stream's own digest).
+`Content-Type` is the `0x370E` MIME tag **as stored**, or `application/octet-stream` when absent
+(the fact's `mime_tag = None` records "defaulted", the only place the two are distinguished -- the
+attach stage's `declared_mime` verdict reads `application/octet-stream` either way);
+`Content-Disposition` is `inline` when `0x3714` has the `ATT_MHTML_REF` bit (`0x4`), else
+`attachment`, with the filename parameter from the ladder; `Content-ID` is `0x3712` wrapped in
+`<...>` only if it is not already; the CTE is `binary`. The `0x7FFE` hidden flag has no MIME
+equivalent: it is recorded in the facts and no header is invented for it. A method-5 (embedded),
+method-6 (OLE) or reference (2/3/4) leaf is a zero-length `SYNTHETIC` body with the part's
+`size_bytes`/`sha256` `None` (`0`/the empty digest at the occurrence); `message/rfc822` is never
+used (the embedded storage has no RFC 822 bytes to back the claim).
+
+**The filename ladder (D3).** Long `0x3707` over short `0x3704` over display `0x3001`: the first
+present, non-empty value wins and its rung (`long`/`short`/`display`/`none`) is recorded. The
+projected parameter is a plain quoted string only for printable ASCII outside `"` `\` `/` `;`;
+anything else (a control character, NUL, a separator, a quote) uses RFC 2231's
+`filename*=utf-8''<percent-encoded>`, so `attach.py` recovers the property text byte for byte. The
+name is **data**: no `Path`/`open`/`os.*` call touches it and it is never sanitised.
+
+**`storage_tree_sha256` (D4), the canonical walk.** Over the entries under an embedded-message
+storage (not the storage entry itself): sort them ascending by their **full relative path** as
+UTF-8 bytes (separator `/`); for each entry append `b"S"` (a storage) or `b"T"` (a stream), the
+path length as a 4-byte big-endian integer, the path's UTF-8 bytes, the stream size as an 8-byte
+big-endian integer (`0` for a storage), and, for a stream, its bytes (`cfb.read_stream`). The digest
+is the sha256 of that concatenation. A stream under the storage that faults publishes **no** digest
+(`None`) and records `msg.stream_truncated`. It is never claimed to equal any file's hash. It does
+cover a nested embedded message's streams -- computing it reads them -- though the nested message is
+never read into an `EmbeddedSummary` (the depth cap; `msg.embedded_depth_cap`).
+
+**The embedded table's header (D4).** An embedded message's own `__properties_version1.0` opens on
+a **24-byte** header (`[MS-OXMSG]`'s embedded-message value), neither the top-level 32 nor the
+sub-table 8: measured by the entry count -- `(size - 24) % 16 == 0` leaves exactly the declared
+entries, while an 8-byte header injects a spurious `0000:0000` entry. It is read with
+`mapi.parse_property_table(..., header_size=24)`.
+
+**`attachment_facts` (D6).** `MsgContainer.attachment_facts` is a frozen tuple of `AttachmentFact`
+named tuples (plain data -- `index`, `method`, `filename_raw`, `filename_source`, `mime_tag`,
+`cid`, `hidden`, `inline`, `size`, `sha256`, `embedded_summary`, `storage_tree_sha256`, `fault`,
+`source_stream`), one per directory row in index order. The join between a record and its
+`PartRecord` is through the span table (`source_stream`), never through a virtual offset in a record
+or a `part_id`. `container_facts["attachment_count"]` is the directory row count, published only
+when it is at least 1 (the 1b.6 `recipient_count` rule). The attachment gaps ride `container_gaps`
+after the 1b.6 gaps: `msg.attachment_method_unsupported` (detail `<index>:<method>`),
+`msg.stream_truncated` (detail `attach:<index>:<fault>`) and `msg.embedded_depth_cap` (detail
+`<leaf ordinal>><nested index>`, e.g. `2>0` -- the brief's example form `1.2>1` names the
+occurrence path, which is not known at the container layer; reported in the outcome note).
+`assemble.py` gains one `cfb_msg`-gated edit: it fills `AttachmentOccurrence.embedded` from the
+facts, joined through the span table; every `.eml` container keeps the current expression verbatim.

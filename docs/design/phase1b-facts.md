@@ -157,8 +157,8 @@ means no fault (single meaning).
 ### `msg.attachments` — the attachment rows (part scope)
 
 Shape: `[[part, method, filename_raw, filename_decoded, mime_tag, cid, hidden, inline, size, sha256], ...]`,
-one row per attachment occurrence. `method` is the numeric MAPI attachment method (`1` by-value, `2` by-value,
-`3` by-reference, `4` by-reference-resolve, `5` embedded-message, `6` OLE), rendered as an int. `filename_raw`
+one row per attachment occurrence. `method` is the numeric MAPI attachment method (`1` by-value, `2` by-reference,
+`3` by-reference-resolve, `4` by-reference-only, `5` embedded-message, `6` OLE), rendered as an int. `filename_raw`
 and `filename_decoded` are `null` when the ladder found none; the filename ladder is long (`0x3707`) over short
 (`0x3704`) over display (`0x3001`), and **both** the raw and the decoded name are kept (a hostile name is never a
 path). `mime_tag` (`0x370E`) and `cid` (`0x3712`) are `null` when absent. `hidden`/`inline` are the hidden and

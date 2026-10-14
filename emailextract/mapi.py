@@ -81,6 +81,8 @@ __all__ = [
     "NAMED_TAG_MIN",
     "OBSERVATION_IDS",
     "PROPERTY_TYPES",
+    "AttachmentRow",
+    "EmbeddedTable",
     "MapiMessage",
     "Property",
     "PropertyTable",
@@ -94,6 +96,7 @@ __all__ = [
     "declared_counts",
     "named_properties",
     "parse_property_table",
+    "read_attachments",
     "read_message",
     "read_recipients",
     "render_unknown_tags",
@@ -133,6 +136,9 @@ STREAM_FAULTS = {
 HEADER_SIZE_TOP = 32
 #: A recipient, attachment or embedded-message table's header (B2: 8 bytes, 26/26).
 HEADER_SIZE_SUB = 8
+#: An embedded message's own property table header ([MS-OXMSG]; decided by the
+#: ``(size - header) % 16 == 0`` rule and the ``olefile`` oracle -- D4).
+EMBEDDED_HEADER_SIZE = 24
 #: One property entry: ``(tag << 16) | type``, ``flags``, then 8 value bytes.
 ENTRY_BYTES = 16
 
@@ -203,6 +209,7 @@ PROP_INTERNET_CODEPAGE = 0x3FDE
 PROP_MESSAGE_CODEPAGE = 0x3FFD
 #: The transport-header stream (Phase 1b's headers part) and the class.
 PROP_MESSAGE_CLASS = 0x001A
+PROP_SUBJECT = 0x0037
 PROP_TRANSPORT_HEADERS = 0x007D
 
 #: The recipient-row property tags (D7, B3 / probe P4).
@@ -211,6 +218,36 @@ PROP_RECIPIENT_DISPLAY = 0x3001
 PROP_RECIPIENT_ADDRESS_TYPE = 0x3002
 PROP_RECIPIENT_EMAIL = 0x3003
 PROP_RECIPIENT_SMTP = 0x39FE
+
+#: The attachment-row property tags (Turn 1b.7 D7, [MS-OXPROPS], probe P4 not yet run on
+#: real mail). ``0x3701`` is the data tag; ``0x3705`` the method word.
+PROP_ATTACH_DATA = 0x3701
+PROP_ATTACH_METHOD = 0x3705
+PROP_ATTACH_FILENAME_SHORT = 0x3704
+PROP_ATTACH_FILENAME_LONG = 0x3707
+#: The ladder's third rung: the display-name tag (``0x3001``), shared with a recipient row.
+PROP_ATTACH_FILENAME_DISPLAY = PROP_RECIPIENT_DISPLAY
+PROP_ATTACH_EXTENSION = 0x3703
+PROP_ATTACH_MIME_TAG = 0x370E
+PROP_ATTACH_CONTENT_ID = 0x3712
+PROP_ATTACH_FLAGS = 0x3714
+PROP_ATTACH_HIDDEN = 0x7FFE
+
+#: The three attachment methods Turn 1b.7 handles specially; every other number (and a
+#: reference method 2/3/4 or a web reference) is recorded and dropped unsupported.
+METHOD_BY_VALUE = 1
+METHOD_BY_REFERENCE = 2
+METHOD_BY_REFERENCE_RESOLVE = 3
+METHOD_BY_REFERENCE_ONLY = 4
+METHOD_EMBEDDED_MESSAGE = 5
+METHOD_OLE = 6
+REFERENCE_METHODS = (
+    METHOD_BY_REFERENCE,
+    METHOD_BY_REFERENCE_RESOLVE,
+    METHOD_BY_REFERENCE_ONLY,
+)
+#: ``0x3714``'s ``ATT_MHTML_REF`` bit: the body references the attachment (D2's ``inline``).
+ATT_MHTML_REF = 0x4
 
 #: ``EncodingSource`` values (``model.EncodingSource``), as strings; pinned by a test.
 ENCODING_SOURCES = ("internet_cpid", "message_cpid", "ascii", "utf8_strict", "windows_1252")
@@ -238,6 +275,7 @@ ADDRESS_TYPES = ("smtp", "ex", "unknown")
 # --- the stream / storage names (B1) ------------------------------------------
 SUBSTG_PREFIX = "__substg1.0_"
 RECIPIENT_PREFIX = "__recip_version1.0_#"
+ATTACHMENT_PREFIX = "__attach_version1.0_#"
 NAMEID_STORAGE = "__nameid_version1.0"
 #: The three ``__nameid_version1.0`` binary streams B1 records (contents never parsed).
 NAMEID_STREAMS = (
@@ -289,6 +327,15 @@ KNOWN_TAGS = (
     (PROP_RECIPIENT_ADDRESS_TYPE, "recipient_address_type", (PT_STRING8, PT_UNICODE), "B3"),
     (PROP_RECIPIENT_EMAIL, "recipient_email_address", (PT_STRING8, PT_UNICODE), "B3"),
     (PROP_RECIPIENT_SMTP, "recipient_smtp_address", (PT_STRING8, PT_UNICODE), "B3"),
+    (PROP_ATTACH_DATA, "attach_data", (PT_OBJECT, PT_BINARY), "MS-OXPROPS"),
+    (PROP_ATTACH_EXTENSION, "attach_extension", (PT_STRING8, PT_UNICODE), "MS-OXPROPS"),
+    (PROP_ATTACH_FILENAME_SHORT, "attach_filename_short", (PT_STRING8, PT_UNICODE), "MS-OXPROPS"),
+    (PROP_ATTACH_METHOD, "attach_method", (PT_LONG,), "MS-OXPROPS"),
+    (PROP_ATTACH_FILENAME_LONG, "attach_filename_long", (PT_STRING8, PT_UNICODE), "MS-OXPROPS"),
+    (PROP_ATTACH_MIME_TAG, "attach_mime_tag", (PT_STRING8, PT_UNICODE), "MS-OXPROPS"),
+    (PROP_ATTACH_CONTENT_ID, "attach_content_id", (PT_STRING8, PT_UNICODE), "MS-OXPROPS"),
+    (PROP_ATTACH_FLAGS, "attach_flags", (PT_LONG,), "MS-OXPROPS"),
+    (PROP_ATTACH_HIDDEN, "attach_hidden", (PT_BOOLEAN,), "MS-OXPROPS"),
 )
 _KNOWN_BY_TAG = {tag: (name, types, source) for tag, name, types, source in KNOWN_TAGS}
 
@@ -838,6 +885,292 @@ def _recipient_row(
         unknown_tags=render_unknown_tags(properties),
         fault=fault,
     )
+
+
+# ------------------------------------------------------------- the attachments
+
+
+def _text_of(properties: "tuple[Property, ...]", tag: int) -> "TextValue | None":
+    """The first decoded text of ``tag``, or ``None`` (D7)."""
+    for prop in properties:
+        if prop.tag == tag and prop.text is not None:
+            return prop.text
+    return None
+
+
+def _int_of(properties: "tuple[Property, ...]", tag: int) -> "int | None":
+    """The first fixed-integer value of ``tag``, or ``None`` (D7)."""
+    for prop in properties:
+        if prop.tag == tag and isinstance(prop.value, int) and not isinstance(prop.value, bool):
+            return prop.value
+    return None
+
+
+def _child_storages(cfb_file: cfb.CfbFile, parent: str, prefix: str) -> list[cfb.CfbEntry]:
+    """The immediate children of ``parent`` whose own name starts ``prefix`` (a directory walk)."""
+    wanted = prefix.upper()
+    marker = f"{parent}/" if parent else ""
+    found: list[cfb.CfbEntry] = []
+    for entry in cfb_file.entries:
+        path = entry.path
+        if not path:
+            continue
+        if marker:
+            if not path.upper().startswith(marker.upper()):
+                continue
+            rest = path[len(marker):]
+        else:
+            rest = path
+        if "/" in rest:
+            continue
+        if rest.upper().startswith(wanted):
+            found.append(entry)
+    return found
+
+
+class EmbeddedTable(NamedTuple):
+    """An embedded message's own summary, read at depth 1 and **never** recursed (D4).
+
+    ``nested_embedded_index`` is set when the embedded message itself carries a method-5
+    attachment: its storage is **not** opened (the depth cap), and the index names the row
+    the cap report cites. ``fault`` is one of :data:`FAULTS` when the embedded table could
+    not be read.
+    """
+
+    message_class: "str | None"
+    subject: "str | None"
+    has_transport_headers: bool
+    recipient_count: int
+    attachment_count: int
+    nested_embedded_index: "int | None"
+    fault: "str | None"
+
+
+class AttachmentRow(NamedTuple):
+    """One ``__attach_version1.0_#XXXXXXXX`` row (Turn 1b.7 D7).
+
+    The rows come from the *directory*, never a declared count. ``index`` is the hex suffix
+    as an int (``None`` when the suffix is not hex). ``method`` is the raw ``0x3705`` word.
+    The three filename rungs, the MIME tag and the Content-ID are the decoded value texts;
+    ``hidden`` is ``0x7FFE`` and ``flags``/``inline`` are ``0x3714`` and its
+    ``ATT_MHTML_REF`` bit. ``data_stream`` names the by-value data stream; ``embedded`` the
+    embedded-message summary. No path or URL property is ever read.
+    """
+
+    name: str
+    index: "int | None"
+    method: "int | None"
+    filename_long: "TextValue | None"
+    filename_short: "TextValue | None"
+    filename_display: "TextValue | None"
+    mime_tag: "TextValue | None"
+    cid: "TextValue | None"
+    hidden: bool
+    flags: "int | None"
+    inline: bool
+    data_stream: "str | None"
+    embedded: "EmbeddedTable | None"
+    properties: tuple[Property, ...]
+    unknown_tags: tuple[str, ...]
+    fault: "str | None"
+
+
+def _embedded_table(
+    cfb_file: cfb.CfbFile,
+    storage: str,
+    *,
+    internet_codepage: "int | None",
+    message_codepage: "int | None",
+    substg: dict,
+) -> EmbeddedTable:
+    """Read an embedded message's own property table (D4): the header is
+    :data:`EMBEDDED_HEADER_SIZE` bytes, decided by the ``(size - header) % 16 == 0`` rule."""
+    path = f"{storage}/{_substg_name(PROP_ATTACH_DATA, PT_OBJECT)}"
+    data, status = cfb.read_stream(cfb_file, f"{path}/__properties_version1.0")
+    stream_fault = _fault_of(status)
+    if stream_fault is not None:
+        return EmbeddedTable(None, None, False, 0, 0, None, stream_fault)
+    table = parse_property_table(data, header_size=EMBEDDED_HEADER_SIZE)
+    properties = tuple(
+        decode_entry(
+            entry,
+            cfb_file,
+            internet_codepage=internet_codepage,
+            message_codepage=message_codepage,
+            storage=path,
+            index=substg,
+        )
+        for entry in table.entries
+    )
+    class_text = _text_of(properties, PROP_MESSAGE_CLASS)
+    subject = _text_of(properties, PROP_SUBJECT)
+    has_transport = (
+        cfb.lookup_entry(cfb_file.entries, f"{path}/__substg1.0_007D001F") is not None
+        or cfb.lookup_entry(cfb_file.entries, f"{path}/__substg1.0_007D001E") is not None
+    )
+    recipients = _child_storages(cfb_file, path, RECIPIENT_PREFIX)
+    attachments = _child_storages(cfb_file, path, ATTACHMENT_PREFIX)
+    nested: "int | None" = None
+    for entry in sorted(attachments, key=lambda item: item.path):
+        row_table, row_status = cfb.read_stream(cfb_file, f"{entry.path}/__properties_version1.0")
+        if _fault_of(row_status) is not None:
+            continue
+        row_props = parse_property_table(row_table, header_size=HEADER_SIZE_SUB)
+        method = None
+        for raw in row_props.entries:
+            if raw.tag == PROP_ATTACH_METHOD:
+                method = struct.unpack_from(FIXED_TYPES[PT_LONG], raw.value, 0)[0]
+                break
+        if method == METHOD_EMBEDDED_MESSAGE:
+            suffix = entry.path.rsplit("#", 1)[-1]
+            try:
+                nested = int(suffix, 16)
+            except ValueError:
+                nested = -1
+            break
+    return EmbeddedTable(
+        class_text.text if class_text is not None else None,
+        subject.text if subject is not None else None,
+        has_transport,
+        len(recipients),
+        len(attachments),
+        nested,
+        table.fault,
+    )
+
+
+def _attachment_row(
+    cfb_file: cfb.CfbFile,
+    path: str,
+    index: "int | None",
+    properties: "tuple[Property, ...]",
+    fault: "str | None",
+    *,
+    internet_codepage: "int | None",
+    message_codepage: "int | None",
+    substg: dict,
+) -> AttachmentRow:
+    work = cfb_file.work
+    method = _int_of(properties, PROP_ATTACH_METHOD)
+    flags = _int_of(properties, PROP_ATTACH_FLAGS)
+    hidden_prop = next((prop for prop in properties if prop.tag == PROP_ATTACH_HIDDEN), None)
+    hidden = bool(hidden_prop.value) if hidden_prop is not None and isinstance(hidden_prop.value, int) else False
+    data_stream: "str | None" = None
+    embedded: "EmbeddedTable | None" = None
+    if method == METHOD_BY_VALUE:
+        data_stream = _substg_name(PROP_ATTACH_DATA, PT_BINARY)
+        if cfb.lookup_entry(cfb_file.entries, f"{path}/{data_stream}") is None:
+            data_stream = None
+    elif method == METHOD_EMBEDDED_MESSAGE:
+        work.tick(1)
+        embedded = _embedded_table(
+            cfb_file,
+            path,
+            internet_codepage=internet_codepage,
+            message_codepage=message_codepage,
+            substg=substg,
+        )
+    return AttachmentRow(
+        name=path,
+        index=index,
+        method=method,
+        filename_long=_text_of(properties, PROP_ATTACH_FILENAME_LONG),
+        filename_short=_text_of(properties, PROP_ATTACH_FILENAME_SHORT),
+        filename_display=_text_of(properties, PROP_ATTACH_FILENAME_DISPLAY),
+        mime_tag=_text_of(properties, PROP_ATTACH_MIME_TAG),
+        cid=_text_of(properties, PROP_ATTACH_CONTENT_ID),
+        hidden=hidden,
+        flags=flags,
+        inline=bool(flags is not None and flags & ATT_MHTML_REF),
+        data_stream=data_stream,
+        embedded=embedded,
+        properties=properties,
+        unknown_tags=render_unknown_tags(properties),
+        fault=fault,
+    )
+
+
+def read_attachments(
+    cfb_file: cfb.CfbFile,
+    *,
+    internet_codepage: "int | None" = None,
+    message_codepage: "int | None" = None,
+) -> tuple[AttachmentRow, ...]:
+    """Every ``__attach_version1.0_#XXXXXXXX`` row, ordered by the hex index (D7).
+
+    The rows come from the directory (trust the directory); a suffix that is not hex makes
+    that row unreadable. Each row is read with the 8-byte-header decoder, and its own
+    embedded message (method 5) is read at depth 1 and **not** descended.
+    """
+    work = cfb_file.work
+    substg = _substg_streams(cfb_file)
+    rows: "list[tuple[int, str]]" = []
+    for entry in cfb_file.entries:
+        path = entry.path
+        if not path or "/" in path or not path.upper().startswith(ATTACHMENT_PREFIX.upper()):
+            continue
+        suffix = path[len(ATTACHMENT_PREFIX):]
+        try:
+            number = int(suffix, 16)
+        except ValueError:
+            number = -1
+        rows.append((number, path))
+    rows.sort(key=lambda pair: (pair[0], pair[1]))
+
+    result: list[AttachmentRow] = []
+    for number, path in rows:
+        work.tick(1)
+        data, status = cfb.read_stream(cfb_file, f"{path}/__properties_version1.0")
+        stream_fault = _fault_of(status)
+        if stream_fault is not None or number < 0:
+            fault = FAULT_STREAM_ABSENT if stream_fault == FAULT_STREAM_OUT_OF_RANGE else stream_fault
+            fault = fault or FAULT_ENTRY_TRUNCATED
+            result.append(
+                AttachmentRow(
+                    name=path,
+                    index=number if number >= 0 else None,
+                    method=None,
+                    filename_long=None,
+                    filename_short=None,
+                    filename_display=None,
+                    mime_tag=None,
+                    cid=None,
+                    hidden=False,
+                    flags=None,
+                    inline=False,
+                    data_stream=None,
+                    embedded=None,
+                    properties=(),
+                    unknown_tags=(),
+                    fault=fault,
+                )
+            )
+            continue
+        table = parse_property_table(data, header_size=HEADER_SIZE_SUB)
+        properties = tuple(
+            decode_entry(
+                entry,
+                cfb_file,
+                internet_codepage=internet_codepage,
+                message_codepage=message_codepage,
+                storage=path,
+                index=substg,
+            )
+            for entry in table.entries
+        )
+        result.append(
+            _attachment_row(
+                cfb_file,
+                path,
+                number,
+                properties,
+                table.fault,
+                internet_codepage=internet_codepage,
+                message_codepage=message_codepage,
+                substg=substg,
+            )
+        )
+    return tuple(result)
 
 
 # ------------------------------------------------------- named properties (D5)

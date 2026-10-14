@@ -31,6 +31,7 @@ import hashlib
 import json
 import os
 import random
+import struct
 import subprocess
 import sys
 from pathlib import Path
@@ -338,6 +339,50 @@ def test_the_hostile_fixtures_and_a_forced_cap_go_through_the_container() -> Non
     assert caps[0].cap_id == "sector_count_cap"
     assert caps[0].cap_value_bytes == 3
     assert caps[0].declared_size_bytes == 6  # the file's real sector count, never a virtual length
+
+
+def _patch_stream_size(data: bytes, stream: str, size: int) -> bytes:
+    """A copy of ``data`` with ``stream``'s directory-entry declared size replaced."""
+    opened = cfb.open_cfb(data)
+    assert isinstance(opened, cfb.CfbFile)
+    entry = cfb.lookup_entry(opened.entries, stream)
+    assert entry is not None
+    offset = (
+        (opened.header.first_dir_sector + 1) * opened.header.sector_size
+        + 128 * entry.index
+        + 120
+    )
+    patched = bytearray(data)
+    struct.pack_into("<I", patched, offset, size)
+    return bytes(patched)
+
+
+def test_a_body_or_transport_stream_fault_is_the_registered_truncated_gap() -> None:
+    """D0.1: a body or transport stream fault is ``msg.stream_truncated`` with the stream and
+    fault in the detail, never the bare fault name as a gap id, and the document is TRUNCATED
+    with the mapped reason (contract section 2)."""
+    base = _bytes("msg_plain_and_html")
+    # A declared size beyond the chain's bytes is a short chain (the fault vocabulary the
+    # projection holds is ``mapi``'s ``stream_*`` form).
+    cases = (
+        ("__substg1.0_1000001F", 128),
+        ("__substg1.0_10130102", 128),
+        ("__substg1.0_007D001F", 300),
+    )
+    for stream, size in cases:
+        data = _patch_stream_size(base, stream, size)
+        container = MsgContainer(data)
+        pairs = [(gap.gap_id, gap.detail) for gap in container.container_gaps]
+        assert (GAP_STREAM_TRUNCATED, f"{stream}:stream_short_chain") in pairs, (stream, pairs)
+        assert "stream_short_chain" not in {gap_id for gap_id, _detail in pairs}, stream
+        # Exactly one gap names this stream (the projection's, not a duplicate from the
+        # cfb-level scan).
+        assert sum(1 for gap_id, detail in pairs if gap_id == GAP_STREAM_TRUNCATED and detail.split(":", 1)[0] == stream) == 1
+        document = assemble(container, limits=LIMITS)
+        assert (document.status.status.value, document.status.reason) == (
+            "truncated",
+            "stream_ended_early",
+        ), stream
 
 
 def test_two_framing_lengths_give_identical_part_ids_and_records() -> None:

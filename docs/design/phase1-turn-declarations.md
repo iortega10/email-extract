@@ -1524,3 +1524,45 @@ additions, written here in the same turn: `emailextract/mapi.py` (the D2 `KNOWN_
 `docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
 `docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md`.
 
+
+```declaration turn=1b.7
+module: emailextract/mapi.py
+module: emailextract/msgcontainer.py
+module: tests/test_msg_attachments.py
+module: tests/test_msg_embedded.py
+test: tests/test_msg_attachments.py::test_a_by_value_attachment_is_read
+test: tests/test_msg_attachments.py::test_the_filename_ladder_is_long_over_short_over_display
+test: tests/test_msg_attachments.py::test_a_hostile_filename_is_never_a_path
+test: tests/test_msg_attachments.py::test_cid_and_hidden_flags_feed_the_attach_stage
+test: tests/test_msg_attachments.py::test_reference_methods_are_recorded_and_dropped_unsupported
+test: tests/test_msg_attachments.py::test_zero_size_and_the_mini_cutoff_trio
+test: tests/test_msg_embedded.py::test_an_embedded_message_carries_an_embedded_summary
+test: tests/test_msg_embedded.py::test_the_storage_tree_sha256_is_a_canonical_walk
+test: tests/test_msg_embedded.py::test_beyond_depth_one_is_the_depth_cap
+test: tests/test_msgcontainer.py::test_a_body_or_transport_stream_fault_is_the_registered_truncated_gap
+test: tests/test_msg_attachments.py::test_a_message_without_attachments_projects_as_before
+test: tests/test_msg_attachments.py::test_two_framing_lengths_give_identical_part_ids_and_records_with_an_attachment
+test: tests/test_msg_attachments.py::test_the_cross_container_pair_differs_only_where_d14_says
+test: tests/test_msg_attachments.py::test_every_attachment_stream_row_agrees_with_the_read_stream
+test: tests/test_msg_attachments.py::test_the_filename_round_trips_through_the_attach_stage
+test: tests/test_msg_attachments.py::test_duplicate_filenames_and_cids_reach_the_existing_gaps
+test: tests/test_msg_attachments.py::test_the_hostile_attachment_cases_go_through_the_container
+test: tests/test_msg_attachments.py::test_no_reference_is_followed
+test: tests/test_msg_attachments.py::test_the_attachment_facts_are_deterministic_across_hash_seeds
+test: tests/test_msg_attachments.py::test_a_seeded_fuzz_of_the_attachment_tables_closes
+test: tests/test_msg_embedded.py::test_the_embedded_table_header_size_is_the_oxmsg_24
+test: tests/test_msg_embedded.py::test_no_deeper_embedded_table_is_read
+stop: after attachments and the embedded summary
+```
+
+Allow-list (`turn=1b.7`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `emailextract/attach.py`,
+`fixtures/msg/`, `tests/test_msg_attachments.py`, `tests/test_msg_embedded.py`,
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `emailextract/assemble.py` (the D6 gated edit only),
+`tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`, `tests/support/mapi_table.py`,
+`tests/support/olefile_oracle.py`, `tests/test_mapi.py`, `tests/test_msg_fixtures.py`,
+`tests/test_msgcontainer.py` and `tests/test_msg_body.py` (**only** for the D0.1 fault-gap id fix,
+each line named), `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
+`docs/design/phase1b-ledgers.md`, `docs/design/phase1b-facts.md` (the method-2 sentence only),
+`docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md` (only if a registry sentence is wrong).

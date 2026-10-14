@@ -46,6 +46,7 @@ from .headers import header_region
 from .ids import NOT_BUILT_IN_PHASE1, RawSpan, SPAN_NOT_RESOLVABLE, sha256_hex, walk_key
 from .mediatype import effective_media_type_in
 from .model import (
+    AttachmentOccurrence,
     BodyView,
     CapRecord,
     Classification,
@@ -500,6 +501,35 @@ def _leaf_size_and_digest(
     return default_size, default_sha256
 
 
+def _attachment_occurrences(
+    container: object, attach: object, span_table: "Mapping[tuple[int, int], object] | None"
+) -> list[AttachmentOccurrence]:
+    """The attachment occurrences, with ``embedded`` filled from the container's facts (D6).
+
+    Only a ``cfb_msg`` container publishes ``attachment_facts``; every ``.eml`` container takes
+    the current expression verbatim (the occurrences are copied unchanged). The join is through
+    the **span table**: a fact is found by its own part's span row, never through a virtual
+    offset published in a record or a ``part_id``.
+    """
+    facts = getattr(container, "attachment_facts", None)
+    if not facts or span_table is None:
+        return list(attach.occurrences)  # type: ignore[attr-defined]
+    by_stream = {fact.source_stream: fact for fact in facts}
+    by_part = {item.part.part_id: item.part for item in attach.facts}  # type: ignore[attr-defined]
+    out: list[AttachmentOccurrence] = []
+    for occurrence in attach.occurrences:  # type: ignore[attr-defined]
+        part = by_part.get(occurrence.part_id)
+        fact = None
+        if part is not None:
+            row = span_table.get((part.raw_span.offset, part.raw_span.length))
+            if row is not None:
+                fact = by_stream.get(getattr(row, "source_stream", None))
+        if fact is not None and fact.embedded_summary is not None:
+            occurrence = replace(occurrence, embedded=fact.embedded_summary)
+        out.append(occurrence)
+    return out
+
+
 def _cap_reason(result: WalkResult, locator: str) -> str:
     """The closed cap reason the walker recorded for ``locator`` (first one wins)."""
     for section in result.unknown_sections:
@@ -527,6 +557,7 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
         limits=limits,
     )
     facts = {item.part.path: item for item in attach.facts}
+    occurrences = _attachment_occurrences(container, attach, span_table)
     selections = {row[0]: row[1] for row in selection_rows(raw, result)}
     caps = _caps(result, limits, cap_observations)
     if cap_observation is not None and cap_observation.cap_id in CFB_CAP_REASONS:
@@ -569,7 +600,7 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
         parts=_part_records(
             result, facts, selections, span_table=span_table, charset_sources=charset_sources
         ),
-        attachments=list(attach.occurrences),
+        attachments=list(occurrences),
         children=[],
         children_axis=not_built_in_phase1(),
         thread_edges=[],
