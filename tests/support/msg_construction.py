@@ -683,6 +683,195 @@ MSG_PROPERTY_VS_HEADER_CONFLICT: Mapping[str, Any] = _t15_table(
 )
 
 
+#: Turn 1b.6 (the five message-fact fixtures). Every one is version 3, 512-byte sectors,
+#: mini-cutoff 4096 and entirely mini-resident, so the writer lays out: header, one FAT
+#: sector, the directory, one miniFAT sector, then the root's mini stream. Every number
+#: below is typed from ``phase1b-fixtures.md``'s fixture descriptions and the writer's
+#: fixed layout rule, then cross-checked against the independent raw reader and ``olefile``.
+def _t16_table(
+    *,
+    directory: list[tuple[str, int, int]],
+    streams: dict[str, dict[str, Any]],
+    dir_sectors: int,
+    stream_bytes: int,
+    file_length: int,
+) -> Mapping[str, Any]:
+    """One all-mini v3 Turn 1b.6 fixture's construction table."""
+    return _property_layer_table(
+        directory=directory,
+        streams=streams,
+        dir_sectors=dir_sectors,
+        mini_fat_sector=1 + dir_sectors,
+        stream_bytes=stream_bytes,
+        file_length=file_length,
+    )
+
+
+MSG_RECIPIENTS_DISPLAY_ONLY: Mapping[str, Any] = _t16_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 704),
+        ("__properties_version1.0", STGTY_STREAM, 80),
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_HTML,
+        ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 56),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 8),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "__recip_version1.0_#00000000/__properties_version1.0":
+            {"mini": True, "start": 8, "size": 56, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3001001F":
+            {"mini": True, "start": 9, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3002001F":
+            {"mini": True, "start": 10, "size": 8, "sectors": 1},
+        "<root>": {"mini": False, "start": 5, "size": 704, "sectors": 2},
+    },
+    dir_sectors=3,
+    stream_bytes=1024,
+    file_length=4096,
+)
+
+MSG_RECIPIENTS_EX_NO_SMTP: Mapping[str, Any] = _t16_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 896),
+        ("__properties_version1.0", STGTY_STREAM, 80),
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_HTML,
+        ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 72),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 4),
+        ("__substg1.0_3003001F", STGTY_STREAM, 72),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "__recip_version1.0_#00000000/__properties_version1.0":
+            {"mini": True, "start": 8, "size": 72, "sectors": 2},
+        "__recip_version1.0_#00000000/__substg1.0_3001001F":
+            {"mini": True, "start": 10, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3002001F":
+            {"mini": True, "start": 11, "size": 4, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3003001F":
+            {"mini": True, "start": 12, "size": 72, "sectors": 2},
+        "<root>": {"mini": False, "start": 5, "size": 896, "sectors": 2},
+    },
+    dir_sectors=3,
+    stream_bytes=1024,
+    file_length=4096,
+)
+
+MSG_RECIPIENTS_BCC_DUPLICATES: Mapping[str, Any] = _t16_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 1472),
+        ("__properties_version1.0", STGTY_STREAM, 80),
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_HTML,
+        ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 72),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 8),
+        ("__substg1.0_3003001F", STGTY_STREAM, 32),
+        ("__recip_version1.0_#00000001", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 72),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 8),
+        ("__substg1.0_3003001F", STGTY_STREAM, 36),
+        ("__recip_version1.0_#00000002", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 72),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 8),
+        ("__substg1.0_3003001F", STGTY_STREAM, 32),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "__recip_version1.0_#00000000/__properties_version1.0":
+            {"mini": True, "start": 8, "size": 72, "sectors": 2},
+        "__recip_version1.0_#00000000/__substg1.0_3001001F":
+            {"mini": True, "start": 10, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3002001F":
+            {"mini": True, "start": 11, "size": 8, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3003001F":
+            {"mini": True, "start": 12, "size": 32, "sectors": 1},
+        "__recip_version1.0_#00000001/__properties_version1.0":
+            {"mini": True, "start": 13, "size": 72, "sectors": 2},
+        "__recip_version1.0_#00000001/__substg1.0_3001001F":
+            {"mini": True, "start": 15, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000001/__substg1.0_3002001F":
+            {"mini": True, "start": 16, "size": 8, "sectors": 1},
+        "__recip_version1.0_#00000001/__substg1.0_3003001F":
+            {"mini": True, "start": 17, "size": 36, "sectors": 1},
+        "__recip_version1.0_#00000002/__properties_version1.0":
+            {"mini": True, "start": 18, "size": 72, "sectors": 2},
+        "__recip_version1.0_#00000002/__substg1.0_3001001F":
+            {"mini": True, "start": 20, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000002/__substg1.0_3002001F":
+            {"mini": True, "start": 21, "size": 8, "sectors": 1},
+        "__recip_version1.0_#00000002/__substg1.0_3003001F":
+            {"mini": True, "start": 22, "size": 32, "sectors": 1},
+        "<root>": {"mini": False, "start": 7, "size": 1472, "sectors": 3},
+    },
+    dir_sectors=5,
+    stream_bytes=1536,
+    file_length=5632,
+)
+
+MSG_TIME_PROPERTY_VS_DATE_HEADER: Mapping[str, Any] = _t16_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 512),
+        ("__properties_version1.0", STGTY_STREAM, 112),
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 112, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 512, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+MSG_UNICODE_SUBJECT: Mapping[str, Any] = _t16_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 512),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        _T15_CLASS,
+        ("__substg1.0_0037001F", STGTY_STREAM, 62),
+        ("__substg1.0_007D001F", STGTY_STREAM, 158),
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_0037001F": {"mini": True, "start": 3, "size": 62, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 4, "size": 158, "sectors": 3},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 512, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+
 #: Turn 1b.4: what ``mapi.py`` must read from each property-layer fixture, typed from
 #: B1-B4 and the fixture description **before** ``mapi.py`` ran. There are no ``.msg``
 #: sidecars (``evals/labels.py`` still accepts only ``.eml``; 1b.10's file set), so this
@@ -762,6 +951,11 @@ CONSTRUCTION: Mapping[str, Mapping[str, Any]] = {
     "msg_transport_headers_utf8_bom": MSG_TRANSPORT_HEADERS_UTF8_BOM,
     "msg_transport_headers_lf_only": MSG_TRANSPORT_HEADERS_LF_ONLY,
     "msg_property_vs_header_conflict": MSG_PROPERTY_VS_HEADER_CONFLICT,
+    "msg_recipients_display_only": MSG_RECIPIENTS_DISPLAY_ONLY,
+    "msg_recipients_ex_no_smtp": MSG_RECIPIENTS_EX_NO_SMTP,
+    "msg_recipients_bcc_duplicates": MSG_RECIPIENTS_BCC_DUPLICATES,
+    "msg_time_property_vs_date_header": MSG_TIME_PROPERTY_VS_DATE_HEADER,
+    "msg_unicode_subject": MSG_UNICODE_SUBJECT,
 }
 
 #: Turn 1b.3: what each **hostile** fixture must do, typed from [MS-CFB] and the E2 table

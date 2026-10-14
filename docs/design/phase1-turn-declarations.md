@@ -1488,3 +1488,39 @@ list is unchanged), `tests/test_fixture_census.py` (the Family F rows and the 1b
 list omitted but the wiring forces: `tests/test_contract_msg.py` (the `NAMED_ERROR_REASONS`
 tuple) and `tests/test_cfb.py` (the handbuilt fixture's mini-sector hex pin).
 
+```declaration turn=1b.6
+module: tests/test_msg_message_facts.py
+module: tests/test_msg_recipients.py
+module: tests/test_msg_time.py
+test: tests/test_msg_message_facts.py::test_subject_sender_and_class_are_mapi_properties
+test: tests/test_msg_message_facts.py::test_the_property_versus_header_conflict_pair_is_recorded
+test: tests/test_msg_message_facts.py::test_message_class_is_recorded_verbatim
+test: tests/test_msg_recipients.py::test_recipients_are_facts_beside_the_headers
+test: tests/test_msg_recipients.py::test_display_only_and_ex_recipients_are_recorded
+test: tests/test_msg_time.py::test_time_properties_are_flat_hex_keys
+test: tests/test_msg_time.py::test_the_filetime_hex_is_lossless_and_canonical
+test: tests/test_msg_time.py::test_no_timeevent_is_emitted
+test: tests/test_msg_message_facts.py::test_the_class_gate_leaves_no_message_facts
+test: tests/test_msg_message_facts.py::test_the_observation_gaps_are_mapped_once_each
+test: tests/test_msg_message_facts.py::test_the_facts_are_deterministic_across_hash_seeds
+test: tests/test_msg_message_facts.py::test_a_seeded_fuzz_of_the_message_facts_closes
+test: tests/test_msg_recipients.py::test_the_recipient_records_match_the_olefile_oracle
+test: tests/test_msg_recipients.py::test_recipient_count_is_the_directory_count_not_the_declared_count
+test: tests/test_msg_recipients.py::test_a_faulted_recipient_row_is_the_recipient_table_unreadable_gap
+test: tests/test_msg_time.py::test_the_filetime_rendering_truncates_the_sub_second_part
+test: tests/test_msg_time.py::test_the_filetime_epoch_renders_with_no_sentinel
+test: tests/test_msg_time.py::test_a_filetime_beyond_the_year_range_is_unrepresentable
+test: tests/test_msg_time.py::test_the_date_header_is_kept_distinct_from_the_time_properties
+stop: after the message-level facts and the time facts
+```
+
+Allow-list (`turn=1b.6`): `emailextract/msgcontainer.py`, `emailextract/assemble.py`,
+`tests/test_msg_message_facts.py`, `tests/test_msg_recipients.py`, `tests/test_msg_time.py`,
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `emailextract/mapi.py` (the D2 `KNOWN_TAGS` rows only),
+`fixtures/msg/`, `tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`,
+`tests/support/mapi_table.py`, `tests/support/olefile_oracle.py`, `tests/test_msg_fixtures.py`,
+`tests/test_mapi.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
+`docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md`.
+

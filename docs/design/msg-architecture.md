@@ -482,3 +482,36 @@ lazy `raw_bytes()` view (protocol) plus a view-based HTML text stage -- both own
 measured 4.0x with the same harness on the same stream size; the `.msg` projection adds the container's
 own pair, which is why 5x and not 3x is the re-declared budget.)
 
+## 10. Turn 1b.6: where the message-level facts plug in
+
+`MsgContainer` publishes one more producer-internal attribute beside `container_gaps`: `message_facts`
+(a `NamedTuple` in `msgcontainer.py`), the MAPI-side facts about the message -- `subject` (D3),
+`sender` (D4), `recipients` (D5, one `RecipientFact` per directory row, in index order, duplicates
+kept) and `times` (D7, one `TimeFact` per present `PT_SYSTIME` tag). It holds plain data only
+(`str | None`, `int`, tuples); no `Property`/`TextValue` object leaves the container. It is
+`None`/empty for a message whose class gate stopped (nothing past the class was opened).
+
+`container_facts()` carries the two flat key families the contract section 6 table names for 1b.6:
+`recipient_count` (the directory row count) and `time.<tag>.filetime_hex`/`time.<tag>.utc` (one pair
+per present, unfaulted `PT_SYSTIME` tag, in ascending tag order). Both are published only for a
+message the gate opened, and `recipient_count` only when the directory yields at least one row, so the
+four zero-recipient Turn 1b.5 fixtures keep the exact key set
+`tests/test_msgcontainer.py::test_container_facts_carry_the_fixed_key_list` pins (and the 1b.7
+`attachment_count` is expected to follow the same rule). The `mapi` message-level observations are
+mapped into `container_gaps` (D8), in `mapi.OBSERVATION_IDS` order after the 1b.5 gaps:
+`msg.property_tag_unknown` (the sorted distinct `tag:type` pairs joined by `,`),
+`msg.named_property_unresolved` (the sorted tag hexes from `MapiMessage.named_tags` joined by `,` --
+the record carries tag hex only, never a type, a brief-versus-`mapi` mismatch reported in the outcome
+note), `msg.codepage_unresolved_ladder_used` (empty detail: `mapi` exposes no surface set) and
+`msg.recipient_table_unreadable` (`declared=<n> rows=<n>` for a count disagreement, else the row/table
+fault).
+
+**What Turn 1b.7 and Turn 1b.10 need.** An attachment row (1b.7) joins the same way: read through
+`cfb`/`mapi` beside the projection and publish `attachment_count` in `container_facts` (again only
+when the directory yields one), with the subject/sender/recipient rows untouched. 1b.10 is the
+consumer: it projects `MessageFacts.subject`/`sender`/`recipients`/`times` into the `msg.*` sidecars
+(the `msg.recipients` shape drops the container record's `smtp_address`/`fault`/`value_source`; the
+`msg.time_facts` shape is the `TimeFact` triple) and persists `container_gaps` under
+`part.gaps`/`gaps.later`. Nothing in this turn persists them: the attribute is the hook, exactly as
+`cap_observations` was for Turn 1b.1.
+

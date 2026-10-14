@@ -50,6 +50,7 @@ string. The container publishes only what it read; every fact value is a ``str``
 
 from __future__ import annotations
 
+import datetime
 from dataclasses import replace
 from typing import Mapping, NamedTuple, Sequence
 
@@ -64,7 +65,18 @@ from .model import (
     StatusOutcome,
 )
 
-__all__ = ["ContainerGap", "LABEL_BY_CODEPAGE", "LABEL_BY_RUNG", "MsgContainer", "PROJECTION"]
+__all__ = [
+    "ContainerGap",
+    "LABEL_BY_CODEPAGE",
+    "LABEL_BY_RUNG",
+    "MessageFacts",
+    "MsgContainer",
+    "PROJECTION",
+    "RecipientFact",
+    "SenderFact",
+    "SubjectFact",
+    "TimeFact",
+]
 
 #: The projection's own name in ``container_facts`` (D6).
 PROJECTION = "virtual_rfc822"
@@ -98,6 +110,21 @@ BODY_RTF = 0x1009
 BODY_HTML = 0x1013
 PROP_SUBJECT = 0x0037
 
+#: The MAPI-side message facts (Turn 1b.6, D3-D5/D7): the sender tags, the recipient's
+#: own email/SMTP tags, and the time tags (ascending, the order the facts are published).
+PROP_SENDER_NAME = 0x0C1A
+PROP_SENDER_ADDRESS_TYPE = 0x0C1E
+PROP_SENDER_EMAIL = 0x0C1F
+PROP_SENDER_SMTP = 0x5D01
+PROP_RECIPIENT_EMAIL = 0x3003
+PROP_RECIPIENT_SMTP = 0x39FE
+TIME_TAGS = (0x0039, 0x0E06, 0x3007, 0x3008)
+
+#: The FILETIME epoch: 1601-01-01T00:00:00Z, one tick per 100 ns (D7).
+FILETIME_EPOCH = datetime.datetime(1601, 1, 1, tzinfo=datetime.timezone.utc)
+#: The rendering for a FILETIME the year range cannot express (D7): never a raise.
+UNREPRESENTABLE = "unrepresentable"
+
 #: The registered document-level gaps this container can record.
 GAP_TRANSPORT_HEADERS_ABSENT = "msg.transport_headers_absent"
 GAP_MAPI_HEADER_PROPERTY_DISAGREE = "headers.mapi_header_property_disagree"
@@ -120,6 +147,81 @@ class ContainerGap(NamedTuple):
 
     gap_id: str
     detail: str = ""
+
+
+class SubjectFact(NamedTuple):
+    """The message's subject, as three separate records (D3).
+
+    ``property_text`` is the ``0x0037`` text verbatim (``None`` if absent or faulted),
+    ``header_text`` the ``0x007D`` ``Subject:`` field text verbatim (``None`` when there
+    is no such field). ``canonical``/``value_source`` are ``"transport_header"`` when a
+    header text exists, else ``"mapi_property"`` when only the property exists, else
+    ``None``. Neither text is stripped, folded or repaired.
+    """
+
+    property_text: "str | None"
+    property_fault: "str | None"
+    header_text: "str | None"
+    canonical: "str | None"
+    value_source: "str | None"
+
+
+class SenderFact(NamedTuple):
+    """The message's sender, kept raw and never compared with ``From`` (D4).
+
+    ``address`` is ``0x0C1F`` as stored (an Exchange sender keeps its ``/O=`` form);
+    ``smtp_address`` is only ever the ``0x5D01`` value, never derived from ``address``.
+    """
+
+    name: "str | None"
+    address_type: "str | None"
+    address: "str | None"
+    smtp_address: "str | None"
+    value_source: str
+
+
+class RecipientFact(NamedTuple):
+    """One recipient directory row, in index order, duplicates kept (D5).
+
+    ``address`` is ``0x3003`` as stored; ``smtp_address`` is ``0x39FE`` when present.
+    Both are distinct from the header stage's address rows.
+    """
+
+    kind: str
+    kind_raw: "int | None"
+    display_name: "str | None"
+    address: "str | None"
+    address_type: str
+    address_type_raw: "str | None"
+    smtp_address: "str | None"
+    fault: "str | None"
+    value_source: str
+
+
+class TimeFact(NamedTuple):
+    """One MAPI time property as raw evidence (D7); never a ``TimeEvent``.
+
+    ``filetime_hex`` is the 16-digit lowercase hex of the raw ``u64`` (lossless, the
+    compared value); ``utc`` is a convenience rendering, or :data:`UNREPRESENTABLE`.
+    """
+
+    tag_hex: str
+    filetime_hex: str
+    utc: str
+
+
+class MessageFacts(NamedTuple):
+    """The MAPI-side facts about one message, beside the headers and never merged (D1).
+
+    All-``str``/``int``/``None``/tuple: no ``Property`` or ``TextValue`` object is
+    published. ``None``/empty for a message whose class gate stopped (nothing past the
+    class was opened).
+    """
+
+    subject: "SubjectFact | None"
+    sender: "SenderFact | None"
+    recipients: "tuple[RecipientFact, ...]"
+    times: "tuple[TimeFact, ...]"
 
 
 class _Body(NamedTuple):
@@ -178,6 +280,20 @@ def _byte_lines(raw: bytes) -> list[tuple[int, int]]:
     return spans
 
 
+def _filetime_utc(ticks: int) -> str:
+    """A FILETIME's whole seconds as ISO-8601 UTC with a ``Z`` (D7), never raising.
+
+    Truncated (not rounded) from 100 ns ticks; a rendering beyond the year range is
+    :data:`UNREPRESENTABLE` rather than a raise or a clamp.
+    """
+    seconds, _remainder = divmod(ticks, 10_000_000)
+    try:
+        moment = FILETIME_EPOCH + datetime.timedelta(seconds=seconds)
+    except OverflowError:
+        return UNREPRESENTABLE
+    return moment.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _label_of(text: "mapi.TextValue") -> tuple[str, EncodingSource]:
     """The charset label and ``EncodingSource`` for one HTML leaf (D4)."""
     if text.text is None:
@@ -222,6 +338,7 @@ class MsgContainer:
         self.cap_observation: "cfb.CapObservation | None" = None
         self.status_outcome: "StatusOutcome | None" = None
         self.container_gaps: tuple[ContainerGap, ...] = ()
+        self.message_facts: MessageFacts = MessageFacts(None, None, (), ())
         self.span_provenance: tuple[SpanRow, ...] = ()
         self.charset_sources: Mapping[str, CharsetOrigin] = {}
         self.cap_observations: Mapping[str, int] = {}
@@ -435,6 +552,9 @@ class MsgContainer:
         )
         if conflict is not None:
             gaps.append(ContainerGap(GAP_MAPI_HEADER_PROPERTY_DISAGREE, conflict))
+        self.message_facts = self._message_facts(transport_text)
+        self._publish_message_facts()
+        gaps.extend(self._observation_gaps())
         self.container_gaps = tuple(gaps)
 
     # ------------------------------------------------------------------- the pieces
@@ -694,3 +814,128 @@ class MsgContainer:
         if header_subject is None or header_subject == subject.text.text:
             return None
         return subject.text.text
+
+    # ---------------------------------------------------- the message facts (D1/D3-D5)
+
+    def _message_facts(self, transport_text: "str | None") -> MessageFacts:
+        """The MAPI-side facts about the message, beside the headers (D1)."""
+        assert self._message is not None
+        return MessageFacts(
+            subject=self._subject_fact(transport_text),
+            sender=self._sender_fact(),
+            recipients=tuple(
+                self._recipient_fact(row) for row in self._message.recipients
+            ),
+            times=self._time_facts(),
+        )
+
+    @staticmethod
+    def _text_of(tag: int, properties: "Sequence[mapi.Property]") -> "str | None":
+        """The decoded text of the first property with ``tag``, or ``None`` (D3-D5)."""
+        for prop in properties:
+            if prop.tag == tag:
+                return prop.text.text if prop.text is not None else None
+        return None
+
+    def _subject_fact(self, transport_text: "str | None") -> SubjectFact:
+        prop = self._property(PROP_SUBJECT)
+        property_text = prop.text.text if prop is not None and prop.text is not None else None
+        property_fault = prop.fault if prop is not None else None
+        header_text = self._header_subject(transport_text)
+        if header_text is not None:
+            canonical = "transport_header"
+        elif property_text is not None:
+            canonical = "mapi_property"
+        else:
+            canonical = None
+        return SubjectFact(property_text, property_fault, header_text, canonical, canonical)
+
+    @staticmethod
+    def _header_subject(transport_text: "str | None") -> "str | None":
+        """The ``0x007D`` ``Subject:`` field text verbatim (D3), or ``None``."""
+        if transport_text is None:
+            return None
+        for line in transport_text.split("\n"):
+            if line.lower().startswith("subject:"):
+                return line[len("subject:") :].rstrip("\r")
+        return None
+
+    def _sender_fact(self) -> SenderFact:
+        assert self._message is not None
+        properties = self._message.properties
+        return SenderFact(
+            name=self._text_of(PROP_SENDER_NAME, properties),
+            address_type=self._text_of(PROP_SENDER_ADDRESS_TYPE, properties),
+            address=self._text_of(PROP_SENDER_EMAIL, properties),
+            smtp_address=self._text_of(PROP_SENDER_SMTP, properties),
+            value_source="mapi_property",
+        )
+
+    def _recipient_fact(self, row: "mapi.RecipientRow") -> RecipientFact:
+        return RecipientFact(
+            kind=row.kind,
+            kind_raw=row.kind_raw,
+            display_name=row.display_name.text if row.display_name is not None else None,
+            address=self._text_of(PROP_RECIPIENT_EMAIL, row.properties),
+            address_type=row.address_type,
+            address_type_raw=row.address_type_raw,
+            smtp_address=self._text_of(PROP_RECIPIENT_SMTP, row.properties),
+            fault=row.fault,
+            value_source="mapi_property",
+        )
+
+    def _time_facts(self) -> "tuple[TimeFact, ...]":
+        """The present ``PT_SYSTIME`` time properties, in ascending tag order (D7)."""
+        rows: list[TimeFact] = []
+        for tag in TIME_TAGS:
+            prop = self._property(tag)
+            if prop is None or prop.prop_type != mapi.PT_SYSTIME or prop.fault is not None:
+                continue
+            if not isinstance(prop.value, int) or prop.value_hex is None:
+                continue
+            rows.append(TimeFact(f"{tag:04x}", prop.value_hex, _filetime_utc(prop.value)))
+        return tuple(rows)
+
+    def _publish_message_facts(self) -> None:
+        """The two flat key families in ``container_facts`` (D6/D7)."""
+        facts = self.message_facts
+        if facts.recipients:
+            self._facts["recipient_count"] = str(len(facts.recipients))
+        for row in facts.times:
+            self._facts[f"time.{row.tag_hex}.filetime_hex"] = row.filetime_hex
+            self._facts[f"time.{row.tag_hex}.utc"] = row.utc
+
+    # ------------------------------------------------- the four D8 observations
+
+    def _observation_gaps(self) -> "list[ContainerGap]":
+        """``mapi``'s message-level observations as gaps, in ``OBSERVATION_IDS`` order."""
+        assert self._message is not None
+        message = self._message
+        gaps: list[ContainerGap] = []
+        for observation in mapi.OBSERVATION_IDS:
+            if observation not in message.observations:
+                continue
+            if observation == mapi.MSG_CLASS_NOT_IPM_NOTE:
+                continue  # the class gate's own, emitted where the gate stops (1b.5)
+            if observation == mapi.MSG_PROPERTY_TAG_UNKNOWN:
+                detail = ",".join(message.unknown_tags)
+            elif observation == mapi.MSG_NAMED_PROPERTY_UNRESOLVED:
+                detail = ",".join(message.named_tags)
+            elif observation == mapi.MSG_CODEPAGE_UNRESOLVED_LADDER_USED:
+                detail = ""
+            else:
+                detail = self._recipient_table_detail(message)
+            gaps.append(ContainerGap(observation, detail))
+        return gaps
+
+    @staticmethod
+    def _recipient_table_detail(message: "mapi.MapiMessage") -> str:
+        """``declared=<n> rows=<n>`` for a count disagreement, else the row/table fault."""
+        declared = message.declared_recipient_count
+        rows = message.recipients
+        if declared is not None and declared != len(rows):
+            return f"declared={declared} rows={len(rows)}"
+        for row in rows:
+            if row.fault is not None:
+                return row.fault
+        return ""

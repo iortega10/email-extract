@@ -145,6 +145,24 @@ keeping the class gate open:
 - `msg_property_vs_header_conflict` (3584 B, 7 sectors): `0037:001F` (subject) disagreeing with the
   `0x007D` `Subject:` field.
 
+**Construction tables: the five Turn 1b.6 fixtures** (hand-typed in `tests/support/msg_construction.py`
+before the generator ran, then cross-checked by the raw reader and `olefile`). All five are version 3,
+512-byte sectors, 64-byte mini sectors, `001A:001F = "IPM.Note"`, and entirely mini-resident:
+
+- `msg_recipients_display_only` (4096 B, 8 sectors, three directory sectors): `0x007D` + `1013:0102`
+  plus one `__recip_version1.0_#00000000` row -- `0C15:0003 = 1` (to), `3001:001F = "Ada Lovelace"`,
+  `3002:001F = "SMTP"`, and **no** `3003`/`39FE` (address-less, D5).
+- `msg_recipients_ex_no_smtp` (4096 B, 8 sectors): the same body plus one row with
+  `3002:001F = "EX"` and `3003:001F = "/O=EXCHANGELABS/CN=RECIPIENTS/CN=9f2"`, **no** `39FE`.
+- `msg_recipients_bcc_duplicates` (5632 B, 11 sectors, five directory sectors): three rows -- index 0
+  a `to`, index 1 a `bcc` (`0C15:0003 = 3`), index 2 the byte-identical duplicate of index 0 (the
+  declared count is 3, so no count disagreement).
+- `msg_time_property_vs_date_header` (3072 B, 6 sectors): `0x007D` (whose `Date:` disagrees) +
+  `1013:0102` + two fixed `PT_SYSTIME` entries, `0039` and `0e06`, both `0x01dd597cebed5800`
+  (`2026-10-11T12:34:56Z`).
+- `msg_unicode_subject` (3072 B, 6 sectors): `0037:001F` with non-ASCII (a surrogate pair included)
+  and a `0x007D` with **no** `Subject:` field, so the property is canonical (D3).
+
 ## Family G — attachments and embedded messages (Turn 1b.7)
 
 | fixture | committed | what it exercises (one thing) | facts / gap ids | turn |

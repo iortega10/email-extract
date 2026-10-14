@@ -277,11 +277,16 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
         if "1b.5" in turn
     }
     assert len(built_in_1b5) == 10, sorted(built_in_1b5)
+    # Turn 1b.6 lands five Family E rows: the three recipient fixtures, the time-versus-Date
+    # fixture and the unicode subject.
+    built_in_1b6 = {name for name, turn in family_e.items() if "1b.6" in turn}
+    assert len(built_in_1b6) == 5, sorted(built_in_1b6)
     committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
     catalogue_rows = set(msg_rows) | set(family_e) | set(family_f)
     assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
     assert built_in_1b4 <= committed_msg, sorted(built_in_1b4 - committed_msg)
     assert built_in_1b5 <= committed_msg, sorted(built_in_1b5 - committed_msg)
+    assert built_in_1b6 <= committed_msg, sorted(built_in_1b6 - committed_msg)
     assert committed_msg <= catalogue_rows, sorted(committed_msg - catalogue_rows)
     # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
     missing = sorted(built_this_turn)[0]

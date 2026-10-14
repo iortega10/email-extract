@@ -732,6 +732,165 @@ def _fixture_codepage_disagree() -> bytes:
     )
 
 
+# --------------------------------------- the Turn 1b.6 message-fact fixtures
+
+#: The Turn 1b.6 fixtures' transport-header text (ASCII, CRLF, one trailing blank).
+T16_TRANSPORT_TEXT = (
+    "Subject: turn 1b.6 synthetic\r\n"
+    "From: Ada Lovelace <ada@example.test>\r\n"
+    "Date: Tue, 4 Mar 2025 08:00:00 +0000\r\n"
+    "\r\n"
+)
+#: ``msg_unicode_subject`` has no ``Subject:`` field, so the ``0x0037`` property is canonical.
+T16_TRANSPORT_NO_SUBJECT = (
+    "From: Ada Lovelace <ada@example.test>\r\n"
+    "Date: Tue, 4 Mar 2025 08:00:00 +0000\r\n"
+    "\r\n"
+)
+#: The 8-bit HTML body (a ``0102`` PT_BINARY stream, the real shape).
+T16_HTML_BODY = b"<html><body><p>synthetic turn 1b.6 body</p></body></html>\r\n"
+
+PROP_CLIENT_SUBMIT_TIME = 0x0039
+PROP_DELIVERY_TIME = 0x0E06
+#: ``0x01DD597CEBED5800`` is 2026-10-11T12:34:56Z (whole seconds): the MAPI time the
+#: ``Date`` header (2025-03-04T08:00:00Z) deliberately disagrees with.
+T16_SUBMIT_FILETIME = 0x01DD597CEBED5800
+
+T16_ADA_DISPLAY = "Ada Lovelace"
+T16_ADA_SMTP = "ada@example.test"
+T16_GRACE_DISPLAY = "Grace Hopper"
+T16_GRACE_SMTP = "grace@example.test"
+T16_EX_ADDRESS = "/O=EXCHANGELABS/CN=RECIPIENTS/CN=9f2"
+#: A non-ASCII subject: Latin-1, CJK, and a non-BMP emoji (a UTF-16 surrogate pair).
+T16_UNICODE_SUBJECT = "synthetic \u00fcnicode \u4e16\u754c subject \U0001f30d"
+
+
+def _recipient_storage(
+    index: int,
+    *,
+    kind: int,
+    display: str | None = None,
+    address_type: str | None = None,
+    email: str | None = None,
+) -> Storage:
+    """One ``__recip_version1.0_#XXXXXXXX`` row, its table and its ``__substg1.0`` streams."""
+    entries = [mapi_table.long_entry(mapi_table.PROP_RECIPIENT_TYPE, kind)]
+    children = []
+    for tag, text in (
+        (mapi_table.PROP_RECIPIENT_DISPLAY, display),
+        (mapi_table.PROP_RECIPIENT_ADDRESS_TYPE, address_type),
+        (mapi_table.PROP_RECIPIENT_EMAIL, email),
+    ):
+        if text is None:
+            continue
+        data = mapi_table.utf16(text)
+        entries.append(mapi_table.variable_entry(tag, mapi_table.PT_UNICODE, len(data)))
+        children.append(stream(mapi_table.substg_name(tag, mapi_table.PT_UNICODE), data))
+    return storage(
+        f"__recip_version1.0_#{index:08X}",
+        stream("__properties_version1.0", mapi_table.sub_table(entries)),
+        *children,
+    )
+
+
+def _t16_fixture(
+    *,
+    transport: str | None,
+    entries=(),
+    recipients: int = 0,
+    recipient_storages=(),
+    subject: str | None = None,
+    html: bytes | None = T16_HTML_BODY,
+) -> bytes:
+    """One Turn 1b.6 fixture: ``IPM.Note`` plus the named streams, in a fixed order."""
+    table_entries = [_class_entry(CLASS_IPM_NOTE)]
+    children = []
+    if subject is not None:
+        subject_stream = subject.encode("utf-16-le")
+        table_entries.append(
+            mapi_table.variable_entry(
+                mapi_table.PROP_SUBJECT, mapi_table.PT_UNICODE, len(subject_stream)
+            )
+        )
+        children.append(stream("__substg1.0_0037001F", subject_stream))
+    table_entries.extend(entries)
+    table = _property_stream(table_entries, recipients=recipients)
+    children = [
+        stream("__properties_version1.0", table),
+        stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+        *children,
+    ]
+    if transport is not None:
+        children.append(stream("__substg1.0_007D001F", transport.encode("utf-16-le")))
+    if html is not None:
+        children.append(stream("__substg1.0_10130102", html))
+    children.extend(recipient_storages)
+    return build_cfb(storage("Root Entry", *children))
+
+
+def _fixture_recipients_display_only() -> bytes:
+    """One ``to`` row with a display name and no SMTP address (D5's display-only case)."""
+    return _t16_fixture(
+        transport=T16_TRANSPORT_TEXT,
+        recipients=1,
+        recipient_storages=(
+            _recipient_storage(0, kind=1, display=T16_ADA_DISPLAY, address_type="SMTP"),
+        ),
+    )
+
+
+def _fixture_recipients_ex_no_smtp() -> bytes:
+    """One Exchange row: its ``/O=`` address in ``0x3003``, no ``0x39FE`` form (D5)."""
+    return _t16_fixture(
+        transport=T16_TRANSPORT_TEXT,
+        recipients=1,
+        recipient_storages=(
+            _recipient_storage(
+                0, kind=1, display=T16_GRACE_DISPLAY, address_type="EX", email=T16_EX_ADDRESS
+            ),
+        ),
+    )
+
+
+def _fixture_recipients_bcc_duplicates() -> bytes:
+    """A ``bcc`` row and a duplicated ``to`` row: three records, index order, never merged."""
+    return _t16_fixture(
+        transport=T16_TRANSPORT_TEXT,
+        recipients=3,
+        recipient_storages=(
+            _recipient_storage(
+                0, kind=1, display=T16_ADA_DISPLAY, address_type="SMTP", email=T16_ADA_SMTP
+            ),
+            _recipient_storage(
+                1, kind=3, display=T16_GRACE_DISPLAY, address_type="SMTP", email=T16_GRACE_SMTP
+            ),
+            _recipient_storage(
+                2, kind=1, display=T16_ADA_DISPLAY, address_type="SMTP", email=T16_ADA_SMTP
+            ),
+        ),
+    )
+
+
+def _fixture_time_property_vs_date_header() -> bytes:
+    """``0x0039``/``0x0E06`` disagree with the ``Date`` header; kept apart (D6/D7)."""
+    return _t16_fixture(
+        transport=T16_TRANSPORT_TEXT,
+        entries=[
+            mapi_table.fixed_entry(
+                PROP_CLIENT_SUBMIT_TIME, mapi_table.PT_SYSTIME, struct.pack("<Q", T16_SUBMIT_FILETIME)
+            ),
+            mapi_table.fixed_entry(
+                PROP_DELIVERY_TIME, mapi_table.PT_SYSTIME, struct.pack("<Q", T16_SUBMIT_FILETIME)
+            ),
+        ],
+    )
+
+
+def _fixture_unicode_subject() -> bytes:
+    """A ``001F`` subject with non-ASCII (a surrogate pair included) and no header ``Subject:``."""
+    return _t16_fixture(transport=T16_TRANSPORT_NO_SUBJECT, subject=T16_UNICODE_SUBJECT)
+
+
 FIXTURES = {
     "msg_headers_only": _fixture_headers_only,
     "msg_headers_html": _fixture_headers_html,
@@ -756,6 +915,11 @@ FIXTURES = {
     "msg_transport_headers_utf8_bom": _fixture_transport_headers_utf8_bom,
     "msg_transport_headers_lf_only": _fixture_transport_headers_lf_only,
     "msg_property_vs_header_conflict": _fixture_property_vs_header_conflict,
+    "msg_recipients_display_only": _fixture_recipients_display_only,
+    "msg_recipients_ex_no_smtp": _fixture_recipients_ex_no_smtp,
+    "msg_recipients_bcc_duplicates": _fixture_recipients_bcc_duplicates,
+    "msg_time_property_vs_date_header": _fixture_time_property_vs_date_header,
+    "msg_unicode_subject": _fixture_unicode_subject,
 }
 
 #: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,

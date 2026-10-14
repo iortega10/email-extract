@@ -397,12 +397,29 @@ test: tests/test_msg_recipients.py::test_display_only_and_ex_recipients_are_reco
 test: tests/test_msg_time.py::test_time_properties_are_flat_hex_keys
 test: tests/test_msg_time.py::test_the_filetime_hex_is_lossless_and_canonical
 test: tests/test_msg_time.py::test_no_timeevent_is_emitted
+test: tests/test_msg_message_facts.py::test_the_class_gate_leaves_no_message_facts
+test: tests/test_msg_message_facts.py::test_the_observation_gaps_are_mapped_once_each
+test: tests/test_msg_message_facts.py::test_the_facts_are_deterministic_across_hash_seeds
+test: tests/test_msg_message_facts.py::test_a_seeded_fuzz_of_the_message_facts_closes
+test: tests/test_msg_recipients.py::test_the_recipient_records_match_the_olefile_oracle
+test: tests/test_msg_recipients.py::test_recipient_count_is_the_directory_count_not_the_declared_count
+test: tests/test_msg_recipients.py::test_a_faulted_recipient_row_is_the_recipient_table_unreadable_gap
+test: tests/test_msg_time.py::test_the_filetime_rendering_truncates_the_sub_second_part
+test: tests/test_msg_time.py::test_the_filetime_epoch_renders_with_no_sentinel
+test: tests/test_msg_time.py::test_a_filetime_beyond_the_year_range_is_unrepresentable
+test: tests/test_msg_time.py::test_the_date_header_is_kept_distinct_from_the_time_properties
 stop: after the message-level facts and the time facts
 ```
 
 Allow-list (`turn=1b.6`): `emailextract/msgcontainer.py`, `emailextract/assemble.py`,
 `tests/test_msg_message_facts.py`, `tests/test_msg_recipients.py`, `tests/test_msg_time.py`,
-`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md`.
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `emailextract/mapi.py` (the D2 `KNOWN_TAGS` rows only),
+`fixtures/msg/`, `tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`,
+`tests/support/mapi_table.py`, `tests/support/olefile_oracle.py`, `tests/test_msg_fixtures.py`,
+`tests/test_mapi.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
+`docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md`.
 
 ```declaration turn=1b.7
 module: emailextract/mapi.py
@@ -1286,3 +1303,186 @@ container". Stated with the alternative in `msg-architecture.md` section 9.
   is a `STREAM` row, not a nested part.
 
 
+## Turn 1b.6 -- outcome (message-level facts: subject, sender, recipients, time, and the four mapped observations)
+
+**Built, uncommitted (the brief says do not commit).** `emailextract/mapi.py` gains eight
+`KNOWN_TAGS` rows and nothing else (D2, table rows only). `emailextract/msgcontainer.py`
+publishes one frozen `message_facts` attribute (D1) and maps `mapi`'s four remaining
+message-level observations into `container_gaps` (D8). Five new `.msg` fixtures with their
+construction tables, and three new test files (19 functions: the 8 declared plus 11 extras).
+`assemble.py` is untouched (the facts need no change there), as are `cfb.py`, `walk.py`,
+`attach.py`, `model.py`, `parse.py`, `ingest.py` and `emailextract/evals/**`.
+
+### D1-D9: the reviewer's decisions, applied
+
+- **D1 (where the fact lives).** Applied. `MsgContainer.message_facts` is one frozen
+  `MessageFacts` NamedTuple, all plain data; nothing consumes it (the measurers are Turn
+  1b.10) and no `EmailDocument`/`to_json`/`ContainerFacts` field is added beyond D6's two flat
+  key families in `container_facts()`.
+- **D2 (known tags).** Applied, rows only, source `"MS-OXPROPS"`. `tests/test_mapi.py` alone
+  after the edit: 8 passed, nothing moved (no committed fixture carries these tags).
+  `tests/test_mapi_hostile.py`'s vocabulary/leaf checks stay green (no import and no
+  `OBSERVATION_IDS` change).
+- **D3 (subject).** Applied. `property_text`/`property_fault` from `0x0037`,
+  `header_text` the verbatim `0x007D` `Subject:` field text (the line's trailing CR dropped,
+  the field's own leading space kept), `canonical`/`value_source` = `transport_header` iff a
+  header text exists, else `mapi_property` iff only the property exists, else `None`. Both
+  texts verbatim: no strip, no case fold, no repair. The 1b.5
+  `headers.mapi_header_property_disagree` gap is byte-for-byte unchanged (same detail, same
+  condition) and the fact is now its second carrier.
+- **D4 (sender).** Applied. Four raw fields + `value_source="mapi_property"`. `address` is
+  `0x0c1f` as stored and `smtp_address` is only ever `0x5d01`, never derived. **No sender
+  gap and no sender-versus-`From` comparison** (deliberate: the display-name/address-form
+  disagreement semantics are unmeasured, and a noisy gap would be a guess). A future
+  comparison would need a probe of the observed `From`/`0x0c1f`/`0x5d01` shapes before any
+  gap id.
+- **D5 (recipients).** Applied, with one reading stated in the code: `address` is `0x3003`
+  as stored and `smtp_address` is `0x39fe` when present -- **two separate fields**, never the
+  merged `RecipientRow.address` (which prefers `0x39fe`). So `msg_recipients_display_only`
+  (a `to` row typed `SMTP` with neither tag) is `address=None`/`smtp_address=None`, and
+  `msg_recipients_ex_no_smtp` keeps `/O=EXCHANGELABS/CN=RECIPIENTS/CN=9f2` in `address` with
+  `smtp_address=None`. Index order, duplicates kept (never merged, never re-sorted).
+- **D6 (`recipient_count`).** Applied with a deviation; see "Reported, not bent".
+- **D7 (time).** Applied. Exactly two keys per present, unfaulted `PT_SYSTIME` tag, ascending
+  tag order: `time.<tag>.filetime_hex` (the raw `u64` as 16-digit lowercase hex, `Property.value_hex`
+  itself, verified equal to `format(value, "016x")`) and `time.<tag>.utc` (whole seconds
+  truncated from the 100 ns ticks, integer arithmetic from the FILETIME epoch, `Z` suffix). A
+  tag absent, of another type or faulted gets **no keys**. A rendering past the year range is
+  `unrepresentable` (hex still present); `0` is `1601-01-01T00:00:00Z` with no sentinel
+  interpreted. `times_axis` keeps `not_built_in_phase1` and `times == []`.
+- **D8 (the mapping).** Applied: the four observations become `ContainerGap`s in
+  `mapi.OBSERVATION_IDS` order, after the 1b.5 gaps, each emitted once per message. The
+  class gate's own id stays where 1b.5 put it.
+- **D9 (nothing moves).** Applied: no 1b.5 test, no virtual byte, no span row and no
+  `part_id` changed. The only 1b.5-visible effect is D6's new fact key, handled by the
+  deviation below so that `test_container_facts_carry_the_fixed_key_list` needed no edit.
+
+### The exact `message_facts` type
+
+`emailextract/msgcontainer.py`, five frozen `NamedTuple`s (my design, D1's constraints):
+
+```python
+class SubjectFact(NamedTuple):
+    property_text: str | None; property_fault: str | None; header_text: str | None
+    canonical: str | None; value_source: str | None
+
+class SenderFact(NamedTuple):
+    name: str | None; address_type: str | None; address: str | None
+    smtp_address: str | None; value_source: str
+
+class RecipientFact(NamedTuple):
+    kind: str; kind_raw: int | None; display_name: str | None; address: str | None
+    address_type: str; address_type_raw: str | None; smtp_address: str | None
+    fault: str | None; value_source: str
+
+class TimeFact(NamedTuple):
+    tag_hex: str; filetime_hex: str; utc: str
+
+class MessageFacts(NamedTuple):
+    subject: SubjectFact | None; sender: SenderFact | None
+    recipients: tuple[RecipientFact, ...]; times: tuple[TimeFact, ...]
+```
+
+No `Property`/`TextValue` object is published. A message whose class gate stopped gets
+`MessageFacts(None, None, (), ())` (tested).
+
+### The five fixtures, hand-typed beside what the code produced
+
+Every expectation below was typed in the test file (and the construction table) **before** the
+reader ran, and the `olefile` oracle cross-check reads the recipient rows independently.
+
+| fixture | hand-typed | produced |
+|---|---|---|
+| `msg_recipients_display_only` | one `to`(1) row, "Ada Lovelace", `address=None`, `smtp=None`, `smtp`/`SMTP` | identical |
+| `msg_recipients_ex_no_smtp` | one `to`(1) row, "Grace Hopper", `address="/O=EXCHANGELABS/CN=RECIPIENTS/CN=9f2"`, `ex`/`EX`, `smtp=None` | identical |
+| `msg_recipients_bcc_duplicates` | three rows: `to` Ada, `bcc`(3) Grace, `to` Ada (byte-identical duplicate); `recipient_count="3"` | identical |
+| `msg_time_property_vs_date_header` | `time.0039.*` and `time.0e06.*`, both `01dd597cebed5800` / `2026-10-11T12:34:56Z` | identical |
+| `msg_unicode_subject` | `property_text="synthetic ünicode 世界 subject 🌍"`, `header_text=None`, `canonical="mapi_property"` | identical |
+
+### The FILETIME cases (hand-computed in `tests/test_msg_time.py`)
+
+- **Truncation, not rounding.** `13_436_195_696 s + 0.9999999 s` -> `2026-10-11T12:34:56Z`
+  (rounding would be `12:34:57Z`).
+- **The epoch.** raw `0` -> `0000000000000000` / `1601-01-01T00:00:00Z`, no sentinel.
+- **Beyond the year range.** `0xffffffffffffffff` -> `ffffffffffffffff` /
+  `unrepresentable`, no raise and no clamp.
+- The fixture value's hex is asserted exact in case and width and cross-checked against
+  `mapi`'s own `Property.value_hex`.
+
+### The four D8 gaps: the registry text, what `mapi` can know, what was emitted
+
+- **`msg.recipient_table_unreadable`** -- registry: "a recipient storage's table could not be
+  read (a broken chain, a truncated table, or a count that disagrees with the real rows); the
+  reader trusts the directory". Emitted once, detail `declared=<n> rows=<n>` for a count
+  disagreement (built in a test by editing the construction: `declared=5 rows=1`), else the
+  row/table fault (`stream_absent` for a row whose table stream is absent). Matches.
+- **`msg.property_tag_unknown`** -- registry: "a property tag the reader does not recognise;
+  recorded as unknown, hex only". Emitted once, detail the sorted distinct `tag:type` pairs
+  from `MapiMessage.unknown_tags` joined by `,`
+  (`msg_unknown_tags`: `6200:0003,6523:0102,6748:0014,6827:001f`). Matches.
+- **`msg.named_property_unresolved`** -- registry: "a named property's name-to-id mapping
+  could not be resolved". Emitted once. **Deviation**: the brief asks for "`tag:type` pairs
+  from `MapiMessage.named_tags`", but `named_tags` carries the **tag hex only** (it is
+  `sorted({prop.tag_hex ...})`, e.g. `8005`), not a `tag:type` pair; `unknown_tags` is the
+  one that carries pairs. D2 restricts `mapi.py` to `KNOWN_TAGS` rows, so the detail is the
+  tag hexes joined by `,` (`8005`) -- the record is not padded with a type it does not know.
+  Reported, not bent; if the owner wants `tag:type`, it is a `named_tags` change in `mapi.py`.
+- **`msg.codepage_unresolved_ladder_used`** -- registry: "the encoding ladder's later rungs
+  were used; the rung that fired is recorded as `encoding_source`". Emitted once, detail
+  **empty**: `mapi` exposes no surface set (it records only the aggregate observation), so
+  the surface set is not available without a `mapi.py` change. Reported, not bent.
+
+### The three mutations (run, restored, each fails by name)
+
+1. `filetime_hex` upper-cased instead of the 16-digit lowercase form -> **4 fail**:
+   `tests/test_msg_time.py::test_time_properties_are_flat_hex_keys`,
+   `::test_the_filetime_hex_is_lossless_and_canonical`,
+   `::test_the_filetime_rendering_truncates_the_sub_second_part`,
+   `::test_a_filetime_beyond_the_year_range_is_unrepresentable`.
+2. The recipient records de-duplicated (`dict.fromkeys`) -> **2 fail**:
+   `tests/test_msg_recipients.py::test_recipients_are_facts_beside_the_headers`,
+   `::test_the_recipient_records_match_the_olefile_oracle`.
+3. `recipient_count` taken from the declared count instead of the directory rows -> **1 fails**:
+   `tests/test_msg_recipients.py::test_recipient_count_is_the_directory_count_not_the_declared_count`.
+
+### Existing tests edited, and why
+
+Exactly the four the brief expects, all in the allow-list: `tests/test_fixture_census.py` (the
+five Family E rows and the 1b.6 count), `tests/test_turn_declarations.py` (`BUILT_TURNS` gains
+`"1b.6"`), the mirrored block in `docs/design/phase1-turn-declarations.md`, and
+`tests/ledger/label_ledger.json` (the hand-edited `tests/support/msg_construction.py` hash, the
+only changed covered file). **No 1b.5 test was edited.** `tests/test_msg_fixtures.py` needed no
+edit: its picks iterate the generated tables and `ALL_FIXTURE_NAMES`, so the five new files are
+covered automatically.
+
+### Reported, not bent
+
+- **D6 vs D9 (a real collision, resolved narrowly).** D6's literal reading -- "`recipient_count`
+  is `str(len(message.recipients))`", absent only for a stopped message -- would add
+  `recipient_count="0"` to the four zero-recipient Turn 1b.5 fixtures and break
+  `tests/test_msgcontainer.py::test_container_facts_carry_the_fixed_key_list`, which D9 says
+  must not change and the allow-list excludes. I resolved it by publishing `recipient_count`
+  **only when the directory yields at least one recipient row** (absent when there are none,
+  exactly as absent for a stopped message). That keeps D9 literally true and is the same rule
+  1b.7's `attachment_count` will need to keep the pin true. If the owner prefers the literal
+  reading, it is a one-line change plus a one-line `FACT_KEYS` edit in `test_msgcontainer.py`.
+- **A dormant 1b.5 gap-id anomaly, found while mapping (not changed, out of scope).** The 1b.5
+  outcome note ("Reported, not bent") says a body fault rides `msg.stream_truncated`, but
+  `msgcontainer._project` emits `ContainerGap(plain.fault)`/`ContainerGap(html_fault)` -- the
+  fault **name** as the gap id, not a registry id. No committed fixture has an undecodable body,
+  so nothing reds; a hostile body fixture would expose it. D9 forbids the edit this turn, so it
+  is reported, not touched.
+- **No `.msg` sidecar** (as directed): `emailextract/evals/labels.py` still accepts only `.eml`,
+  so the five fixtures have no `*.expected.json`; the census checks the `.msg` files only.
+
+### What Turn 1b.7 and Turn 1b.10 need from this turn
+
+- **The hook.** `MsgContainer.message_facts` (plain data) and `MsgContainer.container_gaps` (the
+  1b.5 gaps plus the four mapped here). `container_facts()` now carries `recipient_count` and the
+  `time.<tag>.*` pair-family; 1b.7 adds `attachment_count` under the same "only when the
+  directory yields one" rule.
+- **Unpersisted.** Nothing writes these to a record: the `msg.*` gap rows, `msg.recipients`,
+  `msg.time_facts` and the container facts stay container-side until 1b.10 wires `evals/` and
+  projects them (the `msg.recipients` sidecar shape drops `smtp_address`/`fault`/`value_source`;
+  `msg.time_facts` is the `TimeFact` triple). The `Date` header and the MAPI times are still
+  distinct and unreconciled (Phase 3).
