@@ -429,10 +429,56 @@ through, the `max_input_bytes` asymmetry is designed, `OUT_OF_RANGE` stays).
 | E1 | PASS | 14/14 terminate, 0 hang; oracle is well-formed-only and clamps a cyclic chain silently | 1b.2, 1b.3 |
 | E2 | PASS | 0 raise/hang; every input one outcome; max work 103 << bound 216 | 1b.3 |
 | E3 | PASS | sum - file = 0 on 5 fixtures; cyclic mutants show `unaccounted` | 1b.3, 1b.5 |
-| E4 | **FAIL** | 167.8 MB = 4.0x stream > 3x budget; lazy `raw_bytes()` needed | 1b.1, 1b.5 |
+| E4 | **FAIL** | 167.8 MB = 4.0x stream > 3x budget; lazy `raw_bytes()` needed. 1b.5 re-run on the real projection: 5.05x > the re-declared 5x (section 9) | 1b.1, 1b.5 |
 | E5 | PASS | unmodified diffs 3 (>0); gated diffs 0; `.eml` ids unchanged | 1b.1 |
 | E6 | PASS | 0 wrong cases; 0 edge raises; 88/88 `.eml` fields unchanged | 1b.1, 1b.5 |
 | E7 | PASS | 2/2 leaves `part_level`/`container_stream`; unmodified claims `exact` (finding) | 1b.1, 1b.5 |
 | E8 | PASS | re-ingest identical; 0 `virtual_*` tokens; recompute == rows; `.eml` untouched | 1b.1, 1b.5, 1b.10 |
 | compare | PASS | 0 differing fields; no `_walk_visit` edit forced | 1b.1, 1b.9 |
 | probe | built | sentinels 0; body/header streams opened 0; refusals exit 2 | owner runs it; feeds 1b.6/1b.7/1b.9 |
+
+## 9. Turn 1b.5: the `synthetic` record ref (contract Q3), and the E4 re-run
+
+**Q3, answered: a synthetic leaf carries a `stream_ref` on its `PartRecord`.** The projection's root
+region -- and, later, any synthesized MIME boundary -- is a `SYNTHETIC` span row, and
+`assemble._part_records` publishes `stream_ref_of(row)` for it, so a document from a `.msg` looks like:
+
+```
+root : stream_ref = ContainerStreamRef(stream='synthetic:root:1', byte_offset=None,
+                                       byte_len=None, axis=SYNTHETIC, fault=None)
+```
+
+The ref is carried (not `None`) because C6's "a consumer can tell scaffolding from evidence" is then a
+single field check, `axis is SYNTHETIC`, and `model.py` already validates exactly that shape: a
+synthetic ref must have `byte_offset is None`/`byte_len is None` and a `synthetic:<role>:<ordinal>`
+stream label. Carrying `None` instead would make "no ref at all" and "a `.eml` part with no container"
+indistinguishable, and every consumer would have to consult the span table to know which. The cost is
+that the `synthetic:` label is a *labelling convention*, not a stream name; `model.py`'s validator
+enforces the convention, and no consumer opens a ref by name (`cfb.read_stream` is only reached from
+`msgcontainer`).
+
+**E4 re-run at the re-declared 5x budget (brief D10; this turn's declaration).** A synthetic 40 MiB
+`0x1013` (`PT_BINARY`) stream in a version-4 `.msg`, driven through `MsgContainer` -> `walk` ->
+`assemble`, peak working-set delta, the same `GetProcessMemoryInfo` harness as E4:
+
+| measure | delta | over the stream |
+|---|---|---|
+| container + walk + assemble (the built `.msg` excluded) | 211.8 MB | **5.05x -- over** |
+| the same, with the built `.msg` bytes in the delta | 254.8 MB | **6.07x -- over** |
+| container construction alone | 83.5 MB | 2.0x |
+| container + `walk` (cumulative) | 120.5 MB | 2.9x |
+
+**Still over, and the dominant copy is not in `attach.py`.** The copies, in order of size (all ~40 MiB,
+tracemalloc stage peaks): (1) `cfb.read_stream` of the `0x1013` payload out of the file; (2) the
+materialised virtual message -- `raw_bytes()` is a `bytes` value, so the projection's own string exists
+once (this pair is the container's whole share, 83.5 MB = 2.0x); (3) the walker's decode of the leaf for
+the charset ladder (`text.py` needs `bytes`, not a `memoryview`); (4)-(5) the HTML projection inside
+`assemble`/`selection`/`htmltext`, which needs the 40 MiB text twice (the parsed node text and its
+normalised projection). So the overshoot is **the HTML projection over a 40 MiB HTML body**, plus the
+walker's one decode copy; the container copies a pass-through HTML leaf exactly once more than the
+virtual string itself requires, which is what D10 asked for. The named fix for the remainder is the
+lazy `raw_bytes()` view (protocol) plus a view-based HTML text stage -- both owner decisions, so
+`attach.py` is untouched and nothing was bent to reach the number. (The `.eml` control at 1b.1
+measured 4.0x with the same harness on the same stream size; the `.msg` projection adds the container's
+own pair, which is why 5x and not 3x is the re-declared budget.)
+

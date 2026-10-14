@@ -358,19 +358,23 @@ def prop_known(msg: "mapi.MapiMessage", pair: str) -> bool:
 def test_the_handbuilt_outlook_layout_matches_the_b1_b4_values() -> None:
     """The values typed from B1-B4 before ``mapi.py`` ran, on the hand-built fixture.
 
-    The fixture carries no class, so its gate stops: the reading is taken from the
-    building blocks (the table, the entries, the recipients, the nameid sizes).
+    Turn 1b.5 corrects the fixture to the observed layout (a real ``0x001A`` class and
+    B3's recipient typing), so this goes through ``read_message`` end to end: the gate
+    opens, the class is verbatim, and the recipient row reads kind and address type.
     """
     opened = _fixture("msg_outlook_layout_handbuilt")
-    data, status = cfb.read_stream(opened, cfb.PROPERTIES_STREAM)
-    assert status == cfb.FAULT_OK
-    table = mapi.parse_property_table(data, header_size=32)
+    message = mapi.read_message(opened)
+
+    # The class gate opens on the verbatim ``IPM.Note`` (D6).
+    assert message.class_verdict == mapi.CLASS_IPM_NOTE
+    assert message.message_class == "IPM.Note"
+    assert message.stopped is False
 
     # The header's counts at @16/@20 (B2): one recipient and one attachment.
-    assert mapi.declared_counts(table) == (1, 1)
+    assert (message.declared_recipient_count, message.declared_attachment_count) == (1, 1)
     # 0x3FDE / 0x3FFD are fixed entries (B4), not streams.
-    assert mapi.decode_entry(table.first(0x3FDE), opened).value == 1252
-    assert mapi.decode_entry(table.first(0x3FFD), opened).value == 1252
+    by_tag = {prop.tag: prop for prop in message.properties}
+    assert by_tag[0x3FDE].value == 1252 and by_tag[0x3FFD].value == 1252
     assert [entry.path for entry in opened.entries if entry.path.startswith("__substg1.0_3FDE")] == []
     assert [entry.path for entry in opened.entries if entry.path.startswith("__substg1.0_3FFD")] == []
 
@@ -378,11 +382,15 @@ def test_the_handbuilt_outlook_layout_matches_the_b1_b4_values() -> None:
     html = cfb.lookup_entry(opened.entries, "__substg1.0_10130102")
     assert html is not None and html.size == 160
 
-    # One recipient, read from the directory.
-    rows = mapi.read_recipients(opened)
-    assert len(rows) == 1
-    assert rows[0].index == 0
-    assert rows[0].name == "__recip_version1.0_#00000000"
+    # One recipient, read from the directory with B3's typing (0C15/3001/3002/3003).
+    assert message.recipient_row_count == 1
+    row = message.recipients[0]
+    assert row.index == 0
+    assert row.name == "__recip_version1.0_#00000000"
+    assert row.kind == "to" and row.kind_raw == 1
+    assert row.display_name is not None and row.display_name.text == "Ada Lovelace"
+    assert row.address_type == "smtp" and row.address_type_raw == "SMTP"
+    assert row.address is not None and row.address.text == "ada@example.test"
 
     # ``__nameid_version1.0``'s three streams at B1's sizes (contents never parsed, D5).
     assert mapi.named_properties(opened) == (True, (160, 440, 3090))

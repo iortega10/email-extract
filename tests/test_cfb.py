@@ -178,7 +178,7 @@ def test_walk_directory_and_case_insensitive_lookup() -> None:
     assert cfb.lookup_entry(entries, "__SUBSTG1.0_007d001f") is not None
     nested = cfb.lookup_entry(entries, "__NAMEID_version1.0/__SUBSTG1.0_00020102")
     assert nested is not None and nested.path.endswith("__substg1.0_00020102")
-    assert nested.start == 1 and nested.size == 160
+    assert nested.start == 2 and nested.size == 160
     # A wrong length does not match, and an absent path is ``None``.
     assert cfb.lookup_entry(entries, "__substg1.0_007D00") is None
     assert cfb.lookup_entry(entries, "no/such/stream") is None

@@ -196,48 +196,59 @@ MSG_OUTLOOK_LAYOUT_HANDBUILT: Mapping[str, Any] = {
     "num_dir_sectors": 0,
     "first_dir_sector": 1,
     "num_mini_fat_sectors": 1,
-    "first_mini_fat_sector": 5,
+    "first_mini_fat_sector": 6,
     "num_difat_sectors": 0,
     "difat_used": [0],
-    "file_length": 8704,
-    "sector_count": 17,
-    "directory_entries": 16,
-    "sector_accounting": _accounting(512, 512, 512, 2048, 5120),
+    "file_length": 9728,
+    "sector_count": 19,
+    "directory_entries": 20,
+    "sector_accounting": _accounting(512, 512, 512, 2560, 5632),
     "directory": [
-        ("Root Entry", STGTY_ROOT, 4928),
-        ("__properties_version1.0", STGTY_STREAM, 64),
+        ("Root Entry", STGTY_ROOT, 5312),
+        ("__properties_version1.0", STGTY_STREAM, 80),
         ("__nameid_version1.0", STGTY_STORAGE, 0),
         ("__substg1.0_00020102", STGTY_STREAM, 160),
         ("__substg1.0_00030102", STGTY_STREAM, 440),
         ("__substg1.0_00040102", STGTY_STREAM, 3090),
         ("__substg1.0_007D001F", STGTY_STREAM, 518),
+        ("__substg1.0_001A001F", STGTY_STREAM, 16),
         ("__substg1.0_10130102", STGTY_STREAM, 160),
         ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
-        ("__properties_version1.0", STGTY_STREAM, 56),
+        ("__properties_version1.0", STGTY_STREAM, 72),
+        ("__substg1.0_3001001F", STGTY_STREAM, 24),
+        ("__substg1.0_3002001F", STGTY_STREAM, 8),
+        ("__substg1.0_3003001F", STGTY_STREAM, 32),
         ("__attach_version1.0_#00000000", STGTY_STORAGE, 0),
         ("__properties_version1.0", STGTY_STREAM, 72),
         ("__substg1.0_37010102", STGTY_STREAM, 40),
         ("__substg1.0_3707001F", STGTY_STREAM, 40),
     ],
     "streams": {
-        "__properties_version1.0": {"mini": True, "start": 0, "size": 64, "sectors": 1},
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
         "__nameid_version1.0/__substg1.0_00020102":
-            {"mini": True, "start": 1, "size": 160, "sectors": 3},
+            {"mini": True, "start": 2, "size": 160, "sectors": 3},
         "__nameid_version1.0/__substg1.0_00030102":
-            {"mini": True, "start": 4, "size": 440, "sectors": 7},
+            {"mini": True, "start": 5, "size": 440, "sectors": 7},
         "__nameid_version1.0/__substg1.0_00040102":
-            {"mini": True, "start": 11, "size": 3090, "sectors": 49},
-        "__substg1.0_007D001F": {"mini": True, "start": 60, "size": 518, "sectors": 9},
-        "__substg1.0_10130102": {"mini": True, "start": 69, "size": 160, "sectors": 3},
+            {"mini": True, "start": 12, "size": 3090, "sectors": 49},
+        "__substg1.0_007D001F": {"mini": True, "start": 61, "size": 518, "sectors": 9},
+        "__substg1.0_001A001F": {"mini": True, "start": 70, "size": 16, "sectors": 1},
+        "__substg1.0_10130102": {"mini": True, "start": 71, "size": 160, "sectors": 3},
         "__recip_version1.0_#00000000/__properties_version1.0":
-            {"mini": True, "start": 72, "size": 56, "sectors": 1},
+            {"mini": True, "start": 74, "size": 72, "sectors": 2},
+        "__recip_version1.0_#00000000/__substg1.0_3001001F":
+            {"mini": True, "start": 76, "size": 24, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3002001F":
+            {"mini": True, "start": 77, "size": 8, "sectors": 1},
+        "__recip_version1.0_#00000000/__substg1.0_3003001F":
+            {"mini": True, "start": 78, "size": 32, "sectors": 1},
         "__attach_version1.0_#00000000/__properties_version1.0":
-            {"mini": True, "start": 73, "size": 72, "sectors": 2},
+            {"mini": True, "start": 79, "size": 72, "sectors": 2},
         "__attach_version1.0_#00000000/__substg1.0_37010102":
-            {"mini": True, "start": 75, "size": 40, "sectors": 1},
+            {"mini": True, "start": 81, "size": 40, "sectors": 1},
         "__attach_version1.0_#00000000/__substg1.0_3707001F":
-            {"mini": True, "start": 76, "size": 40, "sectors": 1},
-        "<root>": {"mini": False, "start": 6, "size": 4928, "sectors": 10},
+            {"mini": True, "start": 82, "size": 40, "sectors": 1},
+        "<root>": {"mini": False, "start": 7, "size": 5312, "sectors": 11},
     },
 }
 
@@ -447,6 +458,231 @@ MSG_CODEPAGE_DISAGREE_TABLE: Mapping[str, Any] = _property_layer_table(
     file_length=2560,
 )
 
+#: Turn 1b.5 (the nine body/header fixtures). Every one is version 3, 512-byte sectors,
+#: mini-cutoff 4096 and entirely mini-resident, so the writer lays out: header, one FAT
+#: sector, the directory, one miniFAT sector, then the root's mini stream. Every number
+#: below is typed from ``phase1b-fixtures.md``'s fixture descriptions and the writer's
+#: fixed layout rule, then cross-checked against the independent raw reader and ``olefile``.
+T15_ENDOFCHAIN = 0xFFFFFFFE
+
+
+def _t15_table(
+    *,
+    directory: list[tuple[str, int, int]],
+    streams: dict[str, dict[str, Any]],
+    dir_sectors: int,
+    stream_bytes: int,
+    file_length: int,
+) -> Mapping[str, Any]:
+    """One all-mini v3 Turn 1b.5 fixture's construction table."""
+    return _property_layer_table(
+        directory=directory,
+        streams=streams,
+        dir_sectors=dir_sectors,
+        mini_fat_sector=1 + dir_sectors,
+        stream_bytes=stream_bytes,
+        file_length=file_length,
+    )
+
+
+_T15_PROPS = ("__properties_version1.0", STGTY_STREAM, 80)
+_T15_CLASS = ("__substg1.0_001A001F", STGTY_STREAM, 16)
+_T15_TRANSPORT = ("__substg1.0_007D001F", STGTY_STREAM, 218)
+_T15_HTML = ("__substg1.0_10130102", STGTY_STREAM, 59)
+_T15_PLAIN = ("__substg1.0_1000001F", STGTY_STREAM, 4)
+
+#: ``msg_html_only_no_plain``: the 10-of-11 real shape.
+MSG_HTML_ONLY_NO_PLAIN: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 512),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 512, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_plain_only``: a ``0x1000`` ``001F`` body and nothing else.
+MSG_PLAIN_ONLY: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 512),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_PLAIN,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_1000001F": {"mini": True, "start": 7, "size": 4, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 512, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_plain_and_html``: both bodies, so the selection rule has something to pick.
+MSG_PLAIN_AND_HTML: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 576),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        _T15_PLAIN,
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_1000001F": {"mini": True, "start": 7, "size": 4, "sectors": 1},
+        "__substg1.0_10130102": {"mini": True, "start": 8, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 576, "sectors": 2},
+    },
+    dir_sectors=2,
+    stream_bytes=1024,
+    file_length=3584,
+)
+
+#: ``msg_zero_length_body``: a present-but-empty ``0x1000`` stream (start is ENDOFCHAIN).
+MSG_ZERO_LENGTH_BODY: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 448),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        ("__substg1.0_1000001F", STGTY_STREAM, 0),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_1000001F": {"mini": False, "start": T15_ENDOFCHAIN, "size": 0, "sectors": 0},
+        "<root>": {"mini": False, "start": 4, "size": 448, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_html_meta_charset_contradicts``: ``<meta charset="utf-8">`` against internet 1252.
+MSG_HTML_META_CHARSET_CONTRADICTS: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 576),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        ("__substg1.0_10130102", STGTY_STREAM, 94),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 7, "size": 94, "sectors": 2},
+        "<root>": {"mini": False, "start": 4, "size": 576, "sectors": 2},
+    },
+    dir_sectors=2,
+    stream_bytes=1024,
+    file_length=3584,
+)
+
+#: ``msg_no_transport_headers``: no ``0x007D`` at all (a four-entry directory).
+MSG_NO_TRANSPORT_HEADERS: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 256),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_10130102": {"mini": True, "start": 3, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 3, "size": 256, "sectors": 1},
+    },
+    dir_sectors=1,
+    stream_bytes=512,
+    file_length=2560,
+)
+
+#: ``msg_transport_headers_utf8_bom``: ``0x007D`` as ``001E``, UTF-8 BOM first.
+MSG_TRANSPORT_HEADERS_UTF8_BOM: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 384),
+        _T15_PROPS,
+        _T15_CLASS,
+        ("__substg1.0_007D001E", STGTY_STREAM, 112),
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001E": {"mini": True, "start": 3, "size": 112, "sectors": 2},
+        "__substg1.0_10130102": {"mini": True, "start": 5, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 384, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_transport_headers_lf_only``: the transport text uses bare LF line endings.
+MSG_TRANSPORT_HEADERS_LF_ONLY: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 448),
+        _T15_PROPS,
+        _T15_CLASS,
+        ("__substg1.0_007D001F", STGTY_STREAM, 136),
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 136, "sectors": 3},
+        "__substg1.0_10130102": {"mini": True, "start": 6, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 448, "sectors": 1},
+    },
+    dir_sectors=2,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_property_vs_header_conflict``: a ``0x0037`` subject property beside ``0x007D``.
+MSG_PROPERTY_VS_HEADER_CONFLICT: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 640),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        _T15_CLASS,
+        ("__substg1.0_0037001F", STGTY_STREAM, 72),
+        _T15_TRANSPORT,
+        _T15_HTML,
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_0037001F": {"mini": True, "start": 3, "size": 72, "sectors": 2},
+        "__substg1.0_007D001F": {"mini": True, "start": 5, "size": 218, "sectors": 4},
+        "__substg1.0_10130102": {"mini": True, "start": 9, "size": 59, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 640, "sectors": 2},
+    },
+    dir_sectors=2,
+    stream_bytes=1024,
+    file_length=3584,
+)
+
+
 #: Turn 1b.4: what ``mapi.py`` must read from each property-layer fixture, typed from
 #: B1-B4 and the fixture description **before** ``mapi.py`` ran. There are no ``.msg``
 #: sidecars (``evals/labels.py`` still accepts only ``.eml``; 1b.10's file set), so this
@@ -517,6 +753,15 @@ CONSTRUCTION: Mapping[str, Mapping[str, Any]] = {
     "msg_unknown_tags": MSG_UNKNOWN_TAGS_TABLE,
     "msg_named_properties": MSG_NAMED_PROPERTIES_TABLE,
     "msg_codepage_disagree": MSG_CODEPAGE_DISAGREE_TABLE,
+    "msg_html_only_no_plain": MSG_HTML_ONLY_NO_PLAIN,
+    "msg_plain_only": MSG_PLAIN_ONLY,
+    "msg_plain_and_html": MSG_PLAIN_AND_HTML,
+    "msg_zero_length_body": MSG_ZERO_LENGTH_BODY,
+    "msg_html_meta_charset_contradicts": MSG_HTML_META_CHARSET_CONTRADICTS,
+    "msg_no_transport_headers": MSG_NO_TRANSPORT_HEADERS,
+    "msg_transport_headers_utf8_bom": MSG_TRANSPORT_HEADERS_UTF8_BOM,
+    "msg_transport_headers_lf_only": MSG_TRANSPORT_HEADERS_LF_ONLY,
+    "msg_property_vs_header_conflict": MSG_PROPERTY_VS_HEADER_CONFLICT,
 }
 
 #: Turn 1b.3: what each **hostile** fixture must do, typed from [MS-CFB] and the E2 table

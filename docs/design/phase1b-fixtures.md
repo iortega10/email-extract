@@ -125,6 +125,26 @@ independence is the falsifiable stream-fault classification, the sector-tiling s
 | `msg_zero_length_body` | yes | a `0x1000` stream of length 0 (present-but-empty, not absent) | `msg.body_streams` (`plain`); `body.plain_effectively_empty` | 1b.5 |
 | `msg_html_meta_charset_contradicts` | yes | HTML whose `<meta charset>` contradicts the internet code page | `msg.codepage_ladder`; `body.text` | 1b.5 |
 
+**Construction tables: the nine Turn 1b.5 fixtures** (hand-typed in `tests/support/msg_construction.py`
+before the generator ran, per construction rule 3; the five Family F rows and the four Family E rows the
+turn names). All nine are version 3, 512-byte sectors, 64-byte mini sectors, with `001A:001F = "IPM.Note"`
+keeping the class gate open:
+
+- `msg_html_only_no_plain` (3072 B, 6 sectors): `0x007D` transport headers + `1013:0102` (the 10-of-11
+  shape); both streams mini-resident.
+- `msg_plain_only` (3072 B, 6 sectors): `0x007D` + `1000:001F`.
+- `msg_plain_and_html` (3584 B, 7 sectors): `0x007D` + `1000:001F` + `1013:0102` -- the projection makes
+  `multipart/alternative` with a synthetic boundary, plain first.
+- `msg_zero_length_body` (3072 B, 6 sectors): `1000:001F` of length 0 (present-but-empty).
+- `msg_html_meta_charset_contradicts` (3584 B, 7 sectors): `1013:0102` whose `<meta charset=...>` names
+  a code page the internet code page disagrees with.
+- `msg_no_transport_headers` (2560 B, 5 sectors): `001A:001F` and a body, **no** `0x007D` (five sectors:
+  the tree is one sector smaller).
+- `msg_transport_headers_utf8_bom` (3072 B): `007D:001F` whose text begins with a UTF-8 BOM.
+- `msg_transport_headers_lf_only` (3072 B): `007D:001F` with `LF` line endings only.
+- `msg_property_vs_header_conflict` (3584 B, 7 sectors): `0037:001F` (subject) disagreeing with the
+  `0x007D` `Subject:` field.
+
 ## Family G — attachments and embedded messages (Turn 1b.7)
 
 | fixture | committed | what it exercises (one thing) | facts / gap ids | turn |

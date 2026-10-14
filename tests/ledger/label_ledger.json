@@ -142,7 +142,7 @@
     "tests/support/html_projection_hash.py": "ae4a5525a9929e4159c5172ecb6eefb58c9828c29ac29a1219c64ba8755feb04",
     "tests/support/legacy_walk.py": "e9b9895c3ff9789378da26b67a5f871a6d8612c5e2caffe18fb52197dd6bb89d",
     "tests/support/mapi_table.py": "4be56165d6e1688daeae3e412f471a0563dbbe11514f40c36861d7ec5cf66c0c",
-    "tests/support/msg_construction.py": "63972ec111b9a337c64e6600a593c405b0df3af0b8c61febd034c8c40944c60d",
+    "tests/support/msg_construction.py": "dd7d3f0a1e663d7dc2341bfc97b9a9bc53651e3428fa8f1b3987cb51c6bc185f",
     "tests/support/olefile_oracle.py": "1aebc32e1de36686b746025eeb44f8b3ed0a678c4b4cee87635cd034c995e2ac",
     "tests/support/sidecar_copy.py": "3022d2f7ce133508ac1a9638a521562db83524ddeba7e73ef98126010a688757",
     "tests/support/stdlib_scanner.py": "aca1a19ba8ee06288c450538e270142169ce4f7b462f59ad5599a25758a27f74",

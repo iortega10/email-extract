@@ -316,25 +316,26 @@ def test_adding_a_cfb_msg_document_changes_no_eml_store_byte() -> None:
 
 
 def test_parse_opens_a_cfb_container_instead_of_refusing() -> None:
-    """With an opener a CFB magic opens (a real container); without one it is refused as today."""
+    """A CFB magic opens (Turn 1b.5); a caller's opener seam still overrides the default."""
     def opener(data: bytes):
         from emailextract.parse import ParseResult
 
         return ParseResult(kind="cfb_msg", prelude_bom_bytes=0, prelude_mbox_bytes=0, error=None)
 
-    # Without an opener: refused exactly as today.
+    # The package's own opener now reads the CFB: a bare magic without a property stream
+    # is a named error (never ``cfb_msg_unsupported``, which Turn 1b.5 deletes).
     refused = parse(CFB_BYTES, limits=LIMITS)
     assert refused.error is not None
-    assert refused.error.reason_id == "cfb_msg_unsupported"
-    assert "cfb_msg_unsupported" in NAMED_ERROR_REASONS  # interim member until Turn 1b.5
+    assert refused.error.reason_id in NAMED_ERROR_REASONS
+    assert "cfb_msg_unsupported" not in NAMED_ERROR_REASONS
     # Sniffed: the magic opens through the opener.
     sniffed = parse(CFB_BYTES, limits=LIMITS, open_cfb=opener)
     assert sniffed.error is None and sniffed.kind == "cfb_msg"
     # Claimed: the same opener is honoured.
     claimed = parse(b"anything", container_kind="cfb_msg", limits=LIMITS, open_cfb=opener)
     assert claimed.error is None and claimed.kind == "cfb_msg"
-    # ... and refused without one, again.
-    assert parse(b"anything", container_kind="cfb_msg", limits=LIMITS).error.reason_id == "cfb_msg_unsupported"
+    # ... and the default opener still refuses the same non-CFB bytes.
+    assert parse(b"anything", container_kind="cfb_msg", limits=LIMITS).error is not None
 
 
 # --------------------------------------------------------------- the default branches

@@ -72,7 +72,7 @@ from .parse import Limits
 from .quote import resolve as quote_resolve
 from .selection import display_text, is_body_view, selection_rows
 from .text import analyse_part
-from .walk import CAP_LIMIT_FIELDS, CAP_REASONS, PartShape, WalkResult, walk
+from .walk import CAP_LIMIT_FIELDS, CAP_REASONS, CFB_CAP_REASONS, PartShape, WalkResult, walk
 
 __all__ = [
     "PROJECTION_VERSION_NAMES",
@@ -207,6 +207,7 @@ def _header_fields(
     result: WalkResult,
     limits: Limits,
     span_table: Mapping[tuple[int, int], object] | None = None,
+    value_codec: str = "latin-1",
 ) -> list[HeaderField]:
     """The top-level header region as frozen :class:`HeaderField` records.
 
@@ -227,8 +228,18 @@ def _header_fields(
     with it, a field whose own raw span is a source region carries its
     :class:`~emailextract.model.ContainerStreamRef`. Without it (every ``.eml``
     container) the construction is exactly today's.
+
+    Two ``cfb_msg``-gated refinements (Turn 1b.5). ``value_codec`` is the byte->str
+    mapping the header stage uses -- the default ``"latin-1"`` is today's expression
+    verbatim, and a ``.msg`` projection passes its own ``"utf-8"`` so the re-encoded
+    header text reaches ``raw_value``. And a field whose span row is ``SYNTHETIC`` is
+    **scaffolding, not evidence**: the projection's own structural header lines do not
+    appear in ``headers`` (D2, C6). Both are gated on the span table being present, so
+    the ``.eml`` path is unchanged field for field.
     """
-    region = header_region(raw, result, max_work_units=limits.max_field_work_units_per_byte)
+    region = header_region(
+        raw, result, max_work_units=limits.max_field_work_units_per_byte, value_codec=value_codec
+    )
     fields: list[HeaderField] = []
     for item in region.fields:
         if item.parse_status != "ok":
@@ -240,6 +251,8 @@ def _header_fields(
         if span_table is not None:
             row = span_table.get((item.raw_span.offset, item.raw_span.length))
             if row is not None:
+                if getattr(row, "axis", None) is ContainerStreamAxis.SYNTHETIC:
+                    continue
                 stream_ref = stream_ref_of(row)
         fields.append(
             HeaderField(
@@ -503,6 +516,9 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
     span_table = _span_lookup_of(container)
     charset_sources = getattr(container, "charset_sources", None)
     cap_observations = getattr(container, "cap_observations", None)
+    value_codec = getattr(container, "value_codec", "latin-1")
+    cap_observation = getattr(container, "cap_observation", None)
+    status_override = getattr(container, "status_outcome", None)
     attach = attachment_stage(
         raw,
         result,
@@ -513,6 +529,16 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
     facts = {item.part.path: item for item in attach.facts}
     selections = {row[0]: row[1] for row in selection_rows(raw, result)}
     caps = _caps(result, limits, cap_observations)
+    if cap_observation is not None and cap_observation.cap_id in CFB_CAP_REASONS:
+        # A CFB cap happened before any virtual byte existed (Turn 1b.5): the container
+        # publishes the real observed count, never a virtual region length.
+        caps = [
+            CapRecord(
+                cap_id=cap_observation.cap_id,
+                cap_value_bytes=cap_observation.value,
+                declared_size_bytes=cap_observation.observed,
+            )
+        ]
     views = quote_resolve.all_views(
         raw, result, max_depth=limits.max_depth, max_elements=limits.max_parts
     )
@@ -536,8 +562,10 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
         container_hash=container_id,
         container_facts=ContainerFacts(container.container_facts()),
         content_fingerprint=_content_fingerprint(raw, result, limits=limits),
-        status=_document_status(result),
-        headers=_header_fields(raw, result, limits, span_table=span_table),
+        status=status_override if status_override is not None else _document_status(result),
+        headers=_header_fields(
+            raw, result, limits, span_table=span_table, value_codec=value_codec
+        ),
         parts=_part_records(
             result, facts, selections, span_table=span_table, charset_sources=charset_sources
         ),

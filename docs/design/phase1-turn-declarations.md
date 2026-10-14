@@ -1443,3 +1443,48 @@ test: tests/test_mapi_hostile.py::test_the_mutant_numbers_are_stable_across_hash
 test: tests/test_mapi_hostile.py::test_the_mapi_vocabulary_matches_the_registry_model_and_imports
 stop: after the ladder, the class gate and the recipients, before the container
 ```
+
+```declaration turn=1b.5
+module: emailextract/msgcontainer.py
+module: emailextract/attach.py
+module: emailextract/parse.py
+module: tests/test_msgcontainer.py
+module: tests/test_msg_headers.py
+module: tests/test_msg_body.py
+test: tests/test_msgcontainer.py::test_the_virtual_bytes_and_the_span_table_agree
+test: tests/test_msgcontainer.py::test_the_container_publishes_no_virtual_offset_to_a_record
+test: tests/test_msgcontainer.py::test_container_hash_addresses_the_cfb_file
+test: tests/test_msgcontainer.py::test_container_facts_carry_the_fixed_key_list
+test: tests/test_msgcontainer.py::test_the_span_table_row_shape_is_the_contract
+test: tests/test_msgcontainer.py::test_the_projection_is_deterministic_across_hash_seeds
+test: tests/test_msgcontainer.py::test_a_seeded_fuzz_of_the_projection_closes
+test: tests/test_msgcontainer.py::test_the_hostile_fixtures_and_a_forced_cap_go_through_the_container
+test: tests/test_msgcontainer.py::test_two_framing_lengths_give_identical_part_ids_and_records
+test: tests/test_msg_headers.py::test_headers_come_from_the_007d_stream_in_order
+test: tests/test_msg_headers.py::test_the_utf8_codec_carries_the_real_header_text
+test: tests/test_msg_headers.py::test_no_transport_headers_yields_no_synthesized_headers
+test: tests/test_msg_headers.py::test_the_transport_header_is_canonical_and_the_property_is_kept
+test: tests/test_msg_headers.py::test_msg_non_ipm_note_and_msg_signed_class_through_the_container
+test: tests/test_msg_body.py::test_a_pass_through_html_leaf_is_never_exact
+test: tests/test_msg_body.py::test_a_plain_leaf_is_reencoded_and_container_stream
+test: tests/test_msg_body.py::test_selection_picks_html_over_plain
+test: tests/test_msg_body.py::test_sector_accounting_sums_to_the_file_length_end_to_end
+test: tests/test_msg_body.py::test_the_same_message_as_eml_and_msg_differs_only_where_d14_says
+stop: after headers and one HTML body end to end, with the golden still green
+```
+
+Allow-list (`turn=1b.5`): `emailextract/msgcontainer.py`, `emailextract/parse.py`,
+`emailextract/assemble.py`, `emailextract/walk.py`, `fixtures/msg/`,
+`tests/test_msgcontainer.py`, `tests/test_msg_headers.py`, `tests/test_msg_body.py`,
+`tests/ledger/label_ledger.json`, `tests/ledger/behavior_ledger.json`,
+`docs/design/phase1b-ledgers.md` -- **plus** the brief's named additions, written here in
+the same turn: `emailextract/ingest.py`, `tools/make_msg_fixtures.py`,
+`tests/support/msg_construction.py`, `tests/support/mapi_table.py`, `tests/test_msg_fixtures.py`,
+`tests/test_mapi.py` (the D9 test only), `tests/test_parse_entry.py`, `tests/test_ingest.py`,
+`tests/test_phase1_scope.py` (`EXPECTED_LIBRARY` gains `"msgcontainer.py"`; the import-ban
+list is unchanged), `tests/test_fixture_census.py` (the Family F rows and the 1b.5 count),
+`tests/test_turn_declarations.py` (`BUILT_TURNS` gains `"1b.5"`), `docs/design/phase1-turn-declarations.md`,
+`docs/design/phase1b-fixtures.md`, `docs/design/msg-architecture.md`, and two files the brief's
+list omitted but the wiring forces: `tests/test_contract_msg.py` (the `NAMED_ERROR_REASONS`
+tuple) and `tests/test_cfb.py` (the handbuilt fixture's mini-sector hex pin).
+

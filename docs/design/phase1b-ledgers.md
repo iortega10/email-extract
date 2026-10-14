@@ -1112,3 +1112,177 @@ pass per read (`_substg_streams`), not a scan per entry, so the read stays linea
   `gaps.later` granularity: one aggregate row per message, or one row per distinct pair (B3's 236 would be
   noise), or a `container_facts` count. The pairs and their count are available either way.
 
+## Turn 1b.5 -- outcome (`msgcontainer.py`: the projection over real CFB, headers from `0x007D`, one HTML body end to end)
+
+The turn where a `.msg` first becomes an `EmailDocument`. `emailextract/msgcontainer.py` is **new** (`MsgContainer(data, *,
+cfb_limits=...)`, the A'' projection over an opened `CfbFile` + `mapi.read_message`, the `Container` Protocol,
+`span_provenance`, `charset_sources`, `cap_observations`, `sector_accounting`, `container_gaps`); `parse.py` gains the
+default CFB opener and loses `cfb_msg_unsupported`; `ingest.py::_row_for` builds a `MsgContainer` for `cfb_msg`;
+`assemble.py::_header_fields` gains the two `cfb_msg`-gated refinements D2 names. Nine `.msg` fixtures land (five
+Family F, four Family E) plus the D9 correction to `msg_outlook_layout_handbuilt`; 19 declared tests. The `.eml`
+golden, `behavior_ledger.json`, `versions.py`/`EMAIL_PARSER_VERSION` and every Phase 1 gate are untouched (all five
+`--check` tools exit 0 on 3.12 and 3.11).
+
+### D1-D10: the reviewer's decisions, applied (no decision changed)
+
+- **D1 (layout: synthetic structure first)** -- applied as specified: `MIME-Version`/`Content-Type`/
+  `Content-Transfer-Encoding` (and, for plain+HTML, `multipart/alternative` with a synthetic boundary) as
+  `SYNTHETIC` rows `synthetic:structure:<n>` **first**; then the whole `0x007D` stream as one `REENCODED` row (its
+  UTF-16LE source bytes are the span; the UTF-8 re-encoding is what the scanner reads; one trailing NUL stripped,
+  line endings untouched); then one synthetic blank line and the body leaves, the multipart delimiters and the
+  projection's separator being `SYNTHETIC` rows. A UTF-8 BOM on the transport text is projected first as its own
+  `synthetic:prelude:1` region, so `headers.leading_bom` fires exactly as it does for an `.eml`.
+- **D1's re-measurement (the ask that could have stopped the layout).** Measured, not assumed, on the walker's own
+  resolution and on every consumer that reads a header by name -- probe with duplicated `Content-Type`,
+  `Content-Transfer-Encoding`, `MIME-Version`, `Content-Disposition`, `Content-Location`, where the duplicate
+  `Content-Type` is a `multipart/alternative` that would split the part if it won:
+
+  | reader | expression | winner |
+  |---|---|---|
+  | `walk._header_value` (`content-type`, `content-transfer-encoding`) | first `parse_status == "ok"` field | **first** (`text/plain`, `8bit`) |
+  | `walk` structural decision (`media.startswith("multipart/")`) | same call | **first** (one part; the second `multipart/alternative` line split nothing) |
+  | `attach._media_as_written`, `attach._header_text` | first matching field | **first** (`text/plain`, `8bit`, `inline`) |
+  | `selection._is_explicit_attachment`, `_content_location`, `_content_type` | first matching field | **first** |
+  | `text.flowed_declared` | first `content-type` | **first** |
+
+  No consumer reads the last or all occurrences, and `MIME-Version` has no by-name reader at all (the header stage
+  classifies it as a `text` field, nothing else). So the layout stands and no stop was needed. `headers.fields` still
+  records **every** occurrence in stream order -- that is a list, not a lookup, so it does not conflict.
+- **D2 (`headers` is evidence only)** -- applied as the smallest `cfb_msg`-gated edit: inside
+  `assemble._header_fields`, `value_codec` becomes `"utf-8"` for the projection and a field whose span row's `axis`
+  is `SYNTHETIC` is skipped. Both sit under `if span_table is not None:`; the default branch (every `.eml`
+  container) is the previous expression verbatim, so the `.eml` path is unchanged field for field -- evidence:
+  `tools/update_eml_golden.py --check` exits 0, the behavior ledger does not move, and
+  `tests/test_provenance_points.py::test_adding_a_cfb_msg_document_changes_no_eml_store_byte` is green. So a `.msg`
+  whose virtual bytes carry structural lines still has `headers == []` without `0x007D` (no synthesis, O6).
+- **D3 (no `0x007D`)** -- `headers == []`, the walkers do not run over an empty block, and the only gap is one
+  document-level `msg.transport_headers_absent` (no `headers.no_date`/`headers.no_from` noise).
+- **D4 (HTML pass-through)** -- the `0x1013` leaf is the stream's own bytes, unchanged, with CTE `binary` and
+  `charset=<label>`, a `STREAM` row; `size_bytes`/`sha256` are the stream's. The label and `encoding_source` come
+  from the mapi ladder run on the HTML bytes (the decoded text discarded) and are published through
+  `charset_sources`. Code page -> label: `1252 -> windows-1252`, `20127 -> us-ascii`, `28591 -> iso-8859-1`,
+  `65001 -> utf-8`; rungs 3-5 -> `us-ascii`, `utf-8`, `windows-1252`. `msg_html_meta_charset_contradicts`: the
+  container's declared charset is the evidence the text stage already uses; that stage is untouched.
+- **D5 (plain body)** -- `001F` re-encoded to UTF-8 (`REENCODED` row, `decoded_char_offset`/`decoded_char_len`,
+  `charset=utf-8`, CTE `8bit`); both bodies -> `multipart/alternative`, plain first, the boundary a deterministic
+  counter chosen against both body parts (so the same bytes always give the same boundary); a present-but-empty
+  `0x1000` is **present** (`msg_zero_length_body`); a body whose bytes cannot be decoded records its fault and
+  projects no view (no replacement string anywhere). `0x1009` is listed in `body_streams` and not projected (1b.8).
+- **D6 (`container_facts`)** -- exactly the declared key list (`adapter`, `cfb_version`, `sector_size`,
+  `mini_sector_size`, `mini_cutoff`, `sector_count`, `directory_entries`, `message_class`, `internet_codepage`,
+  `message_codepage`, `body_streams`, `has_transport_headers`, `named_property_count`, `projection`, the eight
+  `sectors.*` counts) -- no `recipient_count`/`attachment_count`/`time.*` yet. `container_hash` is the sha256 of the
+  **CFB file bytes**; `raw_bytes()` is the virtual message.
+- **D7 (outcomes and refusals)** -- `parse()` now opens CFB by default (`parse._default_open_cfb`:
+  `cfb_header_unsupported`/`cfb_directory_loop`/`not_a_message` are the named errors); `cfb_msg_unsupported` is
+  deleted from `NAMED_ERROR_REASONS` and from every site that produced it. A CFB **cap** hit is *not* a named error
+  -- it is a `SKIPPED` document with the matching reason and a `CapRecord` carrying the caller's value and the real
+  observed count (`cfb_limits` accepted). A non-`IPM.Note` class is a document with `Status.UNSUPPORTED`, the class
+  verbatim in `container_facts`, nothing past the class opened, and the gate's registered gap
+  `msg.class_not_ipm_note` (the class as its detail). **The signed class (`IPM.Note.SMIME.MultipartSigned`) is
+  `Status.UNSUPPORTED`** -- the conservative reading the brief names, because nothing past the class is opened and
+  no body is projected; the owner's open question (O8: `UNSUPPORTED` versus `PARSED`) stands. A per-stream chain
+  fault is `TRUNCATED` (`msg.stream_truncated`, naming stream and fault). A `class_absent`/`class_unreadable`
+  message has no class to stop on, so it is projected and parsed (a `PARSED` document, the owner's suggested
+  reading) -- **no gap is invented for it**; say if it should carry one.
+- **D8 (the disagreement gap, narrowly)** -- only `0x0037` (subject) against the decoded `0x007D` `Subject:` field;
+  when both exist and differ, the transport header is canonical (it is in `headers`) and the gap
+  `headers.mapi_header_property_disagree` is emitted **with the property text in its detail**. The registry entry
+  (`phase0-gaps.md:192-198`) additionally asks for `value_source=transport_header` on the header's *fact*;
+  `value_source` is a fact-level attribute no `headers` record carries today and the subject fact is Turn 1b.6's,
+  so nothing was invented and no `container_facts` key was added -- reported here instead (the "do not invent one"
+  branch of D8).
+- **D9 (the hand-built fixture, corrected in one move)** -- the construction table in
+  `tests/support/msg_construction.py` was retyped **first** (`001A:001F = "IPM.Note"` in the top-level table; the
+  recipient table to `0C15` type / `3001` display name / `3002` address type / `3003` email address), then the
+  generator, `fixtures/msg/SHA256SUMS`, `tests/test_cfb.py`'s mini-sector pin (`nested.start` 1 -> 2: the bigger
+  top-level table shifts the root's mini stream), `tests/test_msg_fixtures.py` (the table is `32 + 3*16` and the
+  recipient tags/streams are asserted), and `tests/test_mapi.py`'s breaker now goes through `read_message` (no
+  building-block workaround) asserting `kind == "to"`/`kind_raw == 1`, `address_type == "smtp"`/
+  `address_type_raw == "SMTP"`, the display name and the address. The `olefile` cross-check is green unchanged: one
+  disagreement, and it is gone.
+- **D10 (memory)** -- **over the re-declared 5x**: 5.05x (container + `walk` + `assemble`, the built `.msg` excluded)
+  and 6.07x with the file in the delta; the container's own share is 2.0x and container + `walk` is 2.9x. The copy
+  inventory and the dominant copy (the HTML projection over a 40 MiB HTML body) are in `msg-architecture.md`
+  section 9; `attach.py` is untouched and the lazy `raw_bytes()` view is left to the owner, as the brief directs.
+
+### The three mutations (run, restored, each fails by name)
+
+1. **The synthetic structural lines moved after the `0x007D` text** -> 4 fail:
+   `tests/test_msg_headers.py::test_no_transport_headers_yields_no_synthesized_headers`,
+   `tests/test_msg_body.py::test_a_pass_through_html_leaf_is_never_exact`,
+   `::test_a_plain_leaf_is_reencoded_and_container_stream`, `::test_selection_picks_html_over_plain`.
+2. **A synthetic span row no longer excluded from `headers`** (`assemble._header_fields`'s skip dropped) -> 3 fail:
+   `tests/test_msg_headers.py::test_headers_come_from_the_007d_stream_in_order`,
+   `::test_no_transport_headers_yields_no_synthesized_headers`,
+   `tests/test_msg_body.py::test_the_same_message_as_eml_and_msg_differs_only_where_d14_says`.
+3. **A leaf allowed to claim `exact`** (`text.analyse_part`'s `container_stream` precompute dropped) -> 3 fail:
+   `tests/test_msg_body.py::test_a_pass_through_html_leaf_is_never_exact`,
+   `::test_a_plain_leaf_is_reencoded_and_container_stream`,
+   `tests/test_provenance_points.py::test_analyse_part_forces_container_stream_part_level`.
+
+### Existing tests edited, and why (10 files, no `.eml` fixture and no golden)
+
+- `tests/test_parse_entry.py` -- the CFB case is no longer a refusal: the sniff opens a real fixture (`cfb_msg`, no
+  error) and a damaged CFB is `cfb_header_unsupported`; the closed tuple loses `cfb_msg_unsupported`.
+- `tests/test_provenance_points.py` -- `test_parse_opens_a_cfb_container_instead_of_refusing` rewritten for the same
+  reason (a CFB opens; the caller's opener seam still overrides; the deleted id is gone).
+- `tests/test_ingest.py` -- the recorded-skip case now uses a well-formed non-message CFB
+  (`msg_mini_cutoff_boundary`), whose reason is `not_a_message`.
+- `tests/test_contract_msg.py` -- the `NAMED_ERROR_REASONS` tuple loses `cfb_msg_unsupported`.
+- `tests/test_mapi.py` -- D9's breaker through `read_message` (above).
+- `tests/test_msg_fixtures.py` -- D9's pins (`32 + 3*16`, `0x001A` in the tag set, the recipient table's four tags
+  and three streams).
+- `tests/test_cfb.py` -- the named-property mini-sector pin 1 -> 2 (D9's bigger top-level table).
+- `tests/test_fixture_census.py` -- the Family F rows are parsed and the 1b.5 count asserted (10 catalogue rows
+  name this turn: four Family E, five Family F, plus the body half of `msg_headers_html`).
+- `tests/test_phase1_scope.py` -- `EXPECTED_LIBRARY` gains `"msgcontainer.py"` (one line; nothing else in that file
+  moved).
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `"1b.5"`.
+
+### Q3 (contract section 13): does a synthetic leaf carry a `stream_ref`?
+
+**It carries one.** A synthetic leaf's `PartRecord` publishes
+`ContainerStreamRef(stream='synthetic:root:1', byte_offset=None, byte_len=None, axis=SYNTHETIC, fault=None)`: the
+axis alone is C6's "scaffolding, not evidence" test, `model.py` already validates exactly that shape (no offsets, a
+`synthetic:<role>:<ordinal>` label), and `None` would conflate "synthetic scaffolding" with "a `.eml` part with no
+container". Stated with the alternative in `msg-architecture.md` section 9.
+
+### Reported, not bent
+
+- **A per-stream chain fault and a body fault both ride the same `msg.stream_truncated` id** (`TRUNCATED`, with the
+  stream and fault in the detail). The registry names one id; if the owner wants the body fault distinguishable, it
+  is a second id, not a wider one.
+- **Container-level `msg.*` gaps are published, not yet persisted.** `MsgContainer.container_gaps` carries
+  `msg.class_not_ipm_note`, `msg.transport_headers_absent`, `headers.mapi_header_property_disagree` and
+  `msg.stream_truncated`, but nothing consumes it yet: R14 says `msg.*` rows ride `part.gaps`/`gaps.later`, and the
+  only producer/consumer of that fact is `emailextract/evals/**`, which this turn's allow-list **excludes**. The
+  hook is the container attribute (the 1b.1 `cap_observations` pattern); the wiring and the sidecar belong to the
+  turn that owns `evals/` (1b.10), and `phase1b-facts.md:231` already lists these ids as live.
+- **`mapi`'s message-level `observations` are not all mapped to gaps.** Only the class gate's is (D7 names it);
+  `msg.property_tag_unknown`'s granularity is the owner's open question the brief defers to before 1b.6, so it was
+  deliberately not decided here.
+- **`msg.no_display_name_only_recipient`-style recipient facts are untouched**: recipients are 1b.6's, and the
+  container reads only the class, the two code pages, `named_tags` and the body/subject properties.
+
+### What Turn 1b.6 and 1b.7 need from this turn
+
+- **Where a message-level fact plugs in.** `container_facts()` is the only fact surface a container has, and it is
+  a flat `dict[str, str]`: 1b.6 adds `recipient_count` and the `time.*` keys, 1b.7 adds `attachment_count`, in the
+  same commit as the data (D6's additive rule). The richer facts (`msg.recipients`, `msg.time_facts`) are the
+  assembler's, built from `mapi` records the container does not yet publish.
+- **What `mapi.read_message` returns that the container does not use.** `MapiMessage.recipients` (`RecipientRow`:
+  `index`, `name`, `kind`/`kind_raw`, `display_name`, `address_type`/`address_type_raw`, `address`),
+  `declared_recipient_count`, `declared_attachment_count`, `unknown_tags`, the property time tags
+  (`0x0039`/`0x0E06`/`0x0E07`), and `observations` other than the class one. The container opens the message once,
+  in `__init__`, so 1b.6 needs no second read.
+- **Where an attachment row plugs in.** The attachments live in the **CFB directory** (`__attach_version1.0_#*`
+  storages and their `__substg1.0_3701*` streams), not in the projection: 1b.7 reads them through `cfb`/`mapi`
+  beside the projection and adds their rows to `container_facts`/the document, with a `STREAM`-axis span row per
+  attachment stream if it wants `resolve_span` citations. `mapi.declared_counts` already gives the declared
+  (recipient, attachment) pair for the mismatch check.
+- **The projection's own re-open points.** A `.msg` attachment body would have to become a *virtual sub-message* if
+  1b.7 wants the walker to see it; this turn deliberately keeps `raw_bytes()` to one message, so an attachment leaf
+  is a `STREAM` row, not a nested part.
+
+

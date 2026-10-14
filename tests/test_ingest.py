@@ -206,15 +206,20 @@ def test_an_unreadable_file_and_an_over_cap_file_are_recorded_and_the_run_contin
 
 
 def test_a_non_message_file_is_a_recorded_skip_from_the_entry_point(tmp_path: Path) -> None:
-    """A file the entry point refuses is a recorded skip with its closed named reason."""
+    """A file the entry point refuses is a recorded skip with its closed named reason.
+
+    A CFB magic now opens (Turn 1b.5), so the CFB case is a **well-formed container that
+    is not a message** -- ``msg_mini_cutoff_boundary``'s bytes, which carry no
+    ``__properties_version1.0`` -- and the reason is the existing ``not_a_message``.
+    """
     root = tmp_path / "mail"
     _write(root, "note.txt", b"just text, no header line at all\n")
-    _write(root, "cfb.msg", b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1" + b"\x00" * 40)
+    _write(root, "cfb.msg", (ROOT / "fixtures" / "msg" / "msg_mini_cutoff_boundary.msg").read_bytes())
     collection = _store(tmp_path)
     manifest = ingest_path(root, collection, limits=_limits())
     reasons = {row.path: row.reason_id for row in manifest.rows}
     assert reasons["note.txt"] == "not_a_message"
-    assert reasons["cfb.msg"] == "cfb_msg_unsupported"
+    assert reasons["cfb.msg"] == "not_a_message"
     assert _documents(collection) == []
 
 

@@ -447,8 +447,9 @@ def test_the_outlook_layout_fixture_is_typed_from_b1_b4() -> None:
         assert sizes[f"__nameid_version1.0/__substg1.0_{suffix}"] == expected
 
     # B2: the top-level __properties_version1.0 is a 32-byte header plus 16 per entry.
+    # Turn 1b.4 gives it three entries: the two fixed code pages and 0x001A (the class).
     properties = sizes["__properties_version1.0"]
-    assert properties == 32 + 2 * 16
+    assert properties == 32 + 3 * 16
     blob = olefile_oracle.stream_bytes(data, "__properties_version1.0")
     assert int.from_bytes(blob[16:20], "little") == 1  # recipient count @16
     assert int.from_bytes(blob[20:24], "little") == 1  # attachment count @20
@@ -459,8 +460,21 @@ def test_the_outlook_layout_fixture_is_typed_from_b1_b4() -> None:
         int.from_bytes(blob[offset + 2 : offset + 4], "little")
         for offset in range(32, properties, 16)
     }
-    assert {0x3FDE, 0x3FFD} <= tags
+    assert {0x3FDE, 0x3FFD, 0x001A} <= tags
     assert not any("3FDE" in path.upper() or "3FFD" in path.upper() for path in sizes)
+
+    # B3: the recipient table uses the observed typing -- 0C15 type, 3001 display name,
+    # 3002 address type, 3003 email address -- and its three streams are present.
+    recipient_blob = olefile_oracle.stream_bytes(
+        data, "__recip_version1.0_#00000000/__properties_version1.0"
+    )
+    tags_seen = {
+        int.from_bytes(recipient_blob[offset + 2 : offset + 4], "little")
+        for offset in range(8, len(recipient_blob), 16)
+    }
+    assert {0x0C15, 0x3001, 0x3002, 0x3003} <= tags_seen
+    for suffix in ("3001001F", "3002001F", "3003001F"):
+        assert f"__recip_version1.0_#00000000/__substg1.0_{suffix}" in sizes
 
     # B1: the one attachment holds a by-value file (3701:0102) and a 3707:001F name.
     assert "__attach_version1.0_#00000000/__substg1.0_37010102" in sizes

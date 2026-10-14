@@ -47,6 +47,7 @@ EXPECTED_LIBRARY = {
     "mapi.py",
     "mediatype.py",
     "model.py",
+    "msgcontainer.py",
     "parse.py",
     "rfc2047.py",
     "rfc2231.py",

@@ -196,18 +196,20 @@ def test_the_cfb_cap_reasons_join_the_skipped_row() -> None:
 
 
 def test_named_error_reasons_gain_the_two_cfb_faults() -> None:
-    """The closed tuple swaps to the two whole-file CFB faults; ``cfb_msg_unsupported`` stays for now."""
+    """The closed tuple is the two whole-file CFB faults plus ``not_a_message`` (Turn 1b.5).
+
+    ``cfb_msg_unsupported`` is deleted: the entry point now opens a CFB.
+    """
     assert NAMED_ERROR_REASONS == (
         "invalid_input",
         "input_over_cap",
         "invalid_container_kind",
         "cfb_directory_loop",
         "cfb_header_unsupported",
-        "cfb_msg_unsupported",
         "not_a_message",
         "invalid_limits",
     )
-    assert "cfb_msg_unsupported" in NAMED_ERROR_REASONS  # interim: deleted in Turn 1b.5
+    assert "cfb_msg_unsupported" not in NAMED_ERROR_REASONS
     # A success result may now name the projected container kind.
     assert ParseResult(kind="cfb_msg", prelude_bom_bytes=0, prelude_mbox_bytes=0, error=None).kind == "cfb_msg"
     with pytest.raises(CodecError):

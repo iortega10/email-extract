@@ -23,15 +23,17 @@ The named-error reason ids are a **closed tuple** and they are **not** gap ids a
 or :mod:`emailextract.ids`, and they are not members of the D6 status vocabulary.
 
 The sniff (decision 10, decision 14): the first eight bytes ``D0CF11E0A1B11AE1`` are a
-CFB (``cfb_msg``), which Phase 1 has no reader for, so it is the named error
-``cfb_msg_unsupported`` -- never a guess, never an exception from mid-parse. Otherwise
-the bytes are ``rfc822`` iff, after an **optional** UTF-8 BOM and an **optional** mbox
-``From `` line, at least one ``name: value`` header line appears before the first blank
-line or the end of input; otherwise the named error ``not_a_message`` (a text file with
-no header line is not a message, and a message of only a blank line is not a message).
-An explicit ``container_kind`` **overrides** the sniff -- the caller asserts the format,
-and a wrong assertion is the caller's problem, not re-sniffed (a claimed or sniffed CFB
-is still ``cfb_msg_unsupported``).
+CFB, opened through :mod:`emailextract.cfb` (Turn 1b.5): a ``cfb_msg`` when it is a
+message, or one of the three whole-file named errors (``cfb_header_unsupported``,
+``cfb_directory_loop``, ``not_a_message``) -- never a guess, never an exception from
+mid-parse. A CFB **cap** hit is not a named error: the container builds a ``SKIPPED``
+document for it. Otherwise the bytes are ``rfc822`` iff, after an **optional** UTF-8 BOM
+and an **optional** mbox ``From `` line, at least one ``name: value`` header line appears
+before the first blank line or the end of input; otherwise the named error
+``not_a_message`` (a text file with no header line is not a message, and a message of only
+a blank line is not a message). An explicit ``container_kind`` **overrides** the sniff --
+the caller asserts the format, and a wrong assertion is the caller's problem, not
+re-sniffed (a claimed CFB opens through the same opener).
 """
 
 from __future__ import annotations
@@ -40,6 +42,8 @@ from dataclasses import dataclass, fields
 from typing import Final
 
 from docextract_core.codec import CodecError
+
+from . import cfb
 
 __all__ = [
     "Limits",
@@ -69,7 +73,6 @@ NAMED_ERROR_REASONS: Final[tuple[str, ...]] = (
     "invalid_container_kind",
     "cfb_directory_loop",       # a directory link points into a cycle -> NamedError
     "cfb_header_unsupported",   # sector shift outside {9,10,11,12} for v3, or v4 with shift != 12
-    "cfb_msg_unsupported",      # interim: deleted in Turn 1b.5 when the real opener is wired
     "not_a_message",            # CFB magic without __properties_version1.0 (.doc/.xls/.ppt/.msi)
     "invalid_limits",
 )
@@ -302,15 +305,28 @@ def _sniff(data: bytes, has_field, open_cfb=None) -> ParseResult:
 
 
 def _open_projected(data: bytes, open_cfb) -> ParseResult:
-    """Hand a CFB magic to the opener, or refuse it when no opener is wired (point 8).
+    """Hand a CFB magic to the opener (Turn 1b.5's default, or the caller's seam).
 
-    ``open_cfb`` is ``Callable[[bytes, Limits], ParseResult] | None``. With it ``None`` --
-    every existing caller, :mod:`emailextract.ingest` included -- a CFB file is refused
-    exactly as today; Turn 1b.5 deletes this interim branch when the real opener lands.
+    ``open_cfb`` is ``Callable[[bytes], ParseResult] | None``; ``None`` takes the
+    package's own opener (:func:`_default_open_cfb`), which reads the CFB header and
+    decides. A caller that supplies one (a test seam) overrides it.
     """
-    if open_cfb is None:
-        return _failure("cfb_msg_unsupported", "Phase 1 has no CFB reader")
-    return open_cfb(data)
+    return (open_cfb or _default_open_cfb)(data)
+
+
+def _default_open_cfb(data: bytes) -> ParseResult:
+    """Open a CFB magic: a message, or the three whole-file CFB refusals (point 8).
+
+    The CFB header, the DIFAT/FAT, the directory and the ``__properties_version1.0``
+    check decide. ``cfb_header_unsupported``, ``cfb_directory_loop`` and ``not_a_message``
+    are named errors; a CFB **cap** hit is not -- the container builds a ``SKIPPED``
+    document for it (Turn 1b.5), so the entry point says ``cfb_msg`` and lets it.
+    """
+    opened = cfb.open_cfb(data, limits=cfb.DEFAULT_CFB_LIMITS)
+    if isinstance(opened, cfb.CfbRefusal):
+        if opened.reason in (cfb.CFB_HEADER_UNSUPPORTED, cfb.CFB_DIRECTORY_LOOP, cfb.NOT_A_MESSAGE):
+            return _failure(opened.reason, opened.detail)
+    return ParseResult(kind="cfb_msg", prelude_bom_bytes=0, prelude_mbox_bytes=0, error=None)
 
 
 def parse(data, container_kind=None, *, limits: Limits, open_cfb=None) -> ParseResult:

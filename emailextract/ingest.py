@@ -47,8 +47,9 @@ from docextract_core.codec import to_json
 
 from . import parse
 from .assemble import limits_fingerprint
-from .container import EmlContainer, memory_bytes
+from .container import Container, EmlContainer, memory_bytes
 from .ids import FILE_OVER_CAP, FILE_UNREADABLE, SYMLINKED_DIRECTORY, sha256_hex
+from .msgcontainer import MsgContainer
 from .parse import Limits
 from .store import DocumentArtifact, store_document
 
@@ -240,13 +241,20 @@ def _row_for(root: Path, relative: str, store: Collection[DocumentArtifact], *, 
         return ManifestRow(
             path=relative, container_hash="", outcome=SKIPPED, reason_id=decision.error.reason_id
         )
-    container = EmlContainer(memory_bytes(raw))
+    container = _container_for(raw, decision.kind)
     artifact, created = store_document(container, store, limits=limits)
     return ManifestRow(
         path=relative,
         container_hash=artifact.container_hash,
         outcome=WRITTEN if created else HIT,
     )
+
+
+def _container_for(raw: bytes, kind: str) -> Container:
+    """The container the entry point decided on: a ``cfb_msg`` projection, else ``.eml``."""
+    if kind == "cfb_msg":
+        return MsgContainer(memory_bytes(raw))
+    return EmlContainer(memory_bytes(raw))
 
 
 def ingest_path(

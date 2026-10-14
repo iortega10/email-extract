@@ -98,11 +98,16 @@ PT_BINARY = 0x0102
 # Property ids used by the hand-built Outlook-layout fixture.
 PROP_INTERNET_CODEPAGE = 0x3FDE
 PROP_MESSAGE_CODEPAGE = 0x3FFD
+PROP_MESSAGE_CLASS = 0x001A
 PROP_TRANSPORT_HEADERS = 0x007D
 PROP_BODY_HTML = 0x1013
-PROP_RECIPIENT_TYPE = 0x3001
-PROP_RECIPIENT_EMAIL_TYPE = 0x3003
-PROP_RECIPIENT_DISPLAY = 0x3002
+# The recipient tags, per [MS-OXPROPS] (B3 shows 0C15:0003 in real messages): 0x0C15 is
+# the recipient *type*, 0x3001 the display name, 0x3002 the address type, 0x3003 the
+# email address. Turn 1b.4 corrected the earlier per-fixture typing.
+PROP_RECIPIENT_TYPE = 0x0C15
+PROP_RECIPIENT_DISPLAY = 0x3001
+PROP_RECIPIENT_ADDRESS_TYPE = 0x3002
+PROP_RECIPIENT_EMAIL = 0x3003
 PROP_ATTACH_METHOD = 0x3705
 PROP_ATTACH_MIME = 0x370E
 PROP_ATTACH_FILENAME = 0x3707
@@ -202,14 +207,25 @@ def _fixture_mini_cutoff_boundary() -> bytes:
 
 
 def _fixture_outlook_layout_handbuilt() -> bytes:
-    """Hand-built to the observed Outlook structure (B1-B4), never to a default."""
+    """Hand-built to the observed Outlook structure (B1-B4), never to a default.
+
+    Turn 1b.4 fixes the recipient table to B3's typing -- ``0C15`` type, ``3001``
+    display name, ``3002`` address type, ``3003`` email address -- and gives the
+    top-level table a real ``0x001A`` class so the fixture follows the observed
+    layout all the way through the gate.
+    """
     nameid_20, nameid_30, nameid_40 = (
         _filler(size, seed=size) for size in NAMEID_SIZES
     )
+    class_stream = "IPM.Note".encode("utf-16-le")
+    display = _utf16("Ada Lovelace", 24)
+    address_type = _utf16("SMTP", 8)
+    email = _utf16("ada@example.test", 32)
     recipient = _sub_property_stream(
         _prop_entry(PROP_RECIPIENT_TYPE, PT_LONG, struct.pack("<I", 1))
-        + _prop_entry(PROP_RECIPIENT_EMAIL_TYPE, PT_UNICODE, b"")
-        + _prop_entry(PROP_RECIPIENT_DISPLAY, PT_UNICODE, _utf16("Ada", 8))
+        + _prop_entry(PROP_RECIPIENT_DISPLAY, PT_UNICODE, struct.pack("<I", len(display)))
+        + _prop_entry(PROP_RECIPIENT_ADDRESS_TYPE, PT_UNICODE, struct.pack("<I", len(address_type)))
+        + _prop_entry(PROP_RECIPIENT_EMAIL, PT_UNICODE, struct.pack("<I", len(email)))
     )
     attachment = _sub_property_stream(
         _prop_entry(PROP_ATTACH_METHOD, PT_LONG, struct.pack("<I", 1))
@@ -217,10 +233,13 @@ def _fixture_outlook_layout_handbuilt() -> bytes:
         + _prop_entry(PROP_ATTACH_FILENAME, PT_UNICODE, b"")
         + _prop_entry(PROP_ATTACH_RENDERING, PT_LONG, struct.pack("<I", 0))
     )
+    top_level = _message_property_stream(1, 1) + _prop_entry(
+        PROP_MESSAGE_CLASS, PT_UNICODE, struct.pack("<I", len(class_stream))
+    )
     return build_cfb(
         storage(
             "Root Entry",
-            stream("__properties_version1.0", _message_property_stream(1, 1)),
+            stream("__properties_version1.0", top_level),
             storage(
                 "__nameid_version1.0",
                 stream("__substg1.0_00020102", nameid_20),
@@ -228,10 +247,14 @@ def _fixture_outlook_layout_handbuilt() -> bytes:
                 stream("__substg1.0_00040102", nameid_40),
             ),
             stream("__substg1.0_007D001F", _transport_header_stream()),
+            stream("__substg1.0_001A001F", class_stream),
             stream("__substg1.0_10130102", _html_body()),
             storage(
                 "__recip_version1.0_#00000000",
                 stream("__properties_version1.0", recipient),
+                stream("__substg1.0_3001001F", display),
+                stream("__substg1.0_3002001F", address_type),
+                stream("__substg1.0_3003001F", email),
             ),
             storage(
                 "__attach_version1.0_#00000000",
@@ -552,6 +575,142 @@ def _fixture_named_properties() -> bytes:
     )
 
 
+# --------------------------------------- the Turn 1b.5 body fixtures
+
+#: The Turn 1b.5 fixtures' short transport-header text: ASCII, CRLF, one trailing blank.
+T15_TRANSPORT_TEXT = (
+    "Subject: turn 1b.5 synthetic\r\n"
+    "From: Ada Lovelace <ada@example.test>\r\n"
+    "Date: Tue, 4 Mar 2025 08:00:00 +0000\r\n"
+    "\r\n"
+)
+#: The LF-only variant (bare LF, a bare ``\n`` blank line): the walker's own line model.
+T15_TRANSPORT_LF_TEXT = (
+    "Subject: turn 1b.5 synthetic\n"
+    "From: Ada Lovelace <ada@example.test>\n"
+    "\n"
+)
+#: The 8-bit HTML body (a ``0102`` PT_BINARY stream, the real shape).
+T15_HTML_BODY = b"<html><body><p>synthetic turn 1b.5 body</p></body></html>\r\n"
+#: HTML whose own ``<meta charset>`` contradicts the message's internet code page.
+T15_HTML_META = (
+    b'<html><head><meta charset="utf-8">'
+    b"</head><body><p>synthetic turn 1b.5 body</p></body></html>\r\n"
+)
+#: The plain body text: a whitespace-only stub, the real-world shape that lets the
+#: selection stage prefer the HTML alternative (``body.plain_effectively_empty``, D16).
+T15_PLAIN_TEXT = "\r\n"
+#: The disputed property subject: it does **not** equal the transport header's Subject.
+T15_CONFLICT_SUBJECT = "synthetic turn 1b.5 property subject"
+
+
+def _t15_fixture(
+    *,
+    transport_name: str | None,
+    transport_bytes: bytes | None,
+    subject_stream: bytes | None = None,
+    plain: bytes | None = None,
+    html: bytes | None = None,
+    codepages: tuple[int, int] = (1252, 1252),
+) -> bytes:
+    """One Turn 1b.5 fixture: ``IPM.Note`` plus the named streams, in a fixed order."""
+    entries = [_class_entry(CLASS_IPM_NOTE)]
+    if subject_stream is not None:
+        entries.append(
+            mapi_table.variable_entry(
+                mapi_table.PROP_SUBJECT, mapi_table.PT_UNICODE, len(subject_stream)
+            )
+        )
+    table = _property_stream(entries, codepages=codepages)
+    children = [
+        stream("__properties_version1.0", table),
+        stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+    ]
+    if subject_stream is not None:
+        children.append(stream("__substg1.0_0037001F", subject_stream))
+    if transport_bytes is not None:
+        children.append(stream(transport_name, transport_bytes))
+    if plain is not None:
+        children.append(stream("__substg1.0_1000001F", plain))
+    if html is not None:
+        children.append(stream("__substg1.0_10130102", html))
+    return build_cfb(storage("Root Entry", *children))
+
+
+def _fixture_html_only_no_plain() -> bytes:
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        html=T15_HTML_BODY,
+    )
+
+
+def _fixture_plain_only() -> bytes:
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        plain=T15_PLAIN_TEXT.encode("utf-16-le"),
+    )
+
+
+def _fixture_plain_and_html() -> bytes:
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        plain=T15_PLAIN_TEXT.encode("utf-16-le"),
+        html=T15_HTML_BODY,
+    )
+
+
+def _fixture_zero_length_body() -> bytes:
+    """A ``0x1000`` stream of length 0: present-but-empty, never absent (D5)."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        plain=b"",
+    )
+
+
+def _fixture_html_meta_charset_contradicts() -> bytes:
+    """The HTML's ``<meta charset>`` says utf-8; the message's internet code page is 1252."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        html=T15_HTML_META,
+    )
+
+
+def _fixture_no_transport_headers() -> bytes:
+    return _t15_fixture(transport_name=None, transport_bytes=None, html=T15_HTML_BODY)
+
+
+def _fixture_transport_headers_utf8_bom() -> bytes:
+    """``0x007D`` as ``001E`` whose bytes begin with the UTF-8 BOM the scan tolerates."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001E",
+        transport_bytes=b"\xef\xbb\xbf" + T15_TRANSPORT_TEXT.encode("utf-8"),
+        html=T15_HTML_BODY,
+    )
+
+
+def _fixture_transport_headers_lf_only() -> bytes:
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_LF_TEXT.encode("utf-16-le"),
+        html=T15_HTML_BODY,
+    )
+
+
+def _fixture_property_vs_header_conflict() -> bytes:
+    """The ``0x0037`` subject property and the transport header's ``Subject:`` disagree."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        subject_stream=T15_CONFLICT_SUBJECT.encode("utf-16-le"),
+        html=T15_HTML_BODY,
+    )
+
+
 def _fixture_codepage_disagree() -> bytes:
     """Internet 28591 against message 1252, disagreeing on one byte (D2, B4)."""
     table = _property_stream(
@@ -588,6 +747,15 @@ FIXTURES = {
     "msg_unknown_tags": _fixture_unknown_tags,
     "msg_named_properties": _fixture_named_properties,
     "msg_codepage_disagree": _fixture_codepage_disagree,
+    "msg_html_only_no_plain": _fixture_html_only_no_plain,
+    "msg_plain_only": _fixture_plain_only,
+    "msg_plain_and_html": _fixture_plain_and_html,
+    "msg_zero_length_body": _fixture_zero_length_body,
+    "msg_html_meta_charset_contradicts": _fixture_html_meta_charset_contradicts,
+    "msg_no_transport_headers": _fixture_no_transport_headers,
+    "msg_transport_headers_utf8_bom": _fixture_transport_headers_utf8_bom,
+    "msg_transport_headers_lf_only": _fixture_transport_headers_lf_only,
+    "msg_property_vs_header_conflict": _fixture_property_vs_header_conflict,
 }
 
 #: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,

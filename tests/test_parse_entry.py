@@ -26,7 +26,10 @@ from emailextract.parse import (
     parse,
 )
 
-#: The CFB signature (a ``.msg``): no reader in Phase 1, so a named error.
+#: The repository root, for the committed ``.msg`` fixture the CFB case reads.
+ROOT = Path(__file__).resolve().parent.parent
+
+#: The CFB signature (a ``.msg``): Turn 1b.5 opens it with the package's own reader.
 CFB_SIGNATURE = b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"
 CFB_FILE = CFB_SIGNATURE + b"\x00\x01\x02\x03\x04\x05\x06\x07payload bytes here"
 #: A plain RFC 822 message: two header lines, a blank line, a body.
@@ -90,12 +93,21 @@ def test_limits_untrusted_constructor_supplies_the_caps() -> None:
 
 
 def test_parse_sniffs_cfb_msg_as_a_named_error() -> None:
-    """The CFB signature is a named error -- never a guess, never an exception."""
-    result = parse(CFB_FILE, limits=Limits.untrusted())
-    assert isinstance(result, ParseResult)
-    assert result.kind is None and result.error is not None
-    assert result.error.reason_id == "cfb_msg_unsupported"
-    assert result.prelude_bom_bytes == 0 and result.prelude_mbox_bytes == 0
+    """A CFB magic opens (Turn 1b.5): a real message is ``cfb_msg``; a damaged one is named.
+
+    The negative case is proven able to fail: a CFB that is not readable to the header
+    is still a named error, never a guess and never an exception.
+    """
+    message_bytes = (ROOT / "fixtures" / "msg" / "msg_headers_only.msg").read_bytes()
+    opened = parse(message_bytes, limits=Limits.untrusted())
+    assert isinstance(opened, ParseResult)
+    assert opened.kind == "cfb_msg" and opened.error is None
+    assert opened.prelude_bom_bytes == 0 and opened.prelude_mbox_bytes == 0
+
+    damaged = parse(CFB_FILE, limits=Limits.untrusted())
+    assert damaged.kind is None and damaged.error is not None
+    assert damaged.error.reason_id == "cfb_header_unsupported"
+    assert damaged.prelude_bom_bytes == 0 and damaged.prelude_mbox_bytes == 0
 
 
 def test_parse_sniffs_rfc822_after_an_optional_bom() -> None:
@@ -139,7 +151,7 @@ def test_parse_container_kind_overrides_the_sniff() -> None:
 
     claimed_cfb = parse(RFC822_PLAIN, container_kind="cfb_msg", limits=Limits.untrusted())
     assert claimed_cfb.kind is None and claimed_cfb.error is not None
-    assert claimed_cfb.error.reason_id == "cfb_msg_unsupported"
+    assert claimed_cfb.error.reason_id == "cfb_header_unsupported"
 
 
 # ------------------------------------------------- item 1: the named errors and limits
@@ -192,7 +204,6 @@ def test_limits_construction_is_the_only_named_error_raised() -> None:
         "invalid_container_kind",
         "cfb_directory_loop",
         "cfb_header_unsupported",
-        "cfb_msg_unsupported",
         "not_a_message",
         "invalid_limits",
     )

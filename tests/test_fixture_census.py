@@ -133,6 +133,11 @@ def _msg_family_e_rows(text: str) -> dict[str, str]:
     return _msg_family_rows(text, "## Family E")
 
 
+def _msg_family_f_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family F`` (body streams) table's rows."""
+    return _msg_family_rows(text, "## Family F")
+
+
 def sidecar_stems() -> set[str]:
     return {
         path.name.removesuffix(".expected.json")
@@ -262,10 +267,21 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
         if "1b.4" in turn
     }
     assert len(built_in_1b4) == 5, sorted(built_in_1b4)
+    # Turn 1b.5 lands nine new rows -- the four Family E header/class rows and the five
+    # Family F body rows -- and also does the body half of ``msg_headers_html`` (a 1b.2
+    # row whose turn column reads ``1b.2/1b.5``), so ten rows name this turn.
+    family_f = _msg_family_f_rows(catalogue_text)
+    built_in_1b5 = {
+        name
+        for name, turn in {**msg_rows, **family_e, **family_f}.items()
+        if "1b.5" in turn
+    }
+    assert len(built_in_1b5) == 10, sorted(built_in_1b5)
     committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
-    catalogue_rows = set(msg_rows) | set(family_e)
+    catalogue_rows = set(msg_rows) | set(family_e) | set(family_f)
     assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
     assert built_in_1b4 <= committed_msg, sorted(built_in_1b4 - committed_msg)
+    assert built_in_1b5 <= committed_msg, sorted(built_in_1b5 - committed_msg)
     assert committed_msg <= catalogue_rows, sorted(committed_msg - catalogue_rows)
     # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
     missing = sorted(built_this_turn)[0]
