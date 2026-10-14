@@ -9,7 +9,9 @@ file whose bytes are a *label* or the *oracle over labels*:
 2. every file under ``tests/support/**`` (the independent checkers, the fake store,
    the sidecar-copy helper);
 3. every file under ``emailextract/evals/**`` (the oracle, the gates, the
-   falsifiability catalogue, the metrics CLI).
+   falsifiability catalogue, the metrics CLI);
+4. every file under ``tests/golden/**`` (the committed ``.eml`` golden, Turn 1b.0c:
+   an expected-value file recorded by ``tools/update_eml_golden.py``).
 
 **The additions-only rule.** ``tools/update_label_ledger.py`` appends a line for a
 file not yet recorded (and only for a file that exists); it refuses to write when a
@@ -80,7 +82,11 @@ def covered_files(root: Path | str = _ROOT) -> dict[str, Path]:
         for path in sorted(fixtures.rglob("*.expected.json")):
             if _LOCAL_ONLY not in path.relative_to(fixtures).parts:
                 add(path)
-    for directory in (base / "tests" / "support", base / "emailextract" / "evals"):
+    for directory in (
+        base / "tests" / "support",
+        base / "emailextract" / "evals",
+        base / "tests" / "golden",
+    ):
         if not directory.is_dir():
             continue
         for path in sorted(directory.rglob("*")):

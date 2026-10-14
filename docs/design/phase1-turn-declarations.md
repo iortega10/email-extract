@@ -1259,3 +1259,27 @@ scanner comparisons the new fixtures join (``test_fixture_census.py`` and its ca
 and ``docs/design/phase1-turn-declarations.md``. Not ``emailextract/walk.py``, ``parse.py``,
 ``model.py``, ``ids.py``, ``emailextract/evals/**``, ``pyproject.toml``, or any existing fixture
 or sidecar.
+
+## Turn 1b.0c -- the mirrored `.eml` golden declaration
+
+The Phase 1b declaration blocks live in `docs/design/phase1b-ledgers.md`. Until Turn 1b.10
+extends `tests/test_turn_declarations.py` to read that file **alongside** this one, the collection
+test only reads this file, so Turn 1b.0c's block is mirrored here verbatim (verbatim so that
+Turn 1b.10, reading both files, sees one block per turn and may simply drop the mirror).
+
+```declaration turn=1b.0c
+module: tests/golden/eml_golden.json
+module: tools/update_eml_golden.py
+module: tests/test_eml_golden.py
+test: tests/test_eml_golden.py::test_the_golden_matches_the_committed_corpus
+test: tests/test_eml_golden.py::test_the_golden_pins_the_document_walk_spans_caps_and_store_bytes
+test: tests/test_eml_golden.py::test_the_golden_is_not_regenerated_silently
+test: tests/test_eml_golden.py::test_the_golden_checks_both_interpreters_with_a_recorded_waiver
+test: tests/test_eml_golden.py::test_a_changed_measured_value_fails_the_golden
+test: tests/test_eml_golden.py::test_a_changed_schema_version_alone_is_the_permitted_move
+test: tests/test_eml_golden.py::test_the_golden_covers_every_committed_eml_fixture
+test: tests/test_eml_golden.py::test_the_golden_header_names_the_corpus_and_schema_version
+test: tests/test_eml_golden.py::test_resolve_span_samples_are_the_identity_guard
+test: tests/test_eml_golden.py::test_the_golden_file_is_listed_in_the_label_ledger
+stop: after the golden is captured and committed, before any frozen-module edit (rule 2)
+```
