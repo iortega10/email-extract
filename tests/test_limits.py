@@ -51,6 +51,7 @@ from emailextract.walk import (
     CAP_REASON_PART_COUNT,
     CAP_REASON_SIZE,
     CAP_REASON_TOTAL_SIZE,
+    CFB_CAP_REASONS,
     UNBUILT_SECTIONS,
     WORK,
     UnknownSection,
@@ -267,9 +268,10 @@ def _patch(monkeypatch: pytest.MonkeyPatch, name: str, wrapper: Callable[..., An
 
 
 def test_the_cap_reasons_are_exactly_the_models_closed_skipped_reasons() -> None:
-    """The walker invents no cap vocabulary: its five ids *are* the model's skipped reasons."""
-    assert set(CAP_REASONS) == set(REASON_TABLE[Status.SKIPPED])
+    """The walker invents no cap vocabulary: its five ids plus the CFB three *are* the model's skipped reasons."""
+    assert set(CAP_REASONS) | set(CFB_CAP_REASONS) == set(REASON_TABLE[Status.SKIPPED])
     assert len(CAP_REASONS) == 5
+    assert len(CFB_CAP_REASONS) == 3
     assert set(walk_module.CAP_LIMIT_FIELDS) == set(CAP_REASONS)
     # ... and each reason maps to a field a caller's Limits really has, so the value a
     # reader records is the caller's own.

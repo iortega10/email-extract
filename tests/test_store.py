@@ -161,12 +161,12 @@ def test_a_walk_artifact_is_keyed_by_its_versions(monkeypatch: pytest.MonkeyPatc
         versions.DECODE_CHAIN_VERSION,
         versions.OUTPUT_SCHEMA_VERSION,
     )
-    # Turn 1.9 moved ``OUTPUT_SCHEMA_VERSION`` to 5; the walk artifact names it, so the
+    # Turn 1b.1 moved ``OUTPUT_SCHEMA_VERSION`` to 6; the walk artifact names it, so the
     # walk key moves with it -- a key moves with every version it names.
-    assert versions.OUTPUT_SCHEMA_VERSION == "5"
+    assert versions.OUTPUT_SCHEMA_VERSION == "6"
     artifact = walk_artifact(container)
     assert artifact.key == key
-    assert artifact.output_schema_version == "5"
+    assert artifact.output_schema_version == "6"
     # The projections the walker does NOT run are not in it: bumping one leaves the walk
     # key exactly where it was (``DECODE_CHAIN_VERSION`` is in both, on purpose: the
     # walker's decode chain is what the walk artifact measures).
@@ -206,7 +206,7 @@ def test_the_document_key_is_the_hashed_inputs_and_nothing_else(tmp_path: Path) 
     assert by_path == by_memory
     artifact = document_artifact(EmlContainer(memory_bytes(MESSAGE)), limits=limits)
     assert artifact.key == by_path
-    assert artifact.output_schema_version == "5"
+    assert artifact.output_schema_version == "6"
     assert artifact.projection_versions == projection_versions()
     assert artifact.email_parser_version == versions.EMAIL_PARSER_VERSION
 

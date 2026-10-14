@@ -66,9 +66,10 @@ version; adding a fixture adds a corpus version and bumps no component version).
   schema `"5"`; Turn 1b.1 re-records it at `"6"`, and
   `tests/test_eml_golden.py::test_the_bump_moved_only_the_version_and_the_null_keys` asserts the diff is exactly
   the one `phase1b-contract.md` section 10 lists: the walk artifact's `WalkResult` byte-identical; the document
-  artifact moved by only the `output_schema_version` value plus one `"stream_ref": null` per
-  `PartRecord`/`HeaderField`; the store keys/paths that name `OUTPUT_SCHEMA_VERSION` moved by that version string;
-  every other pinned value byte-identical).
+  artifact moved by only the `output_schema_version` value, one `"stream_ref": null` per
+  `PartRecord`/`HeaderField` and (D2, Turn 1b.1) one `"embedded": null` per `AttachmentOccurrence`; the store
+  keys/paths that name `OUTPUT_SCHEMA_VERSION` moved by that version string; every other pinned value
+  byte-identical).
 - **Both interpreters:** checked on 3.14 and 3.11 with a **recorded waiver** (a named field that legitimately
   differs, never a silent skip). The waiver is recorded in the golden file's header.
 - **It is partial, not redundant, against the behavior ledger:** the ledger's `walk` fingerprint pins the
@@ -195,6 +196,8 @@ module: emailextract/text.py
 module: emailextract/assemble.py
 module: emailextract/parse.py
 module: emailextract/store.py
+module: emailextract/container.py
+module: emailextract/__init__.py
 module: tests/support/fake_msg_container.py
 module: tests/golden/eml_golden.json
 module: tests/test_contract_msg.py
@@ -204,7 +207,7 @@ test: tests/test_contract_msg.py::test_container_stream_ref_invariants_raise
 test: tests/test_contract_msg.py::test_a_synthetic_ref_carries_no_offsets
 test: tests/test_contract_msg.py::test_embedded_summary_shape_and_defaults
 test: tests/test_contract_msg.py::test_the_cfb_cap_reasons_join_the_skipped_row
-test: tests/test_contract_msg.py::test_named_error_reasons_drop_cfb_msg_unsupported
+test: tests/test_contract_msg.py::test_named_error_reasons_gain_the_two_cfb_faults
 test: tests/test_contract_msg.py::test_verbatim_reasons_gain_container_stream
 test: tests/test_contract_msg.py::test_output_schema_version_is_six
 test: tests/test_eml_golden.py::test_the_bump_moved_only_the_version_and_the_null_keys
@@ -219,20 +222,27 @@ test: tests/test_provenance_points.py::test_encoding_source_is_overwritten_from_
 test: tests/test_provenance_points.py::test_cap_declared_size_copies_the_real_stream_size
 test: tests/test_provenance_points.py::test_the_store_persists_sectors_and_the_source_only_span_table
 test: tests/test_provenance_points.py::test_the_source_only_span_table_recomputes_the_virtual_offsets
+test: tests/test_provenance_points.py::test_adding_a_cfb_msg_document_changes_no_eml_store_byte
 test: tests/test_provenance_points.py::test_parse_opens_a_cfb_container_instead_of_refusing
 test: tests/test_provenance_points.py::test_the_eml_default_branch_is_unchanged
 test: tests/test_provenance_points.py::test_the_value_codec_seam_defaults_to_latin_1
 test: tests/test_provenance_points.py::test_walk_msg_matches_walk_of_the_equivalent_eml_modulo_provenance
+test: tests/test_provenance_points.py::test_limits_fingerprint_is_unchanged_by_the_bump
 stop: after the golden re-check (the bump and the eight provenance points green against FakeMsgContainer)
 ```
 
-Allow-list (`turn=1b.1`): the eight `emailextract/` modules above, `tests/support/fake_msg_container.py`,
+Allow-list (`turn=1b.1`): the eight `emailextract/` modules above plus `emailextract/container.py`, `emailextract/__init__.py`,
+`tests/support/fake_msg_container.py`,
 `tests/golden/eml_golden.json`, `tests/test_contract_msg.py`, `tests/test_provenance_points.py`,
 `tests/test_eml_golden.py`, `tests/test_status_reasons.py`, `tests/test_contract_phase1.py`,
 `tests/test_parse_entry.py`, `tests/test_contracts.py`, `tests/test_closed_enums.py`, `tests/test_container.py`,
 `tests/test_assemble.py`, `tests/test_store.py`, `tests/test_ingest.py`, `tests/test_phase1_scope.py`,
-`tests/test_behavior_ledger.py`, `tests/ledger/behavior_ledger.json`, `docs/design/phase1b-ledgers.md`.
-Those test paths are the category-(1)/(2)/(3) edits of `phase1b-contract.md` section 11.
+`tests/test_limits.py`, `tests/test_walk_iterative.py`, `tests/test_stdlib_header_scanner.py`,
+`tests/test_turn_declarations.py`, `tests/ledger/behavior_ledger.json`, `tests/ledger/label_ledger.json`,
+`docs/design/phase1b-ledgers.md`, `docs/design/phase1-turn-declarations.md`. Those test paths are the
+category-(1)/(2)/(3) edits of `phase1b-contract.md` section 11 plus the four extra breakages the bump forced
+(`test_limits.py` per D1, the two gate wrappers `_walk_visit`/`header_fields_at`, and the declaration
+baseline `test_turn_declarations.py`).
 
 ```declaration turn=1b.2
 module: tools/cfb_writer.py
@@ -317,6 +327,7 @@ Allow-list (`turn=1b.4`): `emailextract/mapi.py`, `emailextract/versions.py`, `f
 
 ```declaration turn=1b.5
 module: emailextract/msgcontainer.py
+module: emailextract/attach.py
 module: emailextract/parse.py
 module: tests/test_msgcontainer.py
 module: tests/test_msg_headers.py
@@ -470,3 +481,129 @@ Reused unchanged. The Phase 1b turns run the full suite and `python tools/update
 both pinned interpreters (`py -V:Astral/CPython3.11.15`, with the PATH fallback), and the behavior-ledger
 fingerprints over the `.msg` corpus are required to be **byte-identical** across interpreters; a difference is
 recorded in the ledger header, never hidden.
+
+## Turn 1b.1 -- outcome (the bump, the eight provenance points, the `value_codec` seam)
+
+**Green.** `python -m pytest` on both interpreters: **2039 passed, 2 skipped** on 3.14.3 and on 3.11.15.
+`tools/update_eml_golden.py --check`, `tools/update_behavior_ledger.py --check`, `tools/update_label_ledger.py --check`
+and `tools/make_fixtures.py --check` all exit 0 on both.
+
+### The three reviewer decisions, applied
+
+- **D1 (`Limits` unchanged).** `Limits` gained **no** field; the three CFB reasons joined `walk.CFB_CAP_REASONS`
+  (a new tuple beside the walker's five) and `REASON_TABLE[Status.SKIPPED]`. `walk.CAP_LIMIT_FIELDS` stays the
+  walker's five. This keeps `limits_fingerprint(L)` and every `.eml` `document_key` byte-identical:
+  `tests/test_provenance_points.py::test_limits_fingerprint_is_unchanged_by_the_bump` pins
+  `Limits.untrusted()` = `3475b245…` and the golden's declared `Limits` = `2238d89d…` (both computed on the
+  pre-bump tree). Recorded in `phase1b-contract.md` (the D1 correction in section 1(Y)): the CFB limits live
+  where Turn 1b.3's CFB reader publishes them (a separate `CfbLimits` is the expected shape), under the binding
+  byte-identical-fingerprint constraint.
+- **D2 (the permitted diff is three classes).** The re-recorded document moved by exactly the version value,
+  one `"stream_ref": null` per `PartRecord`/`HeaderField` and one `"embedded": null` per
+  `AttachmentOccurrence`. `phase1b-contract.md` section 10 and `phase1b-ledgers.md` section (d) were corrected.
+  The bump test is `tests/test_eml_golden.py::test_the_bump_moved_only_the_version_and_the_null_keys`.
+- **D3 (the `parse` seam).** `parse(data, container_kind=None, *, limits, open_cfb=None)`; `ParseResult` accepts
+  `"cfb_msg"` on success; `NAMED_ERROR_REASONS` adds `cfb_directory_loop`/`cfb_header_unsupported` and **keeps**
+  `cfb_msg_unsupported` (interim). Every existing caller and `emailextract/ingest.py` is unchanged: with
+  `open_cfb=None` a CFB magic is still `cfb_msg_unsupported`. `tests/test_provenance_points.py::test_parse_opens_a_cfb_container_instead_of_refusing`
+  drives it with a fake opener.
+
+### The golden diff summary (the one permitted re-record)
+
+Re-recorded once with `python tools/update_eml_golden.py`. 126 fixtures; the diff is exactly: the header
+`schema_version` `"5"` -> `"6"`; **1132** `"stream_ref": null` keys (parts + top-level headers); **34**
+`"embedded": null` keys (27 fixtures carry attachments); **126** `record.output_schema_version` and 126
+`run_record.output_schema_version` values; and the store keys/paths/bytes that name `OUTPUT_SCHEMA_VERSION`.
+**Zero** of anything else: every `walk` pin (the `WalkResult`), every `parse_result`, every `CapRecord`, every
+`container_hash`/`part_id`/`sha256`/span is byte-identical (the falsifier in the bump test fails on a stray
+fourth class). Golden size 4,820,988 -> 4,888,412 bytes; digest `0d0dca4d…`.
+
+### Tests edited, each tied to a row of section A5 (or reported as an extra)
+
+Section A5 rows: `test_status_reasons.py` (the `skipped` tuple, `11` -> `14`); `test_contract_phase1.py` (the
+`SKIPPED` tuple; `test_output_schema_version_is_four` removed -- renamed/moved to `test_contract_msg.py` per
+D3); `test_parse_entry.py` (the `NAMED_ERROR_REASONS` tuple); `test_assemble.py`/`test_store.py` (the `"5"` ->
+`"6"` literals); `test_limits.py` (D1's union assertion); `test_turn_declarations.py` (`1b.1` added to
+`BUILT_TURNS`); `tests/ledger/behavior_ledger.json` (a `"6"` `contracts` line appended by the updater);
+`tests/ledger/label_ledger.json` (the new support file + the deliberate golden re-record).
+
+**Extra breakages the brief did not name** (all reported, none a weakened assertion):
+
+1. `tests/test_contracts.py::test_every_dataclass_contract_has_a_round_trip_test` -- the new
+   `ContainerStreamRef`/`EmbeddedSummary` need hand-typed round-trip instances (the test's whole point). Added.
+2. `tests/ingest.py::test_the_manifest_and_the_store_are_byte_identical_across_seeds_and_interpreters` -- its
+   `EXPECTED_DIGEST` hashes the identity projection, which now carries the bump's new keys, so the digest
+   moved (`76bea6e3…` -> `8fec0ad1…`). The same digest is quoted in `docs/design/phase1-empirical.md`, which
+   is **not** in this turn's allow-list, so that doc line is now stale -- flagged for the owner.
+3. `tests/test_walk_iterative.py` -- its `_walk_visit` step-counter wrapper took exactly the seven positional
+   arguments; the new `span_lookup` parameter made it eight. The wrapper now takes `*args, **kwargs`.
+4. `tests/test_stdlib_header_scanner.py` -- its planted-defect wrapper monkeypatched `header_fields_at` with a
+   three-argument function; the new `value_codec` keyword needed `**kwargs`.
+5. `tests/test_phase1_scope.py::test_no_msg_cfb_routing_recursion_or_threading_exists` -- the helper that hands a
+   CFB magic to the opener was named `_open_cfb`, and `FORBIDDEN_NAME_PARTS` still contains `"cfb"` (the
+   contract's own section 11 row defers dropping it to 1b.3-1b.5). Renamed `_open_projected` so the frozen scope
+   test is untouched. `CFB_CAP_REASONS` is a module constant (not a function/class name), so it is not flagged.
+
+### Pinned numbers that moved
+
+`OUTPUT_SCHEMA_VERSION` `"5"` -> `"6"`; `REASON_TABLE[Status.SKIPPED]` 5 -> 8 reasons (owner count 11 -> 14);
+`NAMED_ERROR_REASONS` 6 -> 8; `VERBATIM_REASONS` 3 -> 4; the two `limits_fingerprint` characterization pins (D1);
+`tests/test_ingest.py::EXPECTED_DIGEST`; the golden digest. `EMAIL_PARSER_VERSION` stays `"2"`; no
+`CFB_VERSION`/`MSG_READER_VERSION`/`MSG_PROJECTION_VERSION` was added.
+
+### The E4 numbers (section D)
+
+Measured with the E4 harness (scratch, outside the repo) on a 40 MiB synthetic attachment, `walk()` **and**
+`assemble()`, one subprocess per case:
+
+- **before** (the unchanged tree): pass-through `delta/stream = 4.0` (167,817,216 B), `peak_after_walk +125.9 MB`;
+  re-encoded `7.02`;
+- **after** (the walker's leaf slice is a `memoryview`, and `text._decode_cte` materialises a buffer only where a
+  decode actually needs one): pass-through `delta/stream = 4.0` (167,817,216 B), `peak_after_walk +83.9 MB`;
+  re-encoded `7.05`.
+
+**The 3x goal is not met, and this is the re-open-trigger stop.** The walker's own copy is gone (the walk stage's
+peak fell by 42 MB), but the **metered** peak is `assemble()`'s: the attachment stage's one payload read
+(`text.decoded_payload`, consumed by `attach.read_prefix`) still materialises a 40 MiB buffer, and the harness's
+own `payload` + `raw` already cost 2x. The smallest design that would meet the goal is to extend the same view to
+that read -- make `text.decoded_payload` return a `memoryview` and `attach.read_prefix` materialise only its
+short prefix -- which touches `attach.py`, **outside this turn's allow-list**; the full fix is a lazy
+`raw_view()` threaded through `_walk_visit`, whose `bytes`-only call sites (`.find`/`.startswith` in
+`_split_headers_body`/`_segment`/`_header_fields_at`) make it the A2 re-open trigger, not a licence to
+restructure. Per the brief this turn stops and reports: the owner decides Q5 (re-declare the budget to 5x, which
+4.0x already meets, or accept the `attach.py` view).
+
+**Owner decision (2026-10-13): the budget is re-declared to 5x** (build spec O9). 4.0x meets it, so Turn 1b.1's memory
+goal is satisfied as re-declared and nothing else in this turn changes. The `attach.py` view is deferred to Turn 1b.5,
+whose allow-list gains `emailextract/attach.py` and whose E4 re-run is gated at 5x on the real projection.
+
+### What the contract got wrong that this brief did not catch
+
+- **Section 7's `SpanRow.source_stream` cannot be `None` for a `SYNTHETIC` row** if the kind-gated `part_id`
+  (point 2) and the record's `stream_ref` (point 1) are to carry the `synthetic:<role>:<ordinal>` label the same
+  section names: the label has to live somewhere in the row, and the row has no other field for it. Carried in
+  `source_stream` (the shape is unchanged; only that one comment is loose). `ContainerStreamRef` itself keeps the
+  `synthetic:`-label invariant. Reported for the contract's section 7 comment.
+- **The section 5 synthetic rule is a leaf rule.** A synthetic **container** (the multipart root) has body bytes
+  in the walker's own reading, so applying `None`/`None` to it would contradict the section's own rationale
+  ("a synthetic leaf has no bytes"). Built as written (`SYNTHETIC` -> `None`/`None`), which is why the twin test
+  lists `size_bytes`/`sha256` as provenance differences for the framed root.
+- **`tests/test_ingest.py`'s store digest and `phase1-empirical.md`'s copy of it** are a section-11 row the
+  brief's list missed (extra breakage 2 above).
+- **`test_contract_phase1.py::test_output_schema_version_is_four` was declared by two earlier turns ('1.0b' and
+  '1.9') as well as 1b.1**: removing it from `test_contract_phase1.py` failed direction 1, so both earlier
+  declaration blocks were refined to the new node id (the sanctioned "a later turn refines a declaration" path in
+  section (f)).
+
+### Inputs for the next turns
+
+- **1b.2 (`tools/cfb_writer.py`, the first `.msg` fixtures):** the span-table vocabulary is
+  `emailextract.container.SpanRow` / `PersistedSpanRow` / `CharsetOrigin` and the helper seams
+  `source_key_of`/`stream_ref_of`/`span_lookup`; a container publishes `span_provenance`,
+  `charset_sources`, `sector_accounting` and `cap_observations` through `getattr`, so `Container`'s Protocol is
+  unchanged and `EmlContainer`/`FakeContainer` stay valid. `tests/support/fake_msg_container.py` is the shape a
+  real fixture double must match to reuse the 1b.1 provenance tests.
+- **1b.3 (`cfb.py`, where the CFB limits live):** the one binding constraint, recorded in the contract now --
+  `limits_fingerprint(L)` and `document_key` must stay byte-identical for every existing `Limits` value (the
+  golden proves it), so the three CFB caps' `Limits` fields cannot go on `assemble.parse.Limits`; publish a
+  separate `CfbLimits`/observations channel and keep `walk.CFB_CAP_REASONS` as the reason vocabulary.

@@ -16,20 +16,32 @@ or as the two shapes tests exercise it through: a :class:`pathlib.Path` and
 from __future__ import annotations
 
 import io
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from .ids import container_hash, sha256_hex
-from .model import ContainerKind
+from .model import (
+    ContainerKind,
+    ContainerStreamAxis,
+    ContainerStreamRef,
+    EncodingSource,
+)
 
 __all__ = [
+    "CharsetOrigin",
     "Container",
     "EmlContainer",
     "FakeContainer",
     "FileMaterial",
     "MemoryMaterial",
     "PathMaterial",
+    "PersistedSpanRow",
+    "SpanRow",
     "memory_bytes",
+    "source_key_of",
+    "span_lookup",
+    "stream_ref_of",
 ]
 
 
@@ -174,3 +186,127 @@ class FakeContainer:
 
     def container_facts(self) -> dict[str, str]:
         return dict(self._facts)
+
+
+# --------------------------------------------------------------------------
+# Turn 1b.1: the span table (producer-internal), the source key, the record ref
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class SpanRow:
+    """One virtual region's provenance (contract section 7).
+
+    Producer-internal: not a member of the ``Container`` Protocol, so ``EmlContainer``
+    and ``FakeContainer`` stay valid. A container that projects a ``.msg`` publishes a
+    ``tuple[SpanRow, ...]`` through ``getattr(container, "span_provenance", None)``.
+    ``virtual_offset``/``virtual_len`` never leave the producer: no record and no citation
+    carries them (C2). ``source_stream`` holds the CFB stream name for a ``STREAM``/
+    ``REENCODED`` row and the synthetic label ``synthetic:<role>:<ordinal>`` for a
+    ``SYNTHETIC`` row (the label is the only source identity a synthetic region has, and
+    it is what :func:`source_key_of` and :func:`stream_ref_of` read).
+    """
+
+    axis: ContainerStreamAxis
+    source_stream: str | None
+    source_byte_offset: int | None
+    source_byte_len: int | None
+    source_sha256: str | None
+    virtual_offset: int
+    virtual_len: int
+    decoded_char_offset: int | None = None
+    decoded_char_len: int | None = None
+    exact: bool = False
+
+
+@dataclass(frozen=True)
+class PersistedSpanRow:
+    """The stored span row: source-only, no virtual framing (contract section 7).
+
+    C2: a persisted virtual offset would make the stored bytes depend on the projection's
+    framing length. The virtual offsets are recomputed deterministically from the CFB bytes
+    and ``MSG_PROJECTION_VERSION`` whenever they are needed, so nothing is lost.
+    """
+
+    axis: ContainerStreamAxis
+    source_stream: str | None
+    source_byte_offset: int | None
+    source_byte_len: int | None
+    source_sha256: str | None
+    decoded_char_offset: int | None
+    decoded_char_len: int | None
+    exact: bool
+
+    @classmethod
+    def of(cls, row: SpanRow) -> "PersistedSpanRow":
+        """The source-only projection of a :class:`SpanRow` (drops ``virtual_*``)."""
+        return cls(
+            axis=row.axis,
+            source_stream=row.source_stream,
+            source_byte_offset=row.source_byte_offset,
+            source_byte_len=row.source_byte_len,
+            source_sha256=row.source_sha256,
+            decoded_char_offset=row.decoded_char_offset,
+            decoded_char_len=row.decoded_char_len,
+            exact=row.exact,
+        )
+
+
+@dataclass(frozen=True)
+class CharsetOrigin:
+    """One part's authoritatively-known charset provenance (point 5).
+
+    A ``.msg`` projection's virtual bytes carry a charset the walker's ladder reads, but
+    the real character set of a MAPI string is a property of the message (``internet_cpid``
+    / ``message_cpid`` / the ``001E`` vs ``001F`` stream), which only the reader knows. A
+    container that knows it publishes ``getattr(container, "charset_sources", None)`` as a
+    ``Mapping[part_path, CharsetOrigin]``; the assembler overwrites the ``PartRecord``'s
+    ``encoding_source`` and decode-chain charset fields from it, so the record never claims
+    a ladder rung the walker guessed from virtual bytes.
+    """
+
+    used_charset: str | None
+    declared_charset: str | None
+    encoding_source: "EncodingSource | None" = None
+
+
+def source_key_of(row: SpanRow) -> str:
+    """The framing-length-independent key of one span row (point 2).
+
+    ``<stream>:<byte_offset>:<byte_len>`` for a pass-through or re-encoded region, the
+    synthetic label verbatim for a ``SYNTHETIC`` row. It names the part by its **source**
+    (the CFB stream and the range of it), never by a virtual offset.
+    """
+    if row.axis is ContainerStreamAxis.SYNTHETIC:
+        return row.source_stream or ""
+    return f"{row.source_stream}:{row.source_byte_offset}:{row.source_byte_len}"
+
+
+def stream_ref_of(row: SpanRow) -> ContainerStreamRef:
+    """The :class:`ContainerStreamRef` one span row records (points 1, 3).
+
+    A synthetic row yields the no-offset ref; a pass-through / re-encoded row yields the
+    source range in the stream's own encoding. ``fault`` is ``None``: the fine-grained CFB
+    chain fault rides the span row's own account, not this record.
+    """
+    if row.axis is ContainerStreamAxis.SYNTHETIC:
+        return ContainerStreamRef(stream=row.source_stream or "synthetic:unknown:0", axis=row.axis)
+    return ContainerStreamRef(
+        stream=row.source_stream or "",
+        byte_offset=row.source_byte_offset,
+        byte_len=row.source_byte_len,
+        axis=row.axis,
+    )
+
+
+def span_lookup(container: object) -> dict[tuple[int, int], SpanRow] | None:
+    """``{(virtual_offset, virtual_len): SpanRow}`` for a span-table container, else ``None``.
+
+    ``None`` for every ``.eml`` container (and every container that publishes no
+    ``span_provenance``): that is the signal every gated provenance point keys on, so the
+    ``.eml`` path takes its current expression unchanged.
+    """
+    rows = getattr(container, "span_provenance", None)
+    if not rows:
+        return None
+    return {(row.virtual_offset, row.virtual_len): row for row in rows}

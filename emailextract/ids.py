@@ -25,6 +25,7 @@ __all__ = [
     "content_hash",
     "part_id",
     "sha256_hex",
+    "source_part_id",
     "walk_key",
 ]
 
@@ -136,6 +137,31 @@ def part_id(container_hash_value: str, span: RawSpan, content_hash_value: str) -
         raise ValueError(f"part_id: span must be a RawSpan, got {span!r}")
     payload = "\n".join(
         (container_hash_value, str(span.offset), str(span.length), content_hash_value)
+    ).encode("utf-8")
+    return sha256_hex(payload)
+
+
+def source_part_id(
+    container_hash_value: str, source_key: str, source_sha256: str | None
+) -> str:
+    """The content-addressed id of one **projected** part (Turn 1b.1, point 2).
+
+    A ``.msg`` part's bytes are a virtual re-framing, so ``part_id``'s raw span would
+    depend on the projection's padding length -- the same part would get two ids at two
+    framing lengths (C2). This id is over the part's **source** instead: the container
+    hash (the CFB file, D14), a source key (``<stream>:<byte_offset>:<byte_len>`` for a
+    pass-through or re-encoded region, or the synthetic label ``synthetic:<role>:<ordinal>``)
+    and the sha256 of the real source bytes (``None`` for a synthetic region, hashing no
+    bytes). Both are content facts of the file, so the id is framing-length independent.
+    """
+    if not isinstance(container_hash_value, str) or not container_hash_value:
+        raise ValueError("source_part_id: container_hash must be a non-empty str")
+    if not isinstance(source_key, str) or not source_key:
+        raise ValueError("source_part_id: source_key must be a non-empty str")
+    if source_sha256 is not None and (not isinstance(source_sha256, str) or not source_sha256):
+        raise ValueError("source_part_id: source_sha256 must be a non-empty str or None")
+    payload = "\n".join(
+        (container_hash_value, source_key, source_sha256 or "")
     ).encode("utf-8")
     return sha256_hex(payload)
 

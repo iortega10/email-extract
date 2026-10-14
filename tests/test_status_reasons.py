@@ -27,7 +27,16 @@ EXPECTED_REASON_TABLE = {
     "parsed": (False, ()),
     "skipped": (
         True,
-        ("size_cap", "total_size_cap", "depth_cap", "part_count_cap", "header_bytes_cap"),
+        (
+            "size_cap",
+            "total_size_cap",
+            "depth_cap",
+            "part_count_cap",
+            "header_bytes_cap",
+            "sector_count_cap",
+            "directory_entries_cap",
+            "difat_chain_length_cap",
+        ),
     ),
     "unsupported": (False, ()),
     "not_installed": (False, ()),
@@ -74,13 +83,13 @@ def test_reason_table_has_exactly_the_spec_rows() -> None:
 
 
 def test_every_reason_belongs_to_exactly_one_status() -> None:
-    """D6: a reason belongs to exactly one status -- the three rows hold 5 + 3 + 3."""
+    """D6: a reason belongs to exactly one status -- the three rows hold 8 + 3 + 3."""
     owners: dict[str, str] = {}
     for status_name, (_, reasons) in EXPECTED_REASON_TABLE.items():
         for reason in reasons:
             assert reason not in owners, f"{reason} claimed by both {owners.get(reason)} and {status_name}"
             owners[reason] = status_name
-    assert len(owners) == 11
+    assert len(owners) == 14
 
 
 def test_reason_mandatory_rows_reject_a_missing_reason() -> None:

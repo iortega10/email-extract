@@ -496,8 +496,10 @@ print("interpreter", "%d.%d.%d" % sys.version_info[:3])
 
 #: The digest the script prints, recorded (with its command) in
 #: ``docs/design/phase1-empirical.md`` -- the same on both interpreters and both
-#: hash seeds.
-EXPECTED_DIGEST = "76bea6e31264fb4b52c9a52ad9b6a8838d6bd1d0a15ae7e0e1e293fb93468c1d"
+#: hash seeds. Moved in Turn 1b.1: the identity projection now carries the schema
+#: bump's new keys (``"stream_ref": null``, ``"embedded": null``) and the ``"6"``
+#: ``output_schema_version``, so the serialized documents' digest moves with them.
+EXPECTED_DIGEST = "8fec0ad1e051e8a30b31b23c5d12d6b16de541283bddef8d780dbe466fd3b35d"
 
 
 def _second_interpreter() -> list[str] | None:

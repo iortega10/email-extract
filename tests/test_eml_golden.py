@@ -35,12 +35,13 @@ for _entry in (str(ROOT / "tools"), str(ROOT)):
 import behavior_ledger  # noqa: E402  (the corpus enumeration, the same one the golden used)
 from docextract_core.codec import from_json  # noqa: E402
 from emailextract import versions  # noqa: E402
-from emailextract.assemble import assemble  # noqa: E402
+from emailextract.assemble import assemble, document_key  # noqa: E402
 from emailextract.container import EmlContainer, memory_bytes  # noqa: E402
 from emailextract.model import record_to_bytes  # noqa: E402
 from emailextract.store import (  # noqa: E402
     DocumentArtifact,
     WalkArtifact,
+    artifact_key,
     document_artifact,
     walk_artifact,
 )
@@ -371,6 +372,112 @@ def test_a_changed_schema_version_alone_is_the_permitted_move() -> None:
     parts = stray["fixtures"][sorted(stray["fixtures"])[0]]["document"]["record"]["parts"]
     parts[0]["part_id"] = hashlib.sha256(b"a stray move").hexdigest()
     assert _classify(committed, stray) == "not_permitted"
+
+
+def _pre_bump(golden: dict) -> dict:
+    """The committed golden with the three permitted classes reversed (an in-memory 1b.0c form).
+
+    Undoes exactly what the bump added: the version stamps, one ``stream_ref`` key per
+    ``PartRecord``/``HeaderField`` and one ``embedded`` key per ``AttachmentOccurrence``.
+    The store keys/paths/bytes are left as recorded (their move is checked against the
+    re-computed keys instead, so the reconstruction cannot hide one).
+    """
+    pre = copy.deepcopy(golden)
+    pre["header"]["schema_version"] = "5"
+    for payload in pre["fixtures"].values():
+        record = payload["document"]["record"]
+        record["output_schema_version"] = "5"
+        if record.get("run_record"):
+            record["run_record"]["output_schema_version"] = "5"
+        for part in record["parts"]:
+            part.pop("stream_ref", None)
+        for field in record["headers"]:
+            field.pop("stream_ref", None)
+        for occurrence in record["attachments"]:
+            occurrence.pop("embedded", None)
+    return pre
+
+
+def test_the_bump_moved_only_the_version_and_the_null_keys(
+    fresh: dict, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Re-recorded golden vs the 1b.0c form: the bump moved exactly three classes, nothing else.
+
+    The three are (contract section 1): the ``"5"`` -> ``"6"`` value and every store key/path
+    that names it; one ``"stream_ref": null`` per ``PartRecord``/``HeaderField``; and one
+    ``"embedded": null`` per ``AttachmentOccurrence`` (D2's correction). Everything a measured
+    value carries -- the ``WalkResult`` pins, every ``part_id``/``sha256``/span, the
+    ``CapRecord``s, the ``ParseResult`` -- is byte-identical.
+    """
+    committed = _load()
+    assert committed["header"]["schema_version"] == versions.OUTPUT_SCHEMA_VERSION == "6"
+    # The committed file is a fresh recording of the current code: nothing else moved.
+    assert compare(committed, fresh, _waiver(committed)) == []
+
+    pre_bump = _pre_bump(committed)
+
+    # Every value difference is one of the permitted moves (the version, or a store byte/key).
+    differences = compare(pre_bump, committed, ())
+    assert differences, "the bump moved nothing"
+    for path, old, new in differences:
+        assert _is_permitted_move(path, old, new), path
+
+    # The added keys really are present, and exactly one per record: the only added key is
+    # ``stream_ref`` on a PartRecord/HeaderField and ``embedded`` on an AttachmentOccurrence.
+    for name, payload in committed["fixtures"].items():
+        record = payload["document"]["record"]
+        before = pre_bump["fixtures"][name]["document"]["record"]
+        assert pre_bump["fixtures"][name]["walk"] == payload["walk"], name  # WalkResult byte-identical
+        for old, new in zip(before["parts"], record["parts"]):
+            assert new.get("stream_ref", "MISSING") is None, name
+            assert set(new) - set(old) == {"stream_ref"}, name
+            assert set(old) - set(new) == set(), name
+        for old, new in zip(before["headers"], record["headers"]):
+            assert new.get("stream_ref", "MISSING") is None, name
+            assert set(new) - set(old) == {"stream_ref"}, name
+        for old, new in zip(before["attachments"], record["attachments"]):
+            assert new.get("embedded", "MISSING") is None, name
+            assert set(new) - set(old) == {"embedded"}, name
+
+    # The store keys/paths move by exactly the version string, and by nothing else: the live
+    # key is the live function of the live constant, and the pre-bump key differs from it.
+    # The *walk* key names no projection version, so it is interpreter-independent and pinned
+    # by value; the *document* key names ``HTMLTEXT_VERSION`` (the CPython minor), so it is
+    # compared freshly here (its cross-interpreter waiver is
+    # ``test_the_golden_checks_both_interpreters_with_a_recorded_waiver``'s).
+    for name, payload in committed["fixtures"].items():
+        container = EmlContainer(memory_bytes(_fixture_bytes(name)))
+        live_walk = artifact_key(container)
+        assert payload["store"]["walk"]["key"] == live_walk
+        assert payload["store"]["walk"]["path"] == f"walks/{live_walk}.json"
+        live_doc = document_key(container.container_hash(), limits=LIMITS)
+        monkeypatch.setattr(versions, "OUTPUT_SCHEMA_VERSION", "5")
+        old_walk = artifact_key(container)
+        old_doc = document_key(container.container_hash(), limits=LIMITS)
+        monkeypatch.setattr(versions, "OUTPUT_SCHEMA_VERSION", "6")
+        assert old_walk != live_walk and old_doc != live_doc
+
+    # Every measured value is byte-identical: part ids, sha256s, spans, caps and the ParseResult.
+    for name, payload in committed["fixtures"].items():
+        assert payload["parse_result"] == pre_bump["fixtures"][name]["parse_result"], name
+        assert payload["caps"] == pre_bump["fixtures"][name]["caps"], name
+        assert payload["span_samples"] == pre_bump["fixtures"][name]["span_samples"], name
+        # ... and the freshly recomputed ones, so the pins are not decorative.
+        container = EmlContainer(memory_bytes(_fixture_bytes(name)))
+        assert payload["caps"] == [
+            _encoded(cap) for cap in assemble(container, limits=LIMITS).run_record.caps
+        ], name
+
+    # The falsifier: a stray fourth difference fails the classification.
+    stray = copy.deepcopy(committed)
+    parts = stray["fixtures"][sorted(stray["fixtures"])[0]]["document"]["record"]["parts"]
+    if parts:
+        parts[0]["part_id"] = hashlib.sha256(b"a stray fourth move").hexdigest()
+    else:
+        stray["fixtures"][sorted(stray["fixtures"])[0]]["document"]["record"]["headers"][0][
+            "raw_value"
+        ] = "a stray fourth move"
+    assert _classify(pre_bump, stray) == "not_permitted"
 
 
 # --------------------------------------------------------------- the coverage and header

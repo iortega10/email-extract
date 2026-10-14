@@ -87,6 +87,7 @@ __all__ = [
     "OffsetSpan",
     "PartText",
     "REASON_CTE_NOT_IDENTITY",
+    "REASON_CONTAINER_STREAM",
     "REASON_DECODE_FALLBACK",
     "REASON_MULTIBYTE_WITHOUT_OFFSET_MAP",
     "STATEFUL_OR_MULTIBYTE",
@@ -113,10 +114,12 @@ VERBATIM_PART_LEVEL: Final[str] = "part_level"
 REASON_CTE_NOT_IDENTITY: Final[str] = "cte_not_identity"
 REASON_DECODE_FALLBACK: Final[str] = "decode_fallback"
 REASON_MULTIBYTE_WITHOUT_OFFSET_MAP: Final[str] = "multibyte_without_offset_map"
+REASON_CONTAINER_STREAM: Final[str] = "container_stream"
 VERBATIM_REASONS: Final[tuple[str, ...]] = (
     REASON_CTE_NOT_IDENTITY,
     REASON_DECODE_FALLBACK,
     REASON_MULTIBYTE_WITHOUT_OFFSET_MAP,
+    REASON_CONTAINER_STREAM,
 )
 
 #: The non-identity CTEs the walker's ``_decode_cte`` records as **having run**.
@@ -503,12 +506,20 @@ def _build_offset_map(
     return tuple(merged)
 
 
-def analyse_part(raw: bytes, part: PartShape) -> PartText | None:
+def analyse_part(
+    raw: bytes, part: PartShape, *, container_stream: bool = False
+) -> PartText | None:
     """The part's text and precision, or ``None`` when the part is not a text part.
 
     The walker's **existing** text-part decision is reused, not widened: only a part that ran
     the charset ladder has a ``used_charset``, so ``used_charset is None`` is exactly "the
     walker did not treat this as text" (a multipart, a pdf, a png, an office zip).
+
+    ``container_stream`` (Turn 1b.1, point 4) is the ``.msg`` projection's precompute: every
+    ``.msg`` leaf's span is a byte range of the **virtual** framing, so a citation against its
+    view code points is at best ``part_level`` and never ``exact`` -- the reason is
+    ``container_stream`` and no offset map is built (A3: a virtual offset is a false ``exact``).
+    The default (``False``) is the ``.eml`` path, byte for byte.
     """
     chain = part.decode_chain
     used = chain.used_charset
@@ -539,6 +550,8 @@ def analyse_part(raw: bytes, part: PartShape) -> PartText | None:
         encoding_source=part.encoding_source,
         canonical=canonical,
     )
+    if container_stream:
+        reason = REASON_CONTAINER_STREAM
     offset_map: tuple[OffsetSpan, ...] | None = None
     if reason is None:
         offset_map = _build_offset_map(decoded, len(decoded_text), dropped, canonical or "")
@@ -605,19 +618,30 @@ def decoded_payload(raw: bytes, part: PartShape) -> bytes | None:
     return decoded
 
 
-def analyse_parts(raw: bytes, result: WalkResult) -> tuple[PartText, ...]:
-    """Every text part of ``result``, in the walker's part order."""
+def analyse_parts(
+    raw: bytes, result: WalkResult, *, container_stream: bool = False
+) -> tuple[PartText, ...]:
+    """Every text part of ``result``, in the walker's part order.
+
+    ``container_stream`` is passed through to :func:`analyse_part` for a span-table container
+    (the ``.msg`` projection, point 4): every leaf is ``part_level``/``container_stream``.
+    """
     records: list[PartText] = []
     for part in result.parts:
-        record = analyse_part(raw, part)
+        record = analyse_part(raw, part, container_stream=container_stream)
         if record is not None:
             records.append(record)
     return tuple(records)
 
 
-def part_text_rows(raw: bytes, result: WalkResult) -> list[list[object]]:
+def part_text_rows(
+    raw: bytes, result: WalkResult, *, container_stream: bool = False
+) -> list[list[object]]:
     """The ``body.text`` rows: ``[part, text, verbatim_precision, verbatim_reason]`` per text part."""
-    return [record.as_fact_row() for record in analyse_parts(raw, result)]
+    return [
+        record.as_fact_row()
+        for record in analyse_parts(raw, result, container_stream=container_stream)
+    ]
 
 
 def body_gaps(raw: bytes, result: WalkResult) -> list[tuple[str, str]]:

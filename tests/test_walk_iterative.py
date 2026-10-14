@@ -340,9 +340,9 @@ def _visit_counter(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
     original = walk_module._walk_visit
     counter = {"steps": 0}
 
-    def counted(raw, container_id, item, parts, regions, state, stack):
+    def counted(raw, container_id, item, parts, regions, state, stack, *args, **kwargs):
         counter["steps"] += 1
-        return original(raw, container_id, item, parts, regions, state, stack)
+        return original(raw, container_id, item, parts, regions, state, stack, *args, **kwargs)
 
     monkeypatch.setattr(walk_module, "_walk_visit", counted)
     return counter

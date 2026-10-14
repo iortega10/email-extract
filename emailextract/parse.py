@@ -67,8 +67,10 @@ NAMED_ERROR_REASONS: Final[tuple[str, ...]] = (
     "invalid_input",
     "input_over_cap",
     "invalid_container_kind",
-    "cfb_msg_unsupported",
-    "not_a_message",
+    "cfb_directory_loop",       # a directory link points into a cycle -> NamedError
+    "cfb_header_unsupported",   # sector shift outside {9,10,11,12} for v3, or v4 with shift != 12
+    "cfb_msg_unsupported",      # interim: deleted in Turn 1b.5 when the real opener is wired
+    "not_a_message",            # CFB magic without __properties_version1.0 (.doc/.xls/.ppt/.msi)
     "invalid_limits",
 )
 
@@ -188,8 +190,8 @@ class ParseResult:
 
     def __post_init__(self) -> None:
         if self.error is None:
-            if self.kind != "rfc822":
-                raise CodecError("parse_result: a result with no error is kind='rfc822'")
+            if self.kind not in ("rfc822", "cfb_msg"):
+                raise CodecError("parse_result: a result with no error is kind='rfc822' or 'cfb_msg'")
             if self.prelude_bom_bytes < 0 or self.prelude_mbox_bytes < 0:
                 raise CodecError("parse_result: prelude lengths must be >= 0")
         else:
@@ -280,26 +282,48 @@ def _has_field_before_blank(data: bytes, start: int) -> bool:
     return False
 
 
-def _sniff(data: bytes, has_field) -> ParseResult:
+def _sniff(data: bytes, has_field, open_cfb=None) -> ParseResult:
     """The ``container_kind=None`` decision, with the field predicate taken as an argument.
 
     ``has_field(data, region_start)`` is the "is this a message" predicate; separating it
     from the sniff is what lets a test plant a wrong predicate and prove the sniff's
     negative cases are non-vacuous, without editing this module.
+
+    A CFB magic is opened through ``open_cfb`` when one is supplied (Turn 1b.1's seam,
+    finished in Turn 1b.5); without one it is refused exactly as before, with
+    ``cfb_msg_unsupported``.
     """
     if data[: len(_CFB_MAGIC)] == _CFB_MAGIC:
-        return _failure("cfb_msg_unsupported", "Phase 1 has no CFB reader")
+        return _open_projected(data, open_cfb)
     bom_bytes, mbox_bytes = _prelude(data)
     if not has_field(data, bom_bytes + mbox_bytes):
         return _failure("not_a_message", "no name: value header line before a blank line")
     return _success(bom_bytes, mbox_bytes)
 
 
-def parse(data, container_kind=None, *, limits: Limits) -> ParseResult:
+def _open_projected(data: bytes, open_cfb) -> ParseResult:
+    """Hand a CFB magic to the opener, or refuse it when no opener is wired (point 8).
+
+    ``open_cfb`` is ``Callable[[bytes, Limits], ParseResult] | None``. With it ``None`` --
+    every existing caller, :mod:`emailextract.ingest` included -- a CFB file is refused
+    exactly as today; Turn 1b.5 deletes this interim branch when the real opener lands.
+    """
+    if open_cfb is None:
+        return _failure("cfb_msg_unsupported", "Phase 1 has no CFB reader")
+    return open_cfb(data)
+
+
+def parse(data, container_kind=None, *, limits: Limits, open_cfb=None) -> ParseResult:
     """Decide the container kind of ``data`` under ``limits``; never raise for bytes.
 
     ``limits`` is **keyword-only and required** (there is no default: the function
     cannot know which bytes are untrusted). See the module docstring for the sniff.
+
+    ``open_cfb`` (Turn 1b.1) is the CFB-magic opener seam: ``None`` refuses a CFB file
+    with ``cfb_msg_unsupported`` exactly as before (the ``.eml`` path and every existing
+    caller are unchanged); a supplied ``Callable[[bytes, Limits], ParseResult]`` is what
+    opens a ``cfb_msg`` once the real reader lands in Turn 1b.5. This turn wires the seam
+    and no production caller supplies one.
     """
     if not isinstance(data, bytes):
         return _failure("invalid_input", f"data must be bytes, got {type(data).__name__}")
@@ -311,8 +335,8 @@ def parse(data, container_kind=None, *, limits: Limits) -> ParseResult:
     if container_kind not in _CONTAINER_KINDS:
         return _failure("invalid_container_kind", f"container_kind={container_kind!r}")
     if container_kind == "cfb_msg":
-        return _failure("cfb_msg_unsupported", "Phase 1 has no CFB reader")
+        return _open_projected(data, open_cfb)
     if container_kind == "rfc822":
         bom_bytes, mbox_bytes = _prelude(data)
         return _success(bom_bytes, mbox_bytes)
-    return _sniff(data, _has_field_before_blank)
+    return _sniff(data, _has_field_before_blank, open_cfb)

@@ -39,7 +39,7 @@ test: tests/test_type_verdicts.py::test_disagreement_needs_two_families
 test: tests/test_type_verdicts.py::test_unknown_iff_no_family_and_magic_wins
 test: tests/test_contract_phase1.py::test_quote_boundary_and_view_level_records_freeze
 test: tests/test_contract_phase1.py::test_run_record_carries_every_cap_and_the_two_new_reasons
-test: tests/test_contract_phase1.py::test_output_schema_version_is_four
+test: tests/test_contract_msg.py::test_output_schema_version_is_six
 test: tests/test_label_ledger.py::test_every_covered_path_is_recorded
 test: tests/test_label_ledger.py::test_a_changed_label_is_refused
 test: tests/test_label_ledger.py::test_a_removed_label_is_refused
@@ -892,7 +892,7 @@ test: tests/test_store.py::test_the_document_key_is_the_hashed_inputs_and_nothin
 test: tests/test_store.py::test_a_document_round_trips_through_the_store
 test: tests/test_store.py::test_two_stores_built_from_the_same_inputs_are_byte_identical
 test: tests/test_store.py::test_the_projection_version_dropped_from_the_key_is_caught
-test: tests/test_contract_phase1.py::test_output_schema_version_is_four
+test: tests/test_contract_msg.py::test_output_schema_version_is_six
 stop: after assemble, ingest and store are green end to end, both ledgers are checked and the
 stop:   schema bump is recorded -- before Turn 1.10 (the gates over real output, the hostile set,
 stop:   the scope test and the close)
@@ -1282,4 +1282,55 @@ test: tests/test_eml_golden.py::test_the_golden_header_names_the_corpus_and_sche
 test: tests/test_eml_golden.py::test_resolve_span_samples_are_the_identity_guard
 test: tests/test_eml_golden.py::test_the_golden_file_is_listed_in_the_label_ledger
 stop: after the golden is captured and committed, before any frozen-module edit (rule 2)
+```
+
+## Turn 1b.1 -- the bump and the eight provenance points (mirrored)
+
+Turn 1b.1's block is mirrored here from `docs/design/phase1b-ledgers.md` (the Phase 1b blocks live
+there until Turn 1b.10 folds both files together). `container.py` and `__init__.py` joined the
+allow-list (the span-table vocabulary and the new exports); `test_named_error_reasons_drop_cfb_msg_unsupported`
+is renamed `test_named_error_reasons_gain_the_two_cfb_faults` (D3).
+
+```declaration turn=1b.1
+module: emailextract/model.py
+module: emailextract/versions.py
+module: emailextract/ids.py
+module: emailextract/walk.py
+module: emailextract/text.py
+module: emailextract/assemble.py
+module: emailextract/parse.py
+module: emailextract/store.py
+module: emailextract/container.py
+module: emailextract/__init__.py
+module: tests/support/fake_msg_container.py
+module: tests/golden/eml_golden.json
+module: tests/test_contract_msg.py
+module: tests/test_provenance_points.py
+test: tests/test_contract_msg.py::test_container_stream_ref_shape_and_round_trip
+test: tests/test_contract_msg.py::test_container_stream_ref_invariants_raise
+test: tests/test_contract_msg.py::test_a_synthetic_ref_carries_no_offsets
+test: tests/test_contract_msg.py::test_embedded_summary_shape_and_defaults
+test: tests/test_contract_msg.py::test_the_cfb_cap_reasons_join_the_skipped_row
+test: tests/test_contract_msg.py::test_named_error_reasons_gain_the_two_cfb_faults
+test: tests/test_contract_msg.py::test_verbatim_reasons_gain_container_stream
+test: tests/test_contract_msg.py::test_output_schema_version_is_six
+test: tests/test_eml_golden.py::test_the_bump_moved_only_the_version_and_the_null_keys
+test: tests/test_provenance_points.py::test_the_assembler_fills_stream_ref_from_the_span_table
+test: tests/test_provenance_points.py::test_part_id_is_kind_gated_and_framing_length_independent
+test: tests/test_provenance_points.py::test_two_framing_lengths_give_identical_part_ids
+test: tests/test_provenance_points.py::test_the_eml_part_ids_are_byte_identical
+test: tests/test_provenance_points.py::test_resolve_span_returns_a_stream_ref_for_a_span_table_container
+test: tests/test_provenance_points.py::test_resolve_span_still_refuses_a_virtual_offset
+test: tests/test_provenance_points.py::test_analyse_part_forces_container_stream_part_level
+test: tests/test_provenance_points.py::test_encoding_source_is_overwritten_from_the_ladder_map
+test: tests/test_provenance_points.py::test_cap_declared_size_copies_the_real_stream_size
+test: tests/test_provenance_points.py::test_the_store_persists_sectors_and_the_source_only_span_table
+test: tests/test_provenance_points.py::test_the_source_only_span_table_recomputes_the_virtual_offsets
+test: tests/test_provenance_points.py::test_adding_a_cfb_msg_document_changes_no_eml_store_byte
+test: tests/test_provenance_points.py::test_parse_opens_a_cfb_container_instead_of_refusing
+test: tests/test_provenance_points.py::test_the_eml_default_branch_is_unchanged
+test: tests/test_provenance_points.py::test_the_value_codec_seam_defaults_to_latin_1
+test: tests/test_provenance_points.py::test_walk_msg_matches_walk_of_the_equivalent_eml_modulo_provenance
+test: tests/test_provenance_points.py::test_limits_fingerprint_is_unchanged_by_the_bump
+stop: after the golden re-check (the bump and the eight provenance points green against FakeMsgContainer)
 ```

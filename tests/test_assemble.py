@@ -193,7 +193,7 @@ def test_the_projection_versions_are_the_constants_names_and_values() -> None:
     document = assemble(EmlContainer(memory_bytes(MESSAGE)), limits=_limits())
     assert document.run_record is not None
     assert document.run_record.projection_versions == stamped
-    assert document.output_schema_version == versions.OUTPUT_SCHEMA_VERSION == "5"
+    assert document.output_schema_version == versions.OUTPUT_SCHEMA_VERSION == "6"
 
 
 def test_a_nested_record_read_from_a_store_carries_its_own_axes(tmp_path: Path) -> None:

@@ -41,7 +41,7 @@ from typing import Any, Final, Mapping
 
 from . import versions
 from .attach import attachments as attachment_stage
-from .container import Container
+from .container import Container, span_lookup as _span_lookup_of, stream_ref_of
 from .headers import header_region
 from .ids import NOT_BUILT_IN_PHASE1, RawSpan, SPAN_NOT_RESOLVABLE, sha256_hex, walk_key
 from .mediatype import effective_media_type_in
@@ -50,6 +50,8 @@ from .model import (
     CapRecord,
     Classification,
     ContainerFacts,
+    ContainerStreamAxis,
+    ContainerStreamRef,
     ContentFingerprint,
     DecorativeHint,
     EmailDocument,
@@ -200,7 +202,12 @@ def _reads_as_text(part: PartShape) -> bool:
     return part.decode_chain.used_charset is not None
 
 
-def _header_fields(raw: bytes, result: WalkResult, limits: Limits) -> list[HeaderField]:
+def _header_fields(
+    raw: bytes,
+    result: WalkResult,
+    limits: Limits,
+    span_table: Mapping[tuple[int, int], object] | None = None,
+) -> list[HeaderField]:
     """The top-level header region as frozen :class:`HeaderField` records.
 
     The header stage measures the region; this only re-shapes its fields. ``value``
@@ -215,6 +222,11 @@ def _header_fields(raw: bytes, result: WalkResult, limits: Limits) -> list[Heade
     reported gap, not a silent drop: the paragraph's bytes are still accounted by
     the walker's regions (the no-silent-drop property), and the header stage
     records ``headers.malformed_line`` on its own gap channel.
+
+    ``span_table`` (Turn 1b.1, point 1) is the container's ``span_provenance`` lookup;
+    with it, a field whose own raw span is a source region carries its
+    :class:`~emailextract.model.ContainerStreamRef`. Without it (every ``.eml``
+    container) the construction is exactly today's.
     """
     region = header_region(raw, result, max_work_units=limits.max_field_work_units_per_byte)
     fields: list[HeaderField] = []
@@ -224,6 +236,11 @@ def _header_fields(raw: bytes, result: WalkResult, limits: Limits) -> list[Heade
         decoded = region.text_decodes.get(item.ordinal)
         text = decoded.text if decoded is not None else None
         value = TriValue(state=TriState.VALUE, value=text) if text else TriValue()
+        stream_ref = None
+        if span_table is not None:
+            row = span_table.get((item.raw_span.offset, item.raw_span.length))
+            if row is not None:
+                stream_ref = stream_ref_of(row)
         fields.append(
             HeaderField(
                 name=item.name,
@@ -231,18 +248,29 @@ def _header_fields(raw: bytes, result: WalkResult, limits: Limits) -> list[Heade
                 ordinal=item.ordinal,
                 value=value,
                 flags=FlagSection(),
+                stream_ref=stream_ref,
             )
         )
     return fields
 
 
-def _caps(result: WalkResult, limits: Limits) -> list[CapRecord]:
+def _caps(
+    result: WalkResult,
+    limits: Limits,
+    cap_observations: Mapping[str, int] | None = None,
+) -> list[CapRecord]:
     """Every cap the walk recorded, as ``CapRecord``s, in walk order.
 
     The walker's own ``UnknownSection`` entries on the cap reason channel are the
     source; the accounted region under the same locator carries the skipped size,
     and ``walk.CAP_LIMIT_FIELDS`` maps the reason to the caller's own ``Limits``
     field, so the triple is reconstructible from the result and the ``Limits``.
+
+    ``cap_observations`` (Turn 1b.1, point 6) is the container's published observed
+    count for a cap (a real stream length / sector count, never a virtual region
+    length); when the container supplies one it is the recorded ``declared_size_bytes``.
+    Without it (every ``.eml`` container) the default -- the accounted region's length --
+    is exactly today's.
     """
     declared: dict[tuple[str, str], int] = {}
     for region in result.regions:
@@ -254,11 +282,14 @@ def _caps(result: WalkResult, limits: Limits) -> list[CapRecord]:
         if reason not in CAP_REASONS:
             continue
         field_name = CAP_LIMIT_FIELDS[reason]
+        observed = None if cap_observations is None else cap_observations.get(reason)
         caps.append(
             CapRecord(
                 cap_id=reason,
                 cap_value_bytes=getattr(limits, field_name),
-                declared_size_bytes=declared.get((reason, section.section)),
+                declared_size_bytes=(
+                    observed if observed is not None else declared.get((reason, section.section))
+                ),
             )
         )
     return caps
@@ -338,6 +369,8 @@ def _part_records(
     result: WalkResult,
     attachments: Mapping[str, Any],
     selections: Mapping[str, str],
+    span_table: Mapping[tuple[int, int], object] | None = None,
+    charset_sources: Mapping[str, object] | None = None,
 ) -> list[PartRecord]:
     """The parts tree as frozen :class:`PartRecord` rows, in the walker's order.
 
@@ -347,6 +380,14 @@ def _part_records(
     displayable text view, ``attachment`` for an occurrence and ``None`` otherwise.
     An attachment's classification, decorative hint and type verdicts are the
     attachment stage's own facts for that part, never a second classification.
+
+    ``span_table`` (point 1) fills each record's ``stream_ref`` and, per contract
+    section 5, the leaf ``size_bytes``/``sha256`` (a pass-through leaf's size/digest
+    are the stream's; a synthetic leaf has no bytes, so ``None``/``None``; a re-encoded
+    leaf keeps its own). ``charset_sources`` (point 5) overwrites ``encoding_source`` and
+    the decode chain's charset fields from the container's own MAPI ladder, because the
+    walker can only read the charset the virtual bytes declare. Without either (every
+    ``.eml`` container) the construction is exactly today's.
     """
     by_path = {part.path: part for part in result.parts}
     capped = {
@@ -384,6 +425,27 @@ def _part_records(
             if part.path in capped
             else StatusOutcome(status=Status.PARSED)
         )
+        size_bytes = part.body_span.length
+        sha256 = part.body_sha256
+        stream_ref = None
+        if span_table is not None:
+            row = span_table.get((part.raw_span.offset, part.raw_span.length))
+            if row is not None:
+                stream_ref = stream_ref_of(row)
+                size_bytes, sha256 = _leaf_size_and_digest(
+                    row, part.body_span.length, part.body_sha256
+                )
+        encoding_source = part.encoding_source
+        decode_chain = part.decode_chain
+        if charset_sources is not None:
+            origin = charset_sources.get(part.path)
+            if origin is not None:
+                encoding_source = getattr(origin, "encoding_source", None)
+                decode_chain = replace(
+                    decode_chain,
+                    used_charset=getattr(origin, "used_charset", None),
+                    declared_charset=getattr(origin, "declared_charset", None),
+                )
         records.append(
             PartRecord(
                 part_id=part.part_id,
@@ -393,16 +455,36 @@ def _part_records(
                 classification=classification,
                 selection=Selection(selections.get(part.path, Selection.NOT_APPLICABLE.value)),
                 status=status,
-                size_bytes=part.body_span.length,
-                sha256=part.body_sha256,
-                encoding_source=part.encoding_source,
-                decode_chain=part.decode_chain,
+                size_bytes=size_bytes,
+                sha256=sha256,
+                encoding_source=encoding_source,
+                decode_chain=decode_chain,
                 decorative_hint=hint,
                 type_verdicts=verdicts,
                 flags=FlagSection(),
+                stream_ref=stream_ref,
             )
         )
     return records
+
+
+def _leaf_size_and_digest(
+    row: object, default_size: int, default_sha256: str | None
+) -> tuple[int | None, str | None]:
+    """One leaf's ``size_bytes``/``sha256`` per contract section 5, from its span row.
+
+    A pass-through leaf's bytes *are* the stream's, so it records the stream's own size and
+    digest (which equal the walker's default for an identity decode); a re-encoded leaf keeps
+    the walker's values (the UTF-8 re-encoding's size and digest, the bytes a consumer reads);
+    a synthetic leaf has no stream, so it records ``None``/``None`` (the honest value for a
+    leaf with no source bytes).
+    """
+    axis = getattr(row, "axis", None)
+    if axis is ContainerStreamAxis.SYNTHETIC:
+        return None, None
+    if axis is ContainerStreamAxis.STREAM:
+        return row.source_byte_len, row.source_sha256  # type: ignore[attr-defined]
+    return default_size, default_sha256
 
 
 def _cap_reason(result: WalkResult, locator: str) -> str:
@@ -418,6 +500,9 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
     raw = container.raw_bytes()
     container_id = container.container_hash()
     result = walk(container, limits=limits)
+    span_table = _span_lookup_of(container)
+    charset_sources = getattr(container, "charset_sources", None)
+    cap_observations = getattr(container, "cap_observations", None)
     attach = attachment_stage(
         raw,
         result,
@@ -427,7 +512,7 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
     )
     facts = {item.part.path: item for item in attach.facts}
     selections = {row[0]: row[1] for row in selection_rows(raw, result)}
-    caps = _caps(result, limits)
+    caps = _caps(result, limits, cap_observations)
     views = quote_resolve.all_views(
         raw, result, max_depth=limits.max_depth, max_elements=limits.max_parts
     )
@@ -452,8 +537,10 @@ def _compose(container: Container, *, limits: Limits) -> EmailDocument:
         container_facts=ContainerFacts(container.container_facts()),
         content_fingerprint=_content_fingerprint(raw, result, limits=limits),
         status=_document_status(result),
-        headers=_header_fields(raw, result, limits),
-        parts=_part_records(result, facts, selections),
+        headers=_header_fields(raw, result, limits, span_table=span_table),
+        parts=_part_records(
+            result, facts, selections, span_table=span_table, charset_sources=charset_sources
+        ),
         attachments=list(attach.occurrences),
         children=[],
         children_axis=not_built_in_phase1(),
@@ -557,7 +644,7 @@ def resolve_span(
     view: str,
     start: int,
     end: int,
-) -> RawSpan | Unresolvable:
+) -> RawSpan | ContainerStreamRef | Unresolvable:
     """Cite a view span as raw byte offsets, or refuse with a closed reason.
 
     ``document_or_container`` is the **container** the citation is against: an
@@ -581,12 +668,26 @@ def resolve_span(
     * a part whose transport decode was not identity (base64/QP) or whose charset
       has no sound map -- ``PartText.offset_map`` is absent;
     * an unknown part id, an unknown view or a span outside the view's text.
+
+    For a **span-table container** (Turn 1b.1, point 3) the answer is the part's own
+    :class:`~emailextract.model.ContainerStreamRef` -- a span into the **source** (the CFB
+    stream and the byte range of it), never an offset in the virtual framing. A part with
+    no row is refused as usual. That is the C2 identity guard for citations: the bytes a
+    caller reads are addressed where they really are.
     """
     raw, result = _bytes_and_parts(document_or_container)
     for name, value in (("start", start), ("end", end)):
         if isinstance(value, bool) or not isinstance(value, int):
             raise TypeError(f"resolve_span: {name} must be an int, got {value!r}")
     part = next((item for item in result.parts if item.part_id == part_id), None)
+    span_table = _span_lookup_of(document_or_container)
+    if span_table is not None:
+        if part is None:
+            return Unresolvable(reason_id=SPAN_NOT_RESOLVABLE, part_id=part_id)
+        row = span_table.get((part.raw_span.offset, part.raw_span.length))
+        if row is None:
+            return Unresolvable(reason_id=SPAN_NOT_RESOLVABLE, part_id=part_id)
+        return stream_ref_of(row)
     if part is None or view not in _VIEWS or view == _HTML:
         return Unresolvable(reason_id=SPAN_NOT_RESOLVABLE, part_id=part_id)
     record = analyse_part(raw, part)

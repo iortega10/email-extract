@@ -411,6 +411,13 @@ tests), `tests/test_parse_entry.py` (the NamedError tuple), `tests/test_status_r
   D1 is corrected in design revision 4.
 - **O8. Signed and encrypted mail: class recorded, no body, never verified**, until probe P1 shows the real layout.
   Hearth's proposed split is not adopted.
+- **O9. The memory budget is re-declared from 3x to 5x (2026-10-13, after Turn 1b.1's E4 re-run).** The lazy view did
+  not move the metered peak (4.0x of a 40 MiB pass-through attachment, before and after), because the peak is
+  `assemble()`'s payload read (`text.decoded_payload` consumed by `attach.read_prefix`), not the walker's copy. 4.0x
+  meets 5x, and the worst case is bounded by `max_input_bytes` (64 MiB -> ~256 MB peak). The `attach.py` view
+  (`decoded_payload` returns a `memoryview`; `read_prefix` materialises only its short prefix) is **not** done in 1b.1:
+  it joins Turn 1b.5's allow-list (`emailextract/attach.py`), where experiment E4 is re-run on the real projection. The
+  re-encoded case (7.05x) stays recorded, not gated. This answers 1b.0b's Q5 (and settles Q1 as taken).
 
 ## Probes the owner runs (structure only, aggregates pasted back; none given to hearth's model)
 

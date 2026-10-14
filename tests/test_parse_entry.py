@@ -190,6 +190,8 @@ def test_limits_construction_is_the_only_named_error_raised() -> None:
         "invalid_input",
         "input_over_cap",
         "invalid_container_kind",
+        "cfb_directory_loop",
+        "cfb_header_unsupported",
         "cfb_msg_unsupported",
         "not_a_message",
         "invalid_limits",

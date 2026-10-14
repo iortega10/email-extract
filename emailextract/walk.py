@@ -71,8 +71,15 @@ import quopri
 from dataclasses import dataclass, field
 from typing import Final, Mapping
 
-from .container import Container
-from .ids import NOT_BUILT_IN_PHASE0, RawSpan, content_hash, part_id, sha256_hex
+from .container import Container, source_key_of, span_lookup as _span_lookup_of
+from .ids import (
+    NOT_BUILT_IN_PHASE0,
+    RawSpan,
+    content_hash,
+    part_id,
+    sha256_hex,
+    source_part_id,
+)
 from .model import ContainerKind, DecodeChain, EncodingSource, TriState, TriValue
 from . import parse
 
@@ -84,6 +91,7 @@ __all__ = [
     "CAP_REASON_PART_COUNT",
     "CAP_REASON_SIZE",
     "CAP_REASON_TOTAL_SIZE",
+    "CFB_CAP_REASONS",
     "DECODE_CHUNK",
     "PartShape",
     "RawHeaderField",
@@ -158,6 +166,22 @@ CAP_LIMIT_FIELDS: Final[Mapping[str, str]] = {
     CAP_REASON_PART_COUNT: "max_parts",
     CAP_REASON_HEADER_BYTES: "max_header_bytes",
 }
+
+#: The three CFB cap reasons (Turn 1b.1). They join ``REASON_TABLE[Status.SKIPPED]``
+#: but **not** :data:`CAP_REASONS`: they are the CFB reader's own caps, enforced by
+#: ``cfb.check_caps`` (Turn 1b.3), not by the walker, and their ``Limits`` fields live
+#: in a separate ``CfbLimits``/observations channel the container publishes (D1: the
+#: walker's ``Limits`` does **not** grow, so ``limits_fingerprint`` is unmoved). The
+#: walker records the observation (point 6) and never measures a virtual length for one.
+CFB_CAP_REASON_SECTOR_COUNT: Final[str] = "sector_count_cap"
+CFB_CAP_REASON_DIRECTORY_ENTRIES: Final[str] = "directory_entries_cap"
+CFB_CAP_REASON_DIFAT_CHAIN_LENGTH: Final[str] = "difat_chain_length_cap"
+
+CFB_CAP_REASONS: Final[tuple[str, ...]] = (
+    CFB_CAP_REASON_SECTOR_COUNT,
+    CFB_CAP_REASON_DIRECTORY_ENTRIES,
+    CFB_CAP_REASON_DIFAT_CHAIN_LENGTH,
+)
 
 #: The chunk of input bytes the bounded decoders read at a time (item 4). Base64 groups
 #: are decoded as they complete and quoted-printable is cut at a boundary no escape or
@@ -373,10 +397,13 @@ def walk(container: Container, *, limits: parse.Limits | None = None) -> WalkRes
     """
     raw = container.raw_bytes()
     container_id = container.container_hash()
+    table = _span_lookup_of(container)
     parts: list[PartShape] = []
     regions: list[Region] = []
     state = _WalkState(limits)
-    _walk_part(raw, container_id, RawSpan(0, len(raw), "1"), "1", None, parts, regions, state, 1)
+    _walk_part(
+        raw, container_id, RawSpan(0, len(raw), "1"), "1", None, parts, regions, state, 1, table
+    )
     unknowns = [
         UnknownSection(
             section, TriValue(state=TriState.UNKNOWN, reason_id=NOT_BUILT_IN_PHASE0)
@@ -460,13 +487,20 @@ def iter_lines(raw: bytes, start: int, end: int):
     return _iter_lines(raw, start, end)
 
 
-def header_fields_at(raw: bytes, start: int, end: int) -> tuple[list[RawHeaderField], list[str]]:
+def header_fields_at(
+    raw: bytes, start: int, end: int, *, value_codec: str = "latin-1"
+) -> tuple[list[RawHeaderField], list[str]]:
     """The raw-header scanner (spike c01: stdlib offers no byte offsets at all).
 
     Returns the ordered fields -- duplicates kept, identity by ordinal, one
     field per obs-fold chain -- and the gap ids the scan recorded. A non-blank
     line that is neither ``name: value`` nor a fold becomes its own paragraph
     with ``parse_status: unknown`` (D2) and the scan continues fail-open.
+
+    ``value_codec`` (Turn 1b.1, section 9) is the byte->str mapping for the field's
+    name and raw value; the default ``"latin-1"`` is the current expression verbatim,
+    so the ``.eml`` path is byte-identical. A ``.msg`` projection passes ``"utf-8"``
+    (its virtual header bytes are UTF-8) so ``raw_value`` carries the real text.
     """
     fields: list[RawHeaderField] = []
     gaps: list[str] = []
@@ -481,7 +515,7 @@ def header_fields_at(raw: bytes, start: int, end: int) -> tuple[list[RawHeaderFi
                 ordinal=len(fields),
                 name=open_field["name"],
                 raw_value=raw[open_field["value_start"] : open_field["content_end"]].decode(
-                    "latin-1"
+                    value_codec
                 ),
                 parse_status="ok",
                 name_span=RawSpan(open_field["name_start"], open_field["name_len"], ""),
@@ -507,7 +541,7 @@ def header_fields_at(raw: bytes, start: int, end: int) -> tuple[list[RawHeaderFi
         if name_bytes is not None:
             flush()
             open_field = {
-                "name": name_bytes.decode("latin-1"),
+                "name": name_bytes.decode(value_codec),
                 "name_start": line_start,
                 "name_len": len(name_bytes),
                 "value_start": value_start,
@@ -522,7 +556,7 @@ def header_fields_at(raw: bytes, start: int, end: int) -> tuple[list[RawHeaderFi
             RawHeaderField(
                 ordinal=len(fields),
                 name="",
-                raw_value=content.decode("latin-1"),
+                raw_value=content.decode(value_codec),
                 parse_status="unknown",
                 name_span=RawSpan(line_start, 0, ""),
                 value_span=RawSpan(line_start, content_end - line_start, ""),
@@ -544,11 +578,13 @@ def _split_field(content: bytes, line_start: int) -> tuple[bytes | None, int]:
     return name, line_start + colon + 1
 
 
-def _header_value(fields: list[RawHeaderField], raw: bytes, name: str) -> str | None:
+def _header_value(
+    fields: list[RawHeaderField], raw: bytes, name: str, *, value_codec: str = "latin-1"
+) -> str | None:
     wanted = name.lower()
     for item in fields:
         if item.parse_status == "ok" and item.name.lower() == wanted:
-            return raw[item.value_span.offset : item.value_span.end].decode("latin-1")
+            return raw[item.value_span.offset : item.value_span.end].decode(value_codec)
     return None
 
 
@@ -619,6 +655,27 @@ _PART: Final[str] = "part"
 _CAP: Final[str] = "cap"
 
 
+def _part_shape_id(
+    container_id: str,
+    raw: bytes,
+    span: RawSpan,
+    span_lookup: Mapping[tuple[int, int], object] | None,
+) -> str:
+    """One part's content-addressed id (point 2): source-keyed when a span table is present.
+
+    With no span table (every ``.eml`` container) the default branch is the current
+    expression, verbatim: ``part_id(container_id, span, content_hash(span.slice(raw)))``.
+    With a span table the part is addressed by its source row, so the id does not depend on
+    the projection's framing length (C2).
+    """
+    if span_lookup is None:
+        return part_id(container_id, span, content_hash(span.slice(raw)))
+    row = span_lookup.get((span.offset, span.length))
+    if row is None:
+        return part_id(container_id, span, content_hash(span.slice(raw)))
+    return source_part_id(container_id, source_key_of(row), row.source_sha256)  # type: ignore[attr-defined]
+
+
 def _walk_part(
     raw: bytes,
     container_id: str,
@@ -629,6 +686,7 @@ def _walk_part(
     regions: list[Region],
     state: _WalkState,
     depth: int,
+    span_lookup: Mapping[tuple[int, int], object] | None = None,
 ) -> None:
     """Walk one part and its subtree -- the recursion, drained as an explicit stack.
 
@@ -643,7 +701,7 @@ def _walk_part(
     while stack:
         action, item = stack.pop()
         if action == _VISIT:
-            _walk_visit(raw, container_id, item, parts, regions, state, stack)
+            _walk_visit(raw, container_id, item, parts, regions, state, stack, span_lookup)
         elif action == _REGION:
             regions.append(item)  # type: ignore[arg-type]
         elif action == _PART:
@@ -661,6 +719,7 @@ def _walk_visit(
     regions: list[Region],
     state: _WalkState,
     stack: list[tuple[str, object]],
+    span_lookup: Mapping[tuple[int, int], object] | None = None,
 ) -> None:
     """One part's own measurements, and the items its subtree still owes the stack."""
     span, path, parent_path, depth = item  # type: ignore[misc]
@@ -727,7 +786,7 @@ def _walk_visit(
             parts.append(
                 PartShape(
                     path=path,
-                    part_id=part_id(container_id, span, content_hash(span.slice(raw))),
+                    part_id=_part_shape_id(container_id, raw, span, span_lookup),
                     parent_path=parent_path,
                     content_type=content_type,
                     raw_span=span,
@@ -764,7 +823,10 @@ def _walk_visit(
 
     if not is_multipart:
         regions.append(Region("headers", path, headers))
-        payload = raw[body.offset : body.end]
+        # A view over the body, not a copy: the leaf payload is sliced from the raw bytes only
+        # when a decode actually needs a buffer (base64/quoted-printable, or the text ladder),
+        # so a 40 MiB pass-through attachment never materialises a second copy of itself (E4).
+        payload = memoryview(raw)[body.offset : body.end]
         budget, cap_reason = _decode_budget(state)
         used_cte, decoded, cte_fired, cte_gap = _decode_cte(payload, declared_cte, limit=budget)
         if decoded is None:
@@ -783,8 +845,9 @@ def _walk_visit(
             # charset. Running the text ladder over a binary part reported a windows-1252
             # reading and a false body.decode_destroyed_bytes for content that was never text.
             if content_type is None or content_type.lower().startswith("text/"):
+                # The ladder decodes, so it needs a bytes buffer: materialise only here.
                 used_charset, encoding_source, charset_fired, charset_gap = _charset_ladder(
-                    decoded, declared_charset
+                    decoded if isinstance(decoded, bytes) else bytes(decoded), declared_charset
                 )
             else:
                 used_charset, encoding_source, charset_fired, charset_gap = None, None, False, None
@@ -796,7 +859,7 @@ def _walk_visit(
         parts.append(
             PartShape(
                 path=path,
-                part_id=part_id(container_id, span, content_hash(span.slice(raw))),
+                part_id=_part_shape_id(container_id, raw, span, span_lookup),
                 parent_path=parent_path,
                 content_type=content_type,
                 raw_span=span,
@@ -893,8 +956,8 @@ def _segment(
 
 
 def _decode_cte(
-    payload: bytes, declared: str | None, *, limit: int | None = None
-) -> tuple[str | None, bytes | None, bool, str | None]:
+    payload: bytes | memoryview, declared: str | None, *, limit: int | None = None
+) -> tuple[str | None, "bytes | memoryview | None", bool, str | None]:
     """Transfer decoding, recording the chain instead of trusting stdlib.
 
     No declared CTE means the RFC default ``7bit`` (identity). An unknown CTE is
@@ -923,26 +986,27 @@ def _decode_cte(
         return cte, payload, False, None
     if cte == "quoted-printable":
         if limit is None:
-            return "quoted-printable", quopri.decodestring(payload), False, None
-        decoded, stopped = _quoted_printable_bounded(payload, limit)
+            return "quoted-printable", quopri.decodestring(bytes(payload)), False, None
+        decoded, stopped = _quoted_printable_bounded(bytes(payload), limit)
         if stopped:
             return None, None, False, None
         return "quoted-printable", decoded, False, None
     if cte == "base64":
+        buffer = bytes(payload)
         if limit is None:
             try:
-                compact = b"".join(payload.split())
+                compact = b"".join(buffer.split())
                 return "base64", base64.b64decode(compact, validate=True), False, None
             except (binascii.Error, ValueError):
-                return None, payload, True, GAP_BODY_DECODE_FALLBACK_USED
+                return None, buffer, True, GAP_BODY_DECODE_FALLBACK_USED
         try:
-            decoded, stopped = _base64_bounded(payload, limit)
+            decoded, stopped = _base64_bounded(buffer, limit)
         except (binascii.Error, ValueError):
             # The same rejection the whole-string ``validate=True`` decode makes: the bytes
             # are not base64, so the raw payload is the recorded fallback reading.
-            if len(payload) > limit:
+            if len(buffer) > limit:
                 return None, None, False, None
-            return None, payload, True, GAP_BODY_DECODE_FALLBACK_USED
+            return None, buffer, True, GAP_BODY_DECODE_FALLBACK_USED
         if stopped:
             return None, None, False, None
         return "base64", decoded, False, None

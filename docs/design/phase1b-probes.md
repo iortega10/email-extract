@@ -15,8 +15,11 @@ answer changes what a Phase 1b turn can claim (never what it can build).
 - **It prints nothing it was not specified to print** -- no subject, no address, no body text, no header value,
   no filename, no stream content. It prints **counts, sizes, tag sets, type censuses and presence lines** only:
   a value is never rendered, only its *shape*.
-- **The only stream it reads is structural**: the `__properties_version1.0` tables (tag words, sizes, counts --
-  values are not interpreted). It never opens a body or header stream for reading.
+- **The only streams it reads are structural**: the `__properties_version1.0` tables (tag words, sizes, counts --
+  values are not interpreted), plus -- named by Turn 1b.0b's deviation 1 and ratified as owner decision **Q2** --
+  the **one** PT_UNICODE property stream that carries the message class (`__substg1.0_001A001F`), which P1 reads
+  **only to bucket the item by its `IPM.Note*` prefix** and never renders. Neither read opens a body or a header
+  stream for value; no stream content is ever printed.
 - **The output is pasted by the owner**, and is recorded as a note in `docs/design/open-inputs.md` (aggregates
   only), never as a fixture, a sidecar or a commit. Hearth's model never reads the owner's files.
 - **The command form:** `python tools/msg_probe.py --probe <P1..P6> <DIR> [--limit N]`, run with the primary

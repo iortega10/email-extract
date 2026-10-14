@@ -14,7 +14,7 @@ from __future__ import annotations
 import sys
 from typing import Final
 
-OUTPUT_SCHEMA_VERSION: Final[str] = "5"
+OUTPUT_SCHEMA_VERSION: Final[str] = "6"
 """Version of the output record shapes (EmailDocument and everything it carries).
 
 Moves when a record's serialized shape changes in a way that invalidates cached
@@ -48,6 +48,15 @@ cap with a list of ``CapRecord``. The walker's output did not move.
 already produced -- and the run record's ``projection_versions`` map, so the
 documented record shapes moved and a cached sidecar is invalidated. No stage's
 output moved: the walker, the decode chain and every measured fact are unchanged.
+
+6: Turn 1b.1 (the ``.msg`` schema bump) added the container provenance fields: an
+optional ``stream_ref`` (``ContainerStreamRef``) on ``PartRecord`` and
+``HeaderField`` and an optional ``embedded`` (``EmbeddedSummary``) on
+``AttachmentOccurrence``, plus the three CFB cap reasons in
+``REASON_TABLE[Status.SKIPPED]``. On ``.eml`` every new field serializes as
+``null``, so the record shape moves without moving a measured value; the walker's
+output, every ``part_id``, every ``sha256`` and every span are byte-identical
+(the ``.eml`` golden is re-recorded once, in the bump's own commit).
 """
 
 TEXTMODEL_VERSION: Final[str] = "1"

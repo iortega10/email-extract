@@ -44,7 +44,7 @@ from docextract_core import Collection
 
 from . import versions
 from .assemble import assemble, document_key, limits_fingerprint, projection_versions
-from .container import Container
+from .container import Container, PersistedSpanRow, span_lookup
 from .ids import sha256_hex, walk_key
 from .model import EmailDocument
 from .parse import Limits
@@ -54,6 +54,9 @@ __all__ = [
     "ArtifactOutcome",
     "DocumentArtifact",
     "IngestRun",
+    "MsgProvenance",
+    "MsgWalkArtifact",
+    "PersistedSpanRow",
     "RunInputs",
     "WalkArtifact",
     "artifact_key",
@@ -114,6 +117,52 @@ class WalkArtifact:
 
 
 @dataclass(frozen=True)
+class MsgProvenance:
+    """A ``.msg`` document's source provenance, persisted beside its walk (Turn 1b.1, point 7).
+
+    ``spans`` is the **source-only** span table (:class:`~emailextract.container.PersistedSpanRow`
+    -- never ``virtual_offset``/``virtual_len``: a persisted virtual offset would make the
+    stored bytes depend on the projection's framing length, C2). ``sectors`` is the eight-class
+    CFB sector accounting. ``projection`` labels the projection the virtual offsets can be
+    recomputed from (the container's own ``projection`` fact: the framing is deterministic).
+    """
+
+    projection: str
+    spans: list[PersistedSpanRow] = field(default_factory=list)
+    sectors: dict[str, int] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.projection:
+            raise ValueError("msg_provenance.projection must be non-empty")
+
+
+@dataclass(frozen=True)
+class MsgWalkArtifact:
+    """The stored artifact for a ``cfb_msg`` container: the walk plus its source provenance.
+
+    A separate type on purpose: the ``.eml`` :class:`WalkArtifact` must not gain a field (its
+    bytes carry no schema version and are pinned byte-identical by the ``.eml`` golden), so a
+    projected container's extra provenance lands here, not on the unchanged record.
+    """
+
+    key: str
+    container_hash: str
+    email_parser_version: str
+    decode_chain_version: str
+    output_schema_version: str
+    walk: WalkResult
+    msg_provenance: MsgProvenance
+
+    def __post_init__(self) -> None:
+        if not self.key:
+            raise ValueError("msg_walk_artifact.key must be non-empty")
+        if not self.container_hash:
+            raise ValueError("msg_walk_artifact.container_hash must be non-empty")
+        if not isinstance(self.msg_provenance, MsgProvenance):
+            raise ValueError("msg_walk_artifact.msg_provenance must be a MsgProvenance")
+
+
+@dataclass(frozen=True)
 class IngestRun:
     """The run record: run inputs plus every artifact's hit/miss."""
 
@@ -155,15 +204,44 @@ def artifact_key(container: Container) -> str:
     )
 
 
-def walk_artifact(container: Container) -> WalkArtifact:
-    """Measure the container and package the result under its hashed inputs."""
-    return WalkArtifact(
+def walk_artifact(container: Container) -> WalkArtifact | MsgWalkArtifact:
+    """Measure the container and package the result under its hashed inputs.
+
+    For a container that publishes a span table (a ``cfb_msg`` projection, point 7) the
+    artifact is a :class:`MsgWalkArtifact`, which additionally carries the eight-class CFB
+    sector accounting and the **source-only** span table; the ``.eml`` :class:`WalkArtifact`
+    is unchanged, byte for byte (its bytes carry no schema version and the golden pins them).
+    """
+    table = span_lookup(container)
+    if table is None:
+        return WalkArtifact(
+            key=artifact_key(container),
+            container_hash=container.container_hash(),
+            email_parser_version=versions.EMAIL_PARSER_VERSION,
+            decode_chain_version=versions.DECODE_CHAIN_VERSION,
+            output_schema_version=versions.OUTPUT_SCHEMA_VERSION,
+            walk=walk(container),
+        )
+    return MsgWalkArtifact(
         key=artifact_key(container),
         container_hash=container.container_hash(),
         email_parser_version=versions.EMAIL_PARSER_VERSION,
         decode_chain_version=versions.DECODE_CHAIN_VERSION,
         output_schema_version=versions.OUTPUT_SCHEMA_VERSION,
         walk=walk(container),
+        msg_provenance=_msg_provenance(container),
+    )
+
+
+def _msg_provenance(container: Container) -> MsgProvenance:
+    """The source-only provenance a projected container persists (point 7)."""
+    rows = getattr(container, "span_provenance", ()) or ()
+    sectors = dict(getattr(container, "sector_accounting", None) or {})
+    facts = container.container_facts()
+    return MsgProvenance(
+        projection=facts.get("projection", "virtual_rfc822"),
+        spans=[PersistedSpanRow.of(row) for row in rows],
+        sectors=sectors,
     )
 
 

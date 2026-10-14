@@ -137,8 +137,8 @@ def test_the_scanner_disagrees_only_where_the_stdlib_shares_the_misreading(
     real = header_stage.header_fields_at
     seen = {"patched": 0}
 
-    def reordered(raw, start, end):
-        fields, gaps = real(raw, start, end)
+    def reordered(raw, start, end, **kwargs):
+        fields, gaps = real(raw, start, end, **kwargs)
         seen["patched"] += 1
         return list(reversed(fields)), gaps
 

@@ -417,6 +417,11 @@ If the owner prefers not to take the lazy-view scope addition now, the alternati
    deferred? If re-declared, the peak is bounded by `max_input_bytes` (64 MiB -> ~256 MB peak).
 6. **E2's truncated-file class** (deviation 6.3): keep `OUT_OF_RANGE`, or add a `cfb_file_truncated` whole-file name?
 
+**Answers (2026-10-13).** Q1 accepted (the lazy `raw_bytes()` was attempted in Turn 1b.1); Q5: the budget is
+**re-declared to 5x** (build spec O9) after the 1b.1 re-run measured 4.0x; the `attach.py` payload view moves to Turn
+1b.5. Q2, Q3, Q4 and Q6 were taken at their recommended defaults (the P1 class read stands, extended DIFAT is read
+through, the `max_input_bytes` asymmetry is designed, `OUT_OF_RANGE` stays).
+
 ## 8. Experiment verdicts at a glance
 
 | exp | verdict | deciding number | later turn that re-runs it |

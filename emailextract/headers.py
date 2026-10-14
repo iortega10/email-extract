@@ -207,19 +207,25 @@ def _lone_cr(raw: bytes, start: int, end: int) -> bool:
     return False
 
 
-def header_region(raw: bytes, result: WalkResult, *, max_work_units: int) -> HeaderRegion:
+def header_region(
+    raw: bytes, result: WalkResult, *, max_work_units: int, value_codec: str = "latin-1"
+) -> HeaderRegion:
     """Scan the message's **top-level** header region (the part ``result.parts[0]``).
 
     The walker has already accounted the tolerated prelude as its own region and started
     the headers after it; the prelude gaps are re-derived here from the part's raw span so
     the walker's ``part.gaps`` channel stays untouched (decision 14).
+
+    ``value_codec`` (Turn 1b.1, section 9) is passed through to ``header_fields_at``; the
+    default ``"latin-1"`` is the ``.eml`` path, byte for byte. A ``.msg`` projection passes
+    ``"utf-8"`` so the re-encoded header text reaches ``raw_value`` and ``text_decodes``.
     """
     if not result.parts:
         return HeaderRegion()
     part = result.parts[0]
     start = part.headers_span.offset
     end = part.headers_span.end
-    fields, malformed = header_fields_at(raw, start, end)
+    fields, malformed = header_fields_at(raw, start, end, value_codec=value_codec)
 
     gaps: list[str] = []
     gaps.extend(_unique_conflicts(fields))

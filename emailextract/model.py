@@ -40,12 +40,15 @@ __all__ = [
     "ClassificationClaim",
     "ContainerFacts",
     "ContainerKind",
+    "ContainerStreamAxis",
+    "ContainerStreamRef",
     "ContentFingerprint",
     "CryptoKind",
     "DecodeChain",
     "DecorativeHint",
     "DecorativeHintState",
     "EmailDocument",
+    "EmbeddedSummary",
     "EncodingSource",
     "FlagHit",
     "FlagRollup",
@@ -65,6 +68,7 @@ __all__ = [
     "Span",
     "Status",
     "StatusOutcome",
+    "StreamFault",
     "ThreadEdge",
     "ThreadSource",
     "TimeEvent",
@@ -248,6 +252,9 @@ REASON_TABLE: Final[Mapping[Status, tuple[str, ...]]] = {
         "depth_cap",
         "part_count_cap",
         "header_bytes_cap",
+        "sector_count_cap",
+        "directory_entries_cap",
+        "difat_chain_length_cap",
     ),
     Status.UNSUPPORTED: (),
     Status.NOT_INSTALLED: (),
@@ -312,6 +319,112 @@ class TriValue:
             _non_empty(self.reason_id, "tri-state reason_id")
         else:
             raise CodecError(f"tri-state value: unknown state {self.state!r}")
+
+
+# --------------------------------------------------------------------------
+# Turn 1b.1: container provenance (the .msg schema bump)
+# --------------------------------------------------------------------------
+
+
+class ContainerStreamAxis(str, Enum):
+    """The provenance kind of one virtual region (D13, A'')."""
+
+    STREAM = "stream"          # the bytes ARE a CFB stream (pass-through)
+    REENCODED = "reencoded"    # the bytes are a re-encoding of a CFB stream (001F -> UTF-8)
+    SYNTHETIC = "synthetic"    # the bytes are the projection's own framing
+
+
+class StreamFault(str, Enum):
+    """The per-stream chain fault ``cfb.read_stream`` returns (A8), ``None`` never a member."""
+
+    CYCLE = "cycle"
+    OUT_OF_RANGE = "out_of_range"
+    SHORT_CHAIN = "short_chain"
+
+
+def _check_stream_ref(stream_ref: object, parent: str) -> None:
+    """The ``ContainerStreamRef`` invariants (contract section 1X), enforced on the parent.
+
+    ``None`` is always legal (every ``.eml`` record, and any ``.msg`` record with no
+    provenance). A ``SYNTHETIC`` ref carries no offsets and a ``synthetic:``-labelled
+    stream; a ``STREAM``/``REENCODED`` ref carries both offsets as ints ``>= 0`` and a
+    real, non-``synthetic:`` stream name; a ``SYNTHETIC`` ref carries ``fault=None``.
+    """
+    if stream_ref is None:
+        return
+    if not isinstance(stream_ref, ContainerStreamRef):
+        raise CodecError(f"{parent}.stream_ref must be a ContainerStreamRef or None")
+    if stream_ref.axis is ContainerStreamAxis.SYNTHETIC:
+        if stream_ref.byte_offset is not None or stream_ref.byte_len is not None:
+            raise CodecError(
+                f"{parent}.stream_ref: a synthetic ref carries no byte_offset/byte_len "
+                "(no virtual offset in a record)"
+            )
+        if stream_ref.fault is not None:
+            raise CodecError(f"{parent}.stream_ref: a synthetic ref carries fault=None")
+
+
+@dataclass(frozen=True)
+class ContainerStreamRef:
+    """One record's provenance: which CFB stream, which bytes of it, how, and whether the chain broke."""
+
+    stream: str
+    byte_offset: int | None = None
+    byte_len: int | None = None
+    axis: ContainerStreamAxis = ContainerStreamAxis.STREAM
+    fault: StreamFault | None = None
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.axis, ContainerStreamAxis):
+            raise CodecError(f"container_stream_ref.axis must be a ContainerStreamAxis, got {self.axis!r}")
+        _non_empty(self.stream, "container_stream_ref.stream")
+        if self.fault is not None and not isinstance(self.fault, StreamFault):
+            raise CodecError(f"container_stream_ref.fault must be a StreamFault or None, got {self.fault!r}")
+        if self.axis is ContainerStreamAxis.SYNTHETIC:
+            if self.byte_offset is not None or self.byte_len is not None:
+                raise CodecError(
+                    "container_stream_ref: a synthetic ref carries no byte_offset/byte_len "
+                    "(the offsets are source offsets, never virtual)"
+                )
+            if not self.stream.startswith("synthetic:"):
+                raise CodecError(
+                    "container_stream_ref: a synthetic ref's stream is labelled 'synthetic:<role>:<ordinal>'"
+                )
+            if self.fault is not None:
+                raise CodecError("container_stream_ref: a synthetic ref carries fault=None")
+        else:
+            for name, value in (("byte_offset", self.byte_offset), ("byte_len", self.byte_len)):
+                if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise CodecError(
+                        f"container_stream_ref.{name} must be an int >= 0 for a "
+                        f"{self.axis.value} ref, got {value!r}"
+                    )
+            if self.stream.startswith("synthetic:"):
+                raise CodecError(
+                    "container_stream_ref: only a synthetic ref carries a 'synthetic:' stream label"
+                )
+
+
+@dataclass(frozen=True)
+class EmbeddedSummary:
+    """What an embedded-message attachment's own message is, without recursing (Phase 2 reads it)."""
+
+    message_class: str                 # verbatim, e.g. "IPM.Note"
+    has_transport_headers: bool
+    subject: str | None = None         # None = the embedded message has no subject property
+    recipient_count: int = 0
+    attachment_count: int = 0
+
+    def __post_init__(self) -> None:
+        _non_empty(self.message_class, "embedded_summary.message_class")
+        if not isinstance(self.has_transport_headers, bool):
+            raise CodecError("embedded_summary.has_transport_headers must be bool")
+        if self.subject is not None:
+            _non_empty(self.subject, "embedded_summary.subject")
+        for name, value in (("recipient_count", self.recipient_count),
+                            ("attachment_count", self.attachment_count)):
+            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise CodecError(f"embedded_summary.{name} must be an int >= 0")
 
 
 # --------------------------------------------------------------------------
@@ -650,11 +763,13 @@ class HeaderField:
     ordinal: int
     value: TriValue = field(default_factory=TriValue)
     flags: "FlagSection" = field(default_factory=lambda: FlagSection())
+    stream_ref: ContainerStreamRef | None = None
 
     def __post_init__(self) -> None:
         _non_empty(self.name, "header_field.name")
         if isinstance(self.ordinal, bool) or not isinstance(self.ordinal, int) or self.ordinal < 0:
             raise CodecError("header_field.ordinal must be an int >= 0")
+        _check_stream_ref(self.stream_ref, "header_field")
 
 
 @dataclass(frozen=True)
@@ -681,9 +796,11 @@ class PartRecord:
     decorative_hint: DecorativeHint = field(default_factory=DecorativeHint)
     type_verdicts: TypeVerdicts | None = None
     flags: "FlagSection" = field(default_factory=lambda: FlagSection())
+    stream_ref: ContainerStreamRef | None = None
 
     def __post_init__(self) -> None:
         _non_empty(self.part_id, "part_record.part_id")
+        _check_stream_ref(self.stream_ref, "part_record")
 
 
 @dataclass(frozen=True)
@@ -783,11 +900,14 @@ class AttachmentOccurrence:
     decorative_hint: DecorativeHint = field(default_factory=DecorativeHint)
     type_verdicts: TypeVerdicts | None = None
     flags: "FlagSection" = field(default_factory=lambda: FlagSection())
+    embedded: EmbeddedSummary | None = None
 
     def __post_init__(self) -> None:
         _non_empty(self.attachment_id, "attachment_occurrence.attachment_id")
         _non_empty(self.occurrence_path, "attachment_occurrence.occurrence_path")
         _non_empty(self.part_id, "attachment_occurrence.part_id")
+        if self.embedded is not None and not isinstance(self.embedded, EmbeddedSummary):
+            raise CodecError("attachment_occurrence.embedded must be an EmbeddedSummary or None")
         _check_axis_pair(
             self.status, self.status_axis, value_name="status", axis_name="status_axis"
         )

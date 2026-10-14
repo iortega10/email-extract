@@ -154,10 +154,20 @@ Status.SKIPPED: (
 
 Stream size does **not** get a new reason: an oversized stream folds into `size_cap` / `cap_hit_mid_stream`
 (already in the table, C). `EncodingSource` and `ContainerKind` already carry every needed member (C) and do not
-move. The three new reasons must also join `walk.CAP_REASONS` and `walk.CAP_LIMIT_FIELDS` (C) and `Limits`
-gains `max_sector_count`, `max_directory_entries`, `max_difat_chain_length` (with `Limits.untrusted()` values
-declared in Turn 1b.3), so `tests/test_limits.py:271`'s `set(CAP_REASONS) == set(REASON_TABLE[Status.SKIPPED])`
-still holds (C).
+move.
+
+**D1 correction (Turn 1b.1, docs only).** The three new reasons do **not** join `walk.CAP_REASONS`, and
+`Limits` does **not** gain `max_sector_count`/`max_directory_entries`/`max_difat_chain_length` in Turn 1b.1.
+`assemble.limits_fingerprint` hashes **every** field of `Limits` in declaration order and that fingerprint is
+part of `document_key`, so a new field would move the store key of **every** `.eml` document -- beyond "the
+version string only", and outside what the `.eml` golden permits (section 10). Instead the three reasons join
+`walk.CFB_CAP_REASONS` (a separate tuple beside the walker's five) and their `Limits` fields live wherever the
+CFB reader publishes them: **Turn 1b.3** decides that, under one binding constraint recorded here -- an
+unchanged `Limits` value must keep `limits_fingerprint(L)` and `document_key` byte-identical (the golden is the
+proof). A separate `CfbLimits` published by the container is the expected shape. `tests/test_limits.py`'s
+cap-vocabulary assertion becomes
+`set(CAP_REASONS) | set(CFB_CAP_REASONS) == set(REASON_TABLE[Status.SKIPPED])` (and `len(CAP_REASONS) == 5`
+stays true).
 
 ### (Z) `EmbeddedSummary` on `AttachmentOccurrence`
 
@@ -421,12 +431,19 @@ def header_region(raw: bytes, result: WalkResult, *, max_work_units: int, value_
 
   - the **walk artifact's pinned value** (the `WalkResult`) is **byte-identical**: it carries the walker's shapes
     and no `PartRecord`/`HeaderField`, so it holds no schema version in its bytes (C `walk.py:351-361`);
-  - the **document artifact** differs by exactly the `output_schema_version` value (`"5"` -> `"6"`) and one
-    `"stream_ref": null` key per `PartRecord` and `HeaderField` (C `store.py:229-270`);
+  - the **document artifact** differs by exactly the `output_schema_version` value (`"5"` -> `"6"`), one
+    `"stream_ref": null` key per `PartRecord` and `HeaderField`, and (D2 correction, Turn 1b.1) one
+    `"embedded": null` key per `AttachmentOccurrence` -- no fourth class of difference (C `store.py:229-270`);
   - the **store keys/paths that name `OUTPUT_SCHEMA_VERSION`** move by exactly that version string
     (`store.artifact_key`'s `walk_key`, C `store.py:148-155`; `assemble.document_key`, C `assemble.py:130-147`);
   - `ParseResult`, every `CapRecord` value, `container_hash`, every `part_id`, every `sha256` and every span are
     **byte-identical**.
+
+  **D2 (Turn 1b.1).** Part (Z) adds `AttachmentOccurrence.embedded`, and `AttachmentOccurrence` records are
+  inside every `.eml` document that has attachments, so the re-recorded document gains `"embedded": null` per
+  occurrence **in addition to** the `"stream_ref": null` keys and the version value. Those three classes are the
+  whole permitted diff; the falsifier in
+  `tests/test_eml_golden.py::test_the_bump_moved_only_the_version_and_the_null_keys` fails on a stray fourth.
 
   For a `cfb_msg` document the store artifact additionally carries the CFB sector accounting and the **source-only**
   span table (`PersistedSpanRow`, section 7); no `virtual_offset`/`virtual_len` is persisted (C2). Any other diff

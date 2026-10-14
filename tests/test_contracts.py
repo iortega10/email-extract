@@ -69,7 +69,11 @@ from emailextract import (
 from emailextract.model import (
     BoundaryKind,
     CapRecord,
+    ContainerStreamAxis,
+    ContainerStreamRef,
+    EmbeddedSummary,
     QuoteBoundary,
+    StreamFault,
     ViewLevel,
     built_axis,
 )
@@ -278,6 +282,20 @@ RECORDS = {
     ),
     ContainerFacts: ContainerFacts({"line_endings": "crlf"}),
     ContentFingerprint: ContentFingerprint(body_digest="b" * 64, body_digest_view=BodyView.PLAIN),
+    ContainerStreamRef: ContainerStreamRef(
+        stream="__substg1.0_10130102",
+        byte_offset=0,
+        byte_len=4095,
+        axis=ContainerStreamAxis.STREAM,
+        fault=StreamFault.CYCLE,
+    ),
+    EmbeddedSummary: EmbeddedSummary(
+        message_class="IPM.Note",
+        has_transport_headers=True,
+        subject="a nested subject",
+        recipient_count=2,
+        attachment_count=1,
+    ),
     SameMessageCandidate: SameMessageCandidate("a" * 64, "b" * 64, "<a@example>", "c" * 64, BodyView.PLAIN),
     HeaderField: HeaderField(name="From", raw_value="A <a@example>", ordinal=3),
     PartRecord: PartRecord(part_id="1.2.3", parent_part_id="1.2", content_type="text/plain"),
