@@ -9,7 +9,9 @@ import, and no invented facts. Inputs are exercised through ``Path`` and
 
 from __future__ import annotations
 
+import subprocess
 import sys
+from pathlib import Path
 
 from emailextract.container import (
     EmlContainer,
@@ -76,9 +78,27 @@ def test_the_fake_container_is_a_second_container_kind_without_cfb_code() -> Non
     assert fake.container_hash() == sha256_hex(MESSAGE)
     assert fake.container_facts()["adapter"] == "fake"
     assert fake.container_facts()["synthetic"] == "in_memory"
-    # The whole point of the fake: no CFB dependency anywhere in the import path.
-    assert "olefile" not in sys.modules
-    assert "compoundfiles" not in sys.modules
+    # The whole point of the fake: no CFB library anywhere in the import path. An in-process
+    # ``"olefile" not in sys.modules`` check would turn order-dependent the moment any test
+    # imports the tests-only oracle (Turn 1b.2), so the real guard is a fresh interpreter
+    # whose import of ``emailextract`` is diffed against a pre-import snapshot.
+    script = (
+        "import sys\n"
+        "before = set(sys.modules)\n"
+        "import emailextract\n"
+        "loaded = {name.split('.')[0] for name in set(sys.modules) - before}\n"
+        "print('olefile' in loaded, 'compoundfiles' in loaded)\n"
+    )
+    result = subprocess.run(
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parent.parent,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert result.stdout.strip() == "False False", (
+        f"importing emailextract pulled in a CFB library: {result.stdout.strip()}"
+    )
 
 
 def test_the_fake_never_claims_a_real_container_fact() -> None:

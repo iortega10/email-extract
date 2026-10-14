@@ -13,9 +13,13 @@ sides that are allowed to disagree:
 
 The licence *ids* in :data:`AUDITED_LICENCES` are hand-typed from each project's own
 metadata at the time of the audit. A disagreement with a future ``NOTICE`` is the finding;
-it is not something to "fix" by editing this table. The one row ``NOTICE`` carries that is
-**not** a dependency of this release -- ``olefile`` (the future ``.msg`` reader) -- is a
-named, commented exception, and a test below pins that it is not declared.
+it is not something to "fix" by editing this table.
+
+Turn 1b.2 moved ``olefile`` (BSD-3-Clause) from a NOTICE-only row to a **development**
+dependency: it is the tests-and-tools comparator for the Phase 1b ``.msg`` fixtures, so it
+appears under ``[dev]`` in ``pyproject.toml`` and is never a runtime dependency. The test
+that used to pin "not declared at all" now pins "declared under ``[dev]`` only, never under
+runtime ``dependencies``", which is the real guard (O4).
 
 The AGPL reachable through the optional ``form`` extra is recorded here too: ``form-extract``
 is Apache-2.0, but its **own** ``pdf`` extra pulls PyMuPDF (AGPL-3.0). This package's
@@ -45,10 +49,10 @@ AUDITED_LICENCES = {
     "pytest": "MIT",  # MIT
 }
 
-#: ``NOTICE`` entries that are deliberately **not** dependencies of this release. ``olefile``
-#: is the future ``.msg`` reader (Phase 1b): named so a reader can see the plan, never
-#: installed by this package, and `test_olefile_is_not_a_declared_dependency` pins that.
-NOTICE_ONLY = {"olefile": "the future .msg reader (Phase 1b); not a dependency of this release"}
+#: ``NOTICE`` entries that are deliberately **not** dependencies of this release. Empty from
+#: Turn 1b.2 on: ``olefile`` is now a ``[dev]`` dependency (O4), so every NOTICE row is a
+#: declared dependency and the audit is a plain two-way comparison.
+NOTICE_ONLY: dict[str, str] = {}
 
 #: A NOTICE row: two-space indent, the name, then ``(licence-id)``.
 _NOTICE_ROW = re.compile(r"^\s{2}([A-Za-z0-9._-]+)\s+\(([^)]+)\)")
@@ -163,10 +167,18 @@ def test_the_runtime_dependency_is_exactly_docextract_core() -> None:
 
 
 def test_olefile_is_not_a_declared_dependency() -> None:
-    """The one NOTICE-only row is honest: ``olefile`` is named and is not installed."""
-    names = _declared_distributions(_declared(_pyproject()))
-    assert "olefile" not in names, "olefile is a future dependency, not this release's"
-    assert "olefile" in _notice_rows(), "the future .msg reader must stay named in NOTICE"
+    """``olefile`` is declared -- under ``[dev]`` only (O4), never a runtime ``dependencies``.
+
+    The name kept its 1.10b spelling: ``docs/phase1-report.md`` cites it, and that report is
+    not this turn's to edit (the brief's allow-list). Its assertion flipped from "not declared
+    at all" to "declared under ``[dev]`` only", which is the real guard.
+    """
+    groups = _declared(_pyproject())
+    dev = {_audited_name(_REQUIREMENT_NAME.match(spec).group(0)) for spec in groups.get("dev", [])}
+    assert "olefile" in dev, "olefile is the tests-and-tools comparator's dependency"
+    runtime = {_audited_name(_REQUIREMENT_NAME.match(spec).group(0)) for spec in groups["runtime"]}
+    assert "olefile" not in runtime, "olefile must never be a runtime dependency"
+    assert "olefile" in _notice_rows(), "the comparator must stay named in NOTICE"
 
 
 def test_notice_and_the_declared_dependencies_agree_both_ways() -> None:

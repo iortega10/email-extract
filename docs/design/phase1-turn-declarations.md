@@ -1334,3 +1334,35 @@ test: tests/test_provenance_points.py::test_walk_msg_matches_walk_of_the_equival
 test: tests/test_provenance_points.py::test_limits_fingerprint_is_unchanged_by_the_bump
 stop: after the golden re-check (the bump and the eight provenance points green against FakeMsgContainer)
 ```
+
+## Turn 1b.2 -- the CFB writer, the first `.msg` fixtures and the `olefile` oracle (mirrored)
+
+Turn 1b.2's block is mirrored here from `docs/design/phase1b-ledgers.md` (the Phase 1b blocks live
+there until Turn 1b.10 folds both files together). Two `tests/support/` modules were added (the
+hand-typed construction tables and the raw-bytes inspector), and one test beyond the block's nine --
+the determinism check the brief asks for. `tests/test_licence_audit.py`, `tests/test_container.py`
+and `tests/test_fixture_census.py` are edited in place, not added to; the licence-audit test
+`test_olefile_is_not_a_declared_dependency` keeps its name (``docs/phase1-report.md`` cites it) but
+its assertion flips to "declared under ``[dev]`` only".
+
+```declaration turn=1b.2
+module: tools/cfb_writer.py
+module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/cfb_raw.py
+module: tests/support/olefile_oracle.py
+module: tests/test_msg_fixtures.py
+module: tests/test_olefile_oracle.py
+test: tests/test_msg_fixtures.py::test_the_writer_output_is_frozen_by_sha256
+test: tests/test_msg_fixtures.py::test_the_writer_rebuilds_the_same_bytes_under_any_hash_seed
+test: tests/test_msg_fixtures.py::test_no_real_message_enters_the_repository
+test: tests/test_msg_fixtures.py::test_every_fixture_matches_its_construction_table
+test: tests/test_msg_fixtures.py::test_the_v4_file_uses_4096_byte_sectors
+test: tests/test_msg_fixtures.py::test_the_mini_cutoff_trio_is_4095_4096_4097
+test: tests/test_msg_fixtures.py::test_the_outlook_layout_fixture_is_typed_from_b1_b4
+test: tests/test_msg_fixtures.py::test_the_writer_imports_no_reader_and_no_olefile
+test: tests/test_olefile_oracle.py::test_olefile_agrees_on_every_well_formed_fixture
+test: tests/test_olefile_oracle.py::test_the_oracle_scope_excludes_hostile_mutants
+test: tests/test_olefile_oracle.py::test_the_oracle_records_where_it_is_lenient
+stop: after the writer output is frozen and the oracle test is green
+```

@@ -33,7 +33,7 @@ Rules for every fixture (matching Phase 1's):
 | `msg_fat_cycle` | yes | a cyclic FAT chain on one stream (hostile) | `msg.stream_faults`; `TRUNCATED`/`declared_length_mismatch` | 1b.3 |
 | `msg_directory_loop` | yes | a directory link that points into a cycle (hostile) | NamedError `cfb_directory_loop` | 1b.3 |
 | `msg_truncated_stream` | yes | a stream shorter than its declared size (hostile) | `msg.stream_faults`; `TRUNCATED`/`stream_ended_early` | 1b.3 |
-| `msg_outlook_layout_handbuilt` | yes | **one** fixture typed from Outlook's observed layout (B1-B4), not the writer's defaults | all `msg.*` layout facts | 1b.3 |
+| `msg_outlook_layout_handbuilt` | yes | **one** fixture typed from Outlook's observed layout (B1-B4), not the writer's defaults | all `msg.*` layout facts | 1b.2 |
 | `msg_unknown_tags` | yes | property entries whose tags are not modelled (hex only) | gap `msg.property_tag_unknown` | 1b.4 |
 | `msg_named_properties` | yes | `__nameid_version1.0` present; a named property is not resolved | gap `msg.named_property_unresolved` | 1b.4 |
 
@@ -49,6 +49,29 @@ filename via `0x3707:001F`. Code-page properties `0x3FDE` (`internet_codepage`) 
 (`message_codepage`) as **fixed entries in `__properties_version1.0`, not streams** (B4). Sector size 512,
 mini-sector 64, mini-cutoff 4096. **This fixture is documented as hand-built to the observed structure, not
 real-Outlook provenance.**
+
+Its turn is recorded here as **1b.2** after a three-way disagreement the reviewer resolved (D1): the build spec's
+1b.9 row says "Outlook layout", this table said 1b.3, and the binding `declaration turn=1b.2` block names
+`test_the_outlook_layout_fixture_is_typed_from_b1_b4` in 1b.2. The declaration wins, so it is built here.
+
+**Construction tables: the other four Turn 1b.2 fixtures** (hand-typed before any writer output; the writer's
+`tools/cfb_writer.py` lays sectors out header, FAT, directory, mini-FAT, mini stream, FAT streams).
+
+- `msg_headers_only`: `Root Entry` with `__properties_version1.0` (64 B: the **32-byte** message-property
+  header -- recipient/attachment counts `0/0` at `@16`/`@20` -- plus two 16-byte code-page entries) and
+  `__substg1.0_007D001F` (518 B of UTF-16LE transport headers). Both streams are **strictly below** the
+  4096-byte cutoff, so both live in the mini stream. Version 3, 512-byte sectors, 64-byte mini sectors:
+  FAT 1 sector, directory 1, mini-FAT 1, mini stream 2; file length **3072** (six 512-byte sectors).
+- `msg_headers_html`: the same tree plus `__substg1.0_10130102` (160 B, a `0102` PT_BINARY HTML body -- the
+  10-of-11 real shape). Still all-mini; file length **3072**.
+- `msg_v4_sectors`: the `msg_headers_html` tree as a **version 4** file -- 4096-byte sectors, a 4096-byte
+  header sector (the 512-byte header zero-padded), the header's directory-sector count set for v4. File length
+  **20480** (five 4096-byte sectors: header, FAT, directory, mini-FAT and mini stream one sector each).
+- `msg_mini_cutoff_boundary`: three streams, `boundary_4095` (4095 B), `boundary_4096` (4096 B) and
+  `boundary_4097` (4097 B). 4095 is **strictly below** the cutoff so it is a mini stream; 4096 and 4097 are at
+  or above it, so they come from the FAT. Version 3, 512-byte sectors, mini-cutoff 4096: the two FAT streams
+  are laid out in an explicitly requested order (`boundary_4097` first, at sectors 11-19, then `boundary_4096`
+  at 20-27) so the chain lists are pinned; file length **14848** (twenty-nine 512-byte sectors).
 
 **Hostile mutants (`msg_fat_cycle`, `msg_directory_loop`, `msg_truncated_stream`)** are the three of the
 debate's six mutants that are *fixtures* (a committed byte literal); the other three (size-lie 2\*\*40, size

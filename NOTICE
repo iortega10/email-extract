@@ -17,12 +17,14 @@ Runtime dependencies (installed separately, not bundled)
 Optional dependencies (installed separately, not bundled)
   word-extract (Apache License, Version 2.0) -- the `emailextract[word]` extra; DOCX routing.
   form-extract (Apache License, Version 2.0) -- the `emailextract[form]` extra; PDF/XLSX routing.
-  olefile (BSD 3-Clause), https://github.com/decalage2/olefile -- the future .msg reader
-  (Phase 1b). Not a dependency of this release; no GPL dependency is allowed anywhere in
-  this repository, including optional extras and development dependencies.
 
 Development dependencies (installed separately, not bundled)
   pytest (MIT)
+  olefile (BSD 3-Clause), https://github.com/decalage2/olefile -- the tests-and-tools
+  comparator for the Phase 1b `.msg` fixtures; the `emailextract[dev]` extra. It is never
+  imported by the `emailextract` package and is not a runtime dependency. No GPL dependency
+  is allowed anywhere in this repository, including optional extras and development
+  dependencies.
 
 The test fixtures under fixtures/ are synthetic and contain no real customer, third-party or
 employer data. Real email never enters the repository: fixtures/real/ is git-ignored, probes

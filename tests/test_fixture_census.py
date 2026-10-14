@@ -31,6 +31,9 @@ CATALOGUE_PATH = ROOT / "docs" / "design" / "phase1-fixtures.md"
 DESIGN_PATH = ROOT / "docs" / "design" / "email-extraction-design.md"
 FIXTURES = ROOT / "fixtures"
 FIXTURE_DIRS = (FIXTURES / "generated", FIXTURES / "raw", FIXTURES / "time")
+#: Turn 1b.2: the Phase 1b `.msg` catalogue and where its fixtures live.
+PHASE1B_CATALOGUE = ROOT / "docs" / "design" / "phase1b-fixtures.md"
+MSG_FIXTURES = FIXTURES / "msg"
 
 #: The sixteen fixtures Phase 0 committed (see `tests/test_fixtures.py`). They predate the
 #: Phase 1 catalogue and are deliberately not catalogue rows.
@@ -104,6 +107,20 @@ def catalogue_rows(text: str) -> dict[str, str]:
 
 def committed_stems() -> set[str]:
     return {path.stem for directory in FIXTURE_DIRS for path in directory.glob("*.eml")}
+
+
+def _msg_family_d_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family D`` table's rows (``phase1b-fixtures.md``)."""
+    start = text.index("## Family D")
+    end = text.index("\n## ", start + 1)
+    rows: dict[str, str] = {}
+    for line in text[start:end].splitlines():
+        if not line.startswith("| `"):
+            continue
+        cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
+        if len(cells) >= 5:
+            rows[cells[0].strip("`")] = cells[-1]
+    return rows
 
 
 def sidecar_stems() -> set[str]:
@@ -217,3 +234,21 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     # ... and a committed fixture that is not a catalogue row fails by name.
     problems = census_problems(catalogued, pending, committed | {"not_a_catalogue_row"}, sidecars, design_names)
     assert any("not_a_catalogue_row" in problem for problem in problems), problems
+
+    # Turn 1b.2: the Phase 1b Family D `.msg` rows built this turn are committed. Their
+    # sidecars cannot land yet -- the Phase 1 oracle's loader refuses a non-`.eml` fixture
+    # (D2, recorded in phase1b-ledgers.md) -- so this census checks the `.msg` files only,
+    # and the sidecar rows are added in the turn that lifts that limit.
+    msg_rows = _msg_family_d_rows(PHASE1B_CATALOGUE.read_text(encoding="utf-8"))
+    built_this_turn = {name for name, turn in msg_rows.items() if "1b.2" in turn}
+    assert len(built_this_turn) == 5, sorted(built_this_turn)
+    committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
+    assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
+    assert committed_msg <= set(msg_rows), sorted(committed_msg - set(msg_rows))
+    # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
+    missing = sorted(built_this_turn)[0]
+    problems = [f"catalogue row {missing!r} is committed but has no fixture file"] if missing not in (
+        committed_msg - {missing}
+    ) else []
+    assert problems, "the .msg census stopped comparing"
+    assert any(missing in problem for problem in problems), problems

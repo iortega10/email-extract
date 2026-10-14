@@ -247,10 +247,14 @@ baseline `test_turn_declarations.py`).
 ```declaration turn=1b.2
 module: tools/cfb_writer.py
 module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/cfb_raw.py
 module: tests/support/olefile_oracle.py
 module: tests/test_msg_fixtures.py
 module: tests/test_olefile_oracle.py
 test: tests/test_msg_fixtures.py::test_the_writer_output_is_frozen_by_sha256
+test: tests/test_msg_fixtures.py::test_the_writer_rebuilds_the_same_bytes_under_any_hash_seed
+test: tests/test_msg_fixtures.py::test_no_real_message_enters_the_repository
 test: tests/test_msg_fixtures.py::test_every_fixture_matches_its_construction_table
 test: tests/test_msg_fixtures.py::test_the_v4_file_uses_4096_byte_sectors
 test: tests/test_msg_fixtures.py::test_the_mini_cutoff_trio_is_4095_4096_4097
@@ -263,9 +267,11 @@ stop: after the writer output is frozen and the oracle test is green
 ```
 
 Allow-list (`turn=1b.2`): `tools/cfb_writer.py`, `tools/make_msg_fixtures.py`, `fixtures/msg/`,
-`tests/support/olefile_oracle.py`, `tests/test_msg_fixtures.py`, `tests/test_olefile_oracle.py`,
-`tests/ledger/label_ledger.json`, `tests/ledger/corpus.json`, `tests/test_fixture_census.py`,
-`pyproject.toml`, `NOTICE`, `docs/design/phase1b-ledgers.md`.
+`tests/support/olefile_oracle.py`, `tests/support/msg_construction.py`, `tests/support/cfb_raw.py`,
+`tests/test_msg_fixtures.py`, `tests/test_olefile_oracle.py`, `tests/test_licence_audit.py`,
+`tests/test_container.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`tests/ledger/label_ledger.json`, `pyproject.toml`, `NOTICE`,
+`docs/design/phase1b-fixtures.md`, `docs/design/phase1b-ledgers.md`, `docs/design/phase1-turn-declarations.md`.
 
 ```declaration turn=1b.3
 module: emailextract/cfb.py
@@ -607,3 +613,104 @@ whose allow-list gains `emailextract/attach.py` and whose E4 re-run is gated at 
   `limits_fingerprint(L)` and `document_key` must stay byte-identical for every existing `Limits` value (the
   golden proves it), so the three CFB caps' `Limits` fields cannot go on `assemble.parse.Limits`; publish a
   separate `CfbLimits`/observations channel and keep `walk.CFB_CAP_REASONS` as the reason vocabulary.
+
+## Turn 1b.2 -- outcome (the CFB writer, the first `.msg` fixtures and the `olefile` oracle)
+
+Built: `tools/cfb_writer.py` (a stdlib-only MS-CFB writer), `tools/make_msg_fixtures.py` and
+`fixtures/msg/` (five fixtures + `SHA256SUMS`), `tests/support/olefile_oracle.py` (the tests-only
+comparator), `tests/support/msg_construction.py` (the hand-typed construction tables) and
+`tests/support/cfb_raw.py` (a raw-bytes inspector for the tests). No library code: `emailextract/**` is
+untouched. Green both interpreters: **2050 passed, 2 skipped** on 3.14.3 and on the repo's 3.11.15, and
+`make_msg_fixtures.py --check`, `make_fixtures.py --check`, `update_eml_golden.py --check`,
+`update_behavior_ledger.py --check`, `update_label_ledger.py --check` all exit 0.
+
+### The four reviewer decisions
+
+- **D1 (applied).** `msg_outlook_layout_handbuilt` is built **this turn**. Its turn column in
+  `phase1b-fixtures.md` moved `1b.3 -> 1b.2`, and the three-way disagreement is recorded there: the fixtures
+  table said 1b.3, the build spec's 1b.9 row says "Outlook layout", the binding `declaration turn=1b.2` block
+  names `test_the_outlook_layout_fixture_is_typed_from_b1_b4` in 1b.2. The declaration wins.
+- **D2 (this is the stop-and-report finding; changed, with evidence).** The `.msg` sidecars **cannot be
+  committed this turn**. `emailextract/evals/labels.py:43` is `FIXTURE_SUFFIXES = (".eml",)` and
+  `load_sidecar` (`labels.py:150-154`) raises `LabelError` for any sidecar whose fixture does not end in
+  `.eml`; `load_sidecars()` walks all of `fixtures/` by default and several tests call it at import time
+  (`tests/test_gap_falsifiability.py:39`, `tests/test_label_structure.py:61`, `tests/test_phase1_exit_gate.py:197`,
+  `tests/test_phase1_gap_gate.py:85`, `tests/test_phase0_gaps.py:111`). Probed directly before writing anything:
+  a `fixtures/msg/x.expected.json` naming `x.msg` gives
+  `LabelError: the fixture 'x.msg' has an unknown suffix -- expected one of ['.eml']`, and the same file makes
+  `load_sidecars()` raise, so the whole suite would go red at collection. The only way to keep the gates green
+  is the one-line `FIXTURE_SUFFIXES = (".eml", ".msg")` in `emailextract/evals/**` -- forbidden by D2 and the
+  allow-list (that is 1b.10's file set). **So no sidecars and no label-ledger sidecar rows are committed this
+  turn**, and `tests/test_fixture_census.py` checks the `.msg` files only. The smallest edit that would lift it
+  is that one line in `labels.py`; it is not made here. Fact-id side was checked too and is fine: `msg.container_layout`
+  and `msg.sector_accounting` are declared in `l1.FACTS` at phase 1 with no measurer, so a sidecar naming them at
+  `CURRENT_PHASE = 0` reports `not_yet` (the declared-but-not-yet path), never an `OracleError`.
+- **D3 (applied, to the extent D2 allows).** No sidecar is committed, so nothing carries a reader-derived value;
+  the construction tables in `tests/support/msg_construction.py` carry exactly what a hand can type
+  (`msg.container_layout`/`msg.sector_accounting` shapes and the raw directory/chain layout), typed from MS-CFB
+  and B1-B4. Later turns add sidecars (once the loader accepts `.msg`) and extend them additively.
+- **D4 (applied).** `olefile` moved to `pyproject.toml`'s `[dev]` extra (`olefile>=0.47,<1`), its `NOTICE` row
+  moved from "optional/future reader" to "development dependency, never imported by the package", and the
+  licence-audit test's assertion flipped from "not declared at all" to "declared under `[dev]` only, never a
+  runtime dependency".
+
+### The mutation results (three mutations, each must fail the table test *and* the oracle test)
+
+Run against `tools/cfb_writer.py` (patched, then restored; both tests re-run per mutation):
+
+| mutation | construction-table test | oracle test |
+|---|---|---|
+| mini-FAT cutoff written `<=` instead of `<` | FAILED (file length/sector count/directory rows) | FAILED (`fat length`, root/stream mismatch) |
+| a wrong directory-tree colour (every colour inverted) | FAILED ("the child tree's root is not black", black-height) | FAILED (same, via the oracle's tree check) |
+| off-by-one in a FAT chain | FAILED ("sectors [4] are in no class at all", classes) | FAILED (IndexError walking the bad chain) |
+
+The oracle's colour/order check (`_child_tree_problems`) exists for the second row: `olefile` re-walks the
+tree without checking it, so a plain read cannot see a wrong colour and the oracle has to validate the child
+tree itself to be a real second opinion on the *directory shape*.
+
+### Disagreements between writer, table and `olefile`
+
+**None survived.** Every fixture agrees across all three: `olefile` reads every committed fixture with zero
+`parsing_issues`, and `olefile_oracle.compare(...)` is `[]` for all five, on the in-memory build and on the
+bytes on disk. The hand-typed sizes (3072/3072/20480/14848/8704 bytes; six/five/twenty-nine/seventeen sectors
+at 512-byte or 4096-byte sectors) were typed from the construction tables before the writer ran and matched.
+One detail that first looked like a disagreement and was not: a table's stream **paths** must be full posix
+paths (`__nameid_version1.0/__substg1.0_00020102`), because three streams are all named
+`__properties_version1.0` at different depths; the table was corrected to paths while it was still being typed,
+before any writer output was consulted.
+
+### Existing tests edited, and why
+
+- `tests/test_licence_audit.py` -- `NOTICE_ONLY` shrinks to `{}`; `AUDITED_LICENCES["olefile"]` stays
+  `BSD 3-Clause`; the olefile test's assertion flips to "declared under `[dev]` only". Its **name is kept**
+  (`test_olefile_is_not_a_declared_dependency`): a rename failed `tests/test_phase1_scope.py`, which checks that
+  every `tests/...py::name` cited by `docs/phase1-report.md` still resolves, and that report is not in this
+  turn's allow-list.
+- `tests/test_container.py` -- `test_the_fake_container_is_a_second_container_kind_without_cfb_code`: the
+  in-process `"olefile" not in sys.modules` assertion (order-dependent the moment a test imports the oracle) is
+  reworked into a fresh-subprocess check that `import emailextract` loads no `olefile`/`compoundfiles`.
+- `tests/test_fixture_census.py` -- extended to the Phase 1b Family D `.msg` rows built this turn (the five rows
+  whose turn names 1b.2 have committed `.msg` files; no `.msg` exists that is not a Family D row).
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `1b.2`.
+- `docs/design/phase1-turn-declarations.md` -- the 1b.2 block is mirrored here (verbatim with the ledger's copy),
+  the only file outside the brief's allow-list that this turn touches: `test_turn_declarations.py` reads only this
+  file, and the two `tests/support/` modules and the two extra tests beyond the block's nine (the determinism
+  check and the real-message listing check) are declared there.
+
+### What Turn 1b.3 needs from this turn
+
+- **The writer's API.** `tools/cfb_writer.py` exposes `storage(name, *children)` / `stream(name, data)`,
+  `build_cfb(root, *, version=3, mini_cutoff=4096, mini_sector_size=64, sector_order=None) -> bytes`, the
+  sentinels (`FREESECT`/`ENDOFCHAIN`/`FATSECT`/`DIFSECT`/`NOSTREAM`), the object types and the colour
+  constants. `tools/make_msg_fixtures.py` exposes `FIXTURE_NAMES`, `build_fixture(name)`, `build_all()`.
+  A fixture's construction table is `tests/support/msg_construction.CONSTRUCTION[stem]`; the raw-bytes
+  inspector is `tests/support/cfb_raw.py`; the oracle is `tests/support/olefile_oracle.compare(bytes, table)`.
+- **Hostile byte literals.** 1b.3's mutants are **not** writer output: they are hand-written byte literals
+  frozen in `fixtures/msg/SHA256SUMS`, built by taking a well-formed fixture's bytes and patching a hand-typed
+  offset (`tests/support/cfb_raw.patch_u32` models it), exactly as `tests/test_olefile_oracle.py` builds its two
+  mutants. `cfb_raw` gained no mutation entry point beyond `patch_u32`, deliberately.
+- **`msg_difat_extended`.** The writer deliberately emits no extended DIFAT chain (needs > 109 FAT sectors,
+  ~7.1 MB at 512-byte sectors). That fixture must come from 1b.3: either a hand-written byte literal that adds
+  one DIFAT sector to a writer output, or a deliberate extension of the writer, and 1b.3's allow-list owns the
+  choice. `olefile` reads a DIFAT chain (`loadfat`, lines 1596-1637) but the writer's `_render_header` fixes
+  `num_difat_sectors = 0` and `first_difat = ENDOFCHAIN`, so 1b.3 must not assume the writer can reach it.
