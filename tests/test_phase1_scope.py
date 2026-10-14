@@ -36,6 +36,7 @@ EXPECTED_LIBRARY = {
     "addresses.py",
     "assemble.py",
     "attach.py",
+    "cfb.py",
     "container.py",
     "dates.py",
     "headers.py",
@@ -101,6 +102,8 @@ CONCURRENCY_IMPORTS = {"threading", "concurrent", "multiprocessing", "socket", "
 FETCH_IMPORTS = {"urllib.request", "urllib.error", "requests", "httpx"}
 
 #: Substrings that name a piece of later-phase machinery in a function or class name.
+#: ``cfb`` is **not** here: Turn 1b.3 is the turn that adds the package's own CFB reader
+#: (``emailextract/cfb.py``), so a ``cfb``-named class is this phase's, not a later one's.
 FORBIDDEN_NAME_PARTS = (
     "quote_segment",
     "segment_quote",
@@ -109,7 +112,6 @@ FORBIDDEN_NAME_PARTS = (
     "threading",
     "thread_build",
     "build_thread",
-    "cfb",
     "olefile",
     "msg_reader",
     "read_msg",

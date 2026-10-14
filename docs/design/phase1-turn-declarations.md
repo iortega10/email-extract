@@ -1366,3 +1366,48 @@ test: tests/test_olefile_oracle.py::test_the_oracle_scope_excludes_hostile_mutan
 test: tests/test_olefile_oracle.py::test_the_oracle_records_where_it_is_lenient
 stop: after the writer output is frozen and the oracle test is green
 ```
+
+Turn 1b.3 adds the package's own CFB reader (`emailextract/cfb.py`), the caps, sector
+classification, the four new fixtures (`msg_difat_extended`, `msg_fat_cycle`,
+`msg_directory_loop`, `msg_truncated_stream`), the hostile set and the seeded fuzz. The
+block below is the `turn=1b.3` block from `phase1b-ledgers.md`; the three checks the brief
+asks for beyond the declared seventeen (the `olefile` cross-check, the vocabulary/leaf
+parity check and the hash-seed determinism check) are declared here as their own tests, so
+that the "an undeclared test fails" rule keeps holding. `tests/test_olefile_oracle.py` is
+untouched: its loop is driven by `make_msg_fixtures.FIXTURE_NAMES`, which this turn keeps
+to the **well-formed** set (the five from 1b.2 plus `msg_difat_extended`), with the three
+hostile fixtures named separately (`HOSTILE_FIXTURE_NAMES`).
+
+```declaration turn=1b.3
+module: emailextract/cfb.py
+module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/cfb_raw.py
+module: tests/support/olefile_oracle.py
+module: tests/test_cfb.py
+module: tests/test_cfb_hostile.py
+module: tests/test_cfb_fuzz.py
+module: tests/test_sector_accounting.py
+test: tests/test_cfb.py::test_parse_header_reads_v3_and_v4
+test: tests/test_cfb.py::test_walk_difat_and_read_fat
+test: tests/test_cfb.py::test_read_minifat_and_the_cutoff
+test: tests/test_cfb.py::test_walk_directory_and_case_insensitive_lookup
+test: tests/test_cfb.py::test_read_stream_returns_bytes_and_fault
+test: tests/test_cfb.py::test_read_stream_never_raises
+test: tests/test_cfb.py::test_classify_sectors_assigns_every_sector
+test: tests/test_cfb.py::test_check_caps_reports_the_three_cfb_caps
+test: tests/test_cfb.py::test_the_cfb_reader_and_olefile_agree_on_every_well_formed_fixture
+test: tests/test_cfb.py::test_the_cfb_vocabulary_matches_the_walk_and_parse_contract
+test: tests/test_cfb_hostile.py::test_a_fat_cycle_is_one_streams_fault
+test: tests/test_cfb_hostile.py::test_a_directory_loop_is_a_named_error
+test: tests/test_cfb_hostile.py::test_an_unsupported_header_is_a_named_error
+test: tests/test_cfb_hostile.py::test_magic_without_properties_is_not_a_message
+test: tests/test_cfb_hostile.py::test_the_extended_difat_is_read_through_and_flagged
+test: tests/test_cfb_fuzz.py::test_every_mutant_returns_a_closed_failure_or_the_same_document
+test: tests/test_cfb_fuzz.py::test_the_work_per_byte_budget_holds
+test: tests/test_cfb_fuzz.py::test_the_numbers_are_stable_across_hash_seeds
+test: tests/test_sector_accounting.py::test_the_eight_classes_sum_to_the_file_length
+test: tests/test_sector_accounting.py::test_free_and_slack_are_explicit
+test: tests/test_sector_accounting.py::test_a_cyclic_chain_is_visible_as_unaccounted
+stop: after the hostile set and the seeded fuzz, before MAPI
+```

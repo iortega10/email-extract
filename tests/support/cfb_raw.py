@@ -80,14 +80,54 @@ def sector(data: bytes, size: int, index: int) -> bytes:
     return data[(index + 1) * size : (index + 2) * size]
 
 
-def fat(data: bytes, fields: Mapping[str, Any]) -> list[int]:
-    """The FAT: the header DIFAT's FAT sectors, concatenated, cut to the sector count."""
+def difat_sectors(data: bytes, fields: Mapping[str, Any]) -> list[int]:
+    """The **extended** DIFAT sector ids ([MS-CFB] 2.3.1).
+
+    Follows the chain from the header's ``first_difat_sector`` to ``ENDOFCHAIN``/
+    ``FREESECT``; a revisited or out-of-range sector stops the walk. The header's 109
+    inline entries are not part of this walk.
+    """
+    size = fields["sector_size"]
+    slots = size // 4
+    index = fields["first_difat_sector"]
+    seen: set[int] = set()
+    result: list[int] = []
+    while index not in (FREESECT, ENDOFCHAIN):
+        if index in seen or index >= len(data) // size - 1:
+            break
+        seen.add(index)
+        result.append(index)
+        block = struct.unpack("<%dL" % slots, sector(data, size, index))
+        index = block[-1]
+    return result
+
+
+def difat_chain(data: bytes, fields: Mapping[str, Any]) -> list[int]:
+    """The FAT sector ids the **extended** DIFAT chain holds ([MS-CFB] 2.3.1).
+
+    A DIFAT sector holds 127 FAT ids and, in its last slot, the id of the next DIFAT
+    sector; the chain ends at ``ENDOFCHAIN``/``FREESECT``. A revisited or out-of-range
+    sector stops the walk, so a hostile fixture cannot hang the inspector. The header's
+    109 inline entries are not part of this walk.
+    """
     size = fields["sector_size"]
     slots = size // 4
     values: list[int] = []
-    for index in fields["difat"]:
+    for index in difat_sectors(data, fields):
+        block = struct.unpack("<%dL" % slots, sector(data, size, index))
+        values.extend(block[: slots - 1])
+    return values
+
+
+def fat(data: bytes, fields: Mapping[str, Any]) -> list[int]:
+    """The FAT: the header DIFAT's and the extended chain's FAT sectors, concatenated,
+    cut to the sector count."""
+    size = fields["sector_size"]
+    slots = size // 4
+    values: list[int] = []
+    for index in list(fields["difat"]) + difat_chain(data, fields):
         if index in (FREESECT, ENDOFCHAIN):
-            break
+            continue
         values.extend(struct.unpack("<%dL" % slots, sector(data, size, index)))
     return values[: len(data) // size - 1]
 

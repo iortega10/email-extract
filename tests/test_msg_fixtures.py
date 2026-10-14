@@ -42,6 +42,7 @@ WRITER = ROOT / "tools" / "cfb_writer.py"
 GENERATOR = ROOT / "tools" / "make_msg_fixtures.py"
 
 FIXTURE_NAMES = make_msg_fixtures.FIXTURE_NAMES
+ALL_FIXTURE_NAMES = make_msg_fixtures.ALL_FIXTURE_NAMES
 CONSTRUCTION = msg_construction.CONSTRUCTION
 
 # [MS-CFB] 2.6.1 object types, as this test reads them out of the directory.
@@ -60,8 +61,8 @@ def _sum_rows() -> dict[str, str]:
 
 def test_the_writer_output_is_frozen_by_sha256() -> None:
     rows = _sum_rows()
-    assert set(rows) == {f"{name}.msg" for name in FIXTURE_NAMES}, sorted(rows)
-    for name in FIXTURE_NAMES:
+    assert set(rows) == {f"{name}.msg" for name in ALL_FIXTURE_NAMES}, sorted(rows)
+    for name in ALL_FIXTURE_NAMES:
         built = make_msg_fixtures.build_fixture(name)
         on_disk = (MSG / f"{name}.msg").read_bytes()
         assert on_disk == built, f"{name}: the committed file moved from the generator's bytes"
@@ -80,7 +81,7 @@ def test_the_writer_output_is_frozen_by_sha256() -> None:
 def test_the_writer_rebuilds_the_same_bytes_under_any_hash_seed() -> None:
     # Determinism, beyond the frozen file: two fresh interpreters whose dict/str hash
     # order differs must produce byte-identical fixtures (no dict-order dependence).
-    baseline = {name: hashlib.sha256(make_msg_fixtures.build_fixture(name)).hexdigest() for name in FIXTURE_NAMES}
+    baseline = {name: hashlib.sha256(make_msg_fixtures.build_fixture(name)).hexdigest() for name in ALL_FIXTURE_NAMES}
     assert _hash_seed_run("0") == baseline
     assert _hash_seed_run("1234567") == baseline
 
@@ -90,7 +91,7 @@ def _hash_seed_run(seed: str) -> dict[str, str]:
         "import hashlib, sys\n"
         "sys.path.insert(0, sys.argv[1])\n"
         "import make_msg_fixtures as mk\n"
-        "for name in mk.FIXTURE_NAMES:\n"
+        "for name in mk.ALL_FIXTURE_NAMES:\n"
         "    print(name, hashlib.sha256(mk.build_fixture(name)).hexdigest())\n"
     )
     env = {**os.environ, "PYTHONHASHSEED": seed}
@@ -137,7 +138,11 @@ def _table_problems(data: bytes, table) -> list[str]:
     used_difat = table["difat_used"]
     if fields["difat"][: len(used_difat)] != used_difat:
         problems.append(f"difat: file={fields['difat'][: len(used_difat)]} table={used_difat}")
-    if set(fields["difat"][len(used_difat):]) != {cfb_raw.FREESECT}:
+    # A header whose inline DIFAT is not full must pad the rest with FREESECT; when it is
+    # full (``msg_difat_extended``, whose 110th FAT id lives in an extended DIFAT sector)
+    # there is no padding slot to check.
+    padding = fields["difat"][len(used_difat):]
+    if padding and set(padding) != {cfb_raw.FREESECT}:
         problems.append("an unused header DIFAT slot is not FREESECT")
 
     if len(data) != table["file_length"]:
@@ -182,10 +187,12 @@ def _class_problems(data, fields, fat, table) -> list[str]:
             streams |= set(cfb_raw.chain(fat, entry["start"]))
         if entry["type"] == cfb_raw.STGTY_ROOT and entry["size"]:
             streams |= set(cfb_raw.chain(fat, entry["start"]))
-    free = {index for index, value in enumerate(fat) if value == cfb_raw.FREESECT}
+    difat = set(cfb_raw.difat_sectors(data, fields))
+    free = {index for index, value in enumerate(fat) if value == cfb_raw.FREESECT} - difat
 
     problems: list[str] = []
     groups = {
+        "difat": difat,
         "fat": fat_sectors,
         "directory": directory,
         "minifat": minifat,
@@ -204,7 +211,7 @@ def _class_problems(data, fields, fat, table) -> list[str]:
 
     classes = {
         "header": size,
-        "difat": fields["num_difat_sectors"] * size,
+        "difat": len(difat) * size,
         "fat": len(fat_sectors) * size,
         "minifat": len(minifat) * size,
         "directory": len(directory) * size,
@@ -513,4 +520,4 @@ def test_no_real_message_enters_the_repository() -> None:
         path.relative_to(ROOT / "fixtures").as_posix()
         for path in (ROOT / "fixtures").rglob("*.msg")
     )
-    assert committed == sorted(f"msg/{name}.msg" for name in FIXTURE_NAMES), committed
+    assert committed == sorted(f"msg/{name}.msg" for name in ALL_FIXTURE_NAMES), committed

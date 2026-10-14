@@ -1,4 +1,4 @@
-"""Turn 1b.2: the ``olefile`` oracle over the well-formed ``.msg`` fixtures.
+"""Turn 1b.2/1b.3: the ``olefile`` oracle over the well-formed ``.msg`` fixtures.
 
 ``olefile`` is the independent comparator build spec rule 3 asks for -- the writer and
 the package's future reader share an author, so a third party must agree the fixtures
@@ -16,6 +16,11 @@ agreement) between ``olefile``'s reading and one construction table from
 ``tests/support/msg_construction.py``: the version, sector and mini sizes, the
 directory entry count, every stream's path and size, whether each stream chose the
 mini stream or the FAT, the directory's entries by id, and the root's mini stream size.
+
+``cross_check(file_bytes, cfb_file)`` (Turn 1b.3) is the same view with the package's own
+reader in the table's place: it compares ``emailextract.cfb``'s reading of a well-formed
+container against ``olefile``'s, so the two readers must agree on the layout numbers, on
+every stream's path, size and **bytes**, and on the directory's entries.
 """
 
 from __future__ import annotations
@@ -27,6 +32,7 @@ import olefile
 
 __all__ = [
     "compare",
+    "cross_check",
     "directory_rows",
     "mini_flags",
     "open_file",
@@ -238,6 +244,62 @@ def compare(file_bytes: bytes, expectation: Mapping[str, Any]) -> list[str]:
     expected_rows = [tuple(row) for row in expectation["directory"]]
     if seen["directory"] != expected_rows:
         problems.append(f"directory rows: olefile={seen['directory']} table={expected_rows}")
+
+    if seen["issues"]:
+        problems.append(f"olefile recorded parsing issues: {seen['issues']}")
+    return problems
+
+
+def cross_check(file_bytes: bytes, cfb_file: Any) -> list[str]:
+    """Every disagreement between the package's CFB reader and ``olefile`` (Turn 1b.3).
+
+    ``cfb_file`` is an ``emailextract.cfb.CfbFile`` opened from ``file_bytes`` (the caller
+    opens it; the import is local so this module stays free of a module-scope
+    ``emailextract`` dependency). The two readers must agree on the layout numbers, on
+    every stream's path, size and **bytes**, and on the directory's entries -- the same
+    view :func:`compare` takes of a construction table. Scope is well-formed fixtures
+    only: E1's two leniencies make ``olefile`` silent on a hostile one.
+    """
+    from emailextract import cfb
+
+    seen = reading(file_bytes)
+    problems: list[str] = []
+
+    version, sector_size, mini_sector_size, mini_cutoff, _sectors, directory_entries = (
+        cfb_file.layout()
+    )
+    for field, mine, theirs in (
+        ("version", version, seen["version"]),
+        ("sector_size", sector_size, seen["sector_size"]),
+        ("mini_sector_size", mini_sector_size, seen["mini_sector_size"]),
+        ("mini_cutoff", mini_cutoff, seen["mini_cutoff"]),
+        ("directory_entries", directory_entries, seen["directory_entries"]),
+    ):
+        if mine != theirs:
+            problems.append(f"{field}: cfb={mine} olefile={theirs}")
+
+    mine_streams = {
+        stream.path: stream.size for stream in cfb_file.streams if stream.path != "<root>"
+    }
+    if mine_streams != seen["streams"]:
+        problems.append(f"stream paths/sizes: cfb={mine_streams} olefile={seen['streams']}")
+    for path in sorted(set(mine_streams) & set(seen["streams"])):
+        payload, fault = cfb.read_stream(cfb_file, path)
+        if fault != cfb.FAULT_OK:
+            problems.append(f"{path}: cfb reports {fault} on a fixture olefile reads clean")
+        theirs = stream_bytes(file_bytes, path)
+        if payload != theirs:
+            problems.append(
+                f"{path}: bytes differ, cfb={len(payload)} olefile={len(theirs)}"
+            )
+
+    mine_rows = [
+        (entry.name, entry.entry_type, entry.size)
+        for entry in cfb_file.entries
+        if entry.entry_type != cfb.STGTY_EMPTY
+    ]
+    if mine_rows != seen["directory"]:
+        problems.append(f"directory rows: cfb={mine_rows} olefile={seen['directory']}")
 
     if seen["issues"]:
         problems.append(f"olefile recorded parsing issues: {seen['issues']}")

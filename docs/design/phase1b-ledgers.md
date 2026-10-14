@@ -275,6 +275,10 @@ Allow-list (`turn=1b.2`): `tools/cfb_writer.py`, `tools/make_msg_fixtures.py`, `
 
 ```declaration turn=1b.3
 module: emailextract/cfb.py
+module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/cfb_raw.py
+module: tests/support/olefile_oracle.py
 module: tests/test_cfb.py
 module: tests/test_cfb_hostile.py
 module: tests/test_cfb_fuzz.py
@@ -287,6 +291,8 @@ test: tests/test_cfb.py::test_read_stream_returns_bytes_and_fault
 test: tests/test_cfb.py::test_read_stream_never_raises
 test: tests/test_cfb.py::test_classify_sectors_assigns_every_sector
 test: tests/test_cfb.py::test_check_caps_reports_the_three_cfb_caps
+test: tests/test_cfb.py::test_the_cfb_reader_and_olefile_agree_on_every_well_formed_fixture
+test: tests/test_cfb.py::test_the_cfb_vocabulary_matches_the_walk_and_parse_contract
 test: tests/test_cfb_hostile.py::test_a_fat_cycle_is_one_streams_fault
 test: tests/test_cfb_hostile.py::test_a_directory_loop_is_a_named_error
 test: tests/test_cfb_hostile.py::test_an_unsupported_header_is_a_named_error
@@ -294,15 +300,20 @@ test: tests/test_cfb_hostile.py::test_magic_without_properties_is_not_a_message
 test: tests/test_cfb_hostile.py::test_the_extended_difat_is_read_through_and_flagged
 test: tests/test_cfb_fuzz.py::test_every_mutant_returns_a_closed_failure_or_the_same_document
 test: tests/test_cfb_fuzz.py::test_the_work_per_byte_budget_holds
+test: tests/test_cfb_fuzz.py::test_the_numbers_are_stable_across_hash_seeds
 test: tests/test_sector_accounting.py::test_the_eight_classes_sum_to_the_file_length
 test: tests/test_sector_accounting.py::test_free_and_slack_are_explicit
 test: tests/test_sector_accounting.py::test_a_cyclic_chain_is_visible_as_unaccounted
 stop: after the hostile set and the seeded fuzz, before MAPI
 ```
 
-Allow-list (`turn=1b.3`): `emailextract/cfb.py`, `emailextract/versions.py`, `fixtures/msg/`,
-`tests/test_cfb.py`, `tests/test_cfb_hostile.py`, `tests/test_cfb_fuzz.py`, `tests/test_sector_accounting.py`,
-`tests/support/olefile_oracle.py`, `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md`.
+Allow-list (`turn=1b.3`): the block's list -- `emailextract/cfb.py`, `emailextract/versions.py`,
+`fixtures/msg/`, `tests/test_cfb.py`, `tests/test_cfb_hostile.py`, `tests/test_cfb_fuzz.py`,
+`tests/test_sector_accounting.py`, `tests/support/olefile_oracle.py`, `tests/ledger/label_ledger.json`,
+`docs/design/phase1b-ledgers.md` -- **plus** the brief's named additions, written here in the same turn:
+`tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`, `tests/support/cfb_raw.py`,
+`tests/test_msg_fixtures.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`.
 
 ```declaration turn=1b.4
 module: emailextract/mapi.py
@@ -714,3 +725,168 @@ before any writer output was consulted.
   one DIFAT sector to a writer output, or a deliberate extension of the writer, and 1b.3's allow-list owns the
   choice. `olefile` reads a DIFAT chain (`loadfat`, lines 1596-1637) but the writer's `_render_header` fixes
   `num_difat_sectors = 0` and `first_difat = ENDOFCHAIN`, so 1b.3 must not assume the writer can reach it.
+
+## Turn 1b.3 -- outcome (`cfb.py`, the caps, sector classification, the hostile set and the seeded fuzz)
+
+Built: `emailextract/cfb.py` (the package's own CFB reader -- stdlib only, a leaf), the four committed fixtures
+(`msg_difat_extended`, `msg_fat_cycle`, `msg_directory_loop`, `msg_truncated_stream`, with their four new
+`fixtures/msg/SHA256SUMS` lines), the hostile expectations (`tests/support/msg_construction.HOSTILE_EXPECTATIONS`),
+the sixth construction table (`MSG_DIFAT_EXTENDED`), the extended-DIFAT helper
+(`tests/support/cfb_raw.difat_sectors`), the `cfb`-versus-`olefile` cross-check
+(`tests/support/olefile_oracle.cross_check`) and the four declared test files (`tests/test_cfb.py`,
+`tests/test_cfb_hostile.py`, `tests/test_cfb_fuzz.py`, `tests/test_sector_accounting.py`; 21 test functions --
+the 18 the block names plus the three checks the brief asks for beyond it, declared in the same block).
+Green both interpreters: **2071 passed, 2 skipped** on 3.14.3 and on the repo's 3.11.15, and
+`make_msg_fixtures.py --check`, `make_fixtures.py --check`, `update_eml_golden.py --check`,
+`update_behavior_ledger.py --check`, `update_label_ledger.py --check` all exit 0 on both.
+
+### The four reviewer decisions
+
+- **D1 (applied, unchanged).** `Limits` gained no field: `update_eml_golden.py --check` exits 0, so the `.eml`
+  golden (and `limits_fingerprint`) is byte-identical. The caps live in `cfb.py` as the frozen `CfbLimits`
+  (`max_sector_count = 1_048_576`, `max_directory_entries = 65_536`, `max_difat_chain_length = 256`, arithmetic
+  in the module docstring) with `DEFAULT_CFB_LIMITS`. `check_caps` reports a hit only when `observed > cap`
+  (the boundary itself is legal); a hit carries the caller's value and the real observed count as a
+  `CapObservation` (a `CapRecord` is 1b.5's). The three ids are exactly `walk.CFB_CAP_REASONS`, and both sides of
+  each boundary are pinned by `tests/test_cfb.py::test_check_caps_reports_the_three_cfb_caps`; a real hit is a
+  `CfbRefusal` at that cap id. `test_the_cfb_vocabulary_matches_the_walk_and_parse_contract` pins the ids against
+  the walker.
+- **D2 (applied, unchanged).** No `.msg` sidecar is committed and `emailextract/evals/**` is untouched
+  (`labels.py` still accepts only `.eml`). The four hostile fixtures carry no `*.expected.json`; their behaviour
+  is the hand-typed `HOSTILE_EXPECTATIONS`, typed from [MS-CFB] and the E2 table before `cfb.py` ran.
+  `tests/test_fixture_census.py` needed **no** edit: its Family D check drives off the `phase1b-fixtures.md`
+  rows (which already name all four fixtures at turn 1b.3) and the committed `fixtures/msg/*.msg` files, not off
+  a hard-coded count.
+- **D3 (applied; the smallest legal construction -- under 100 KB, as required).** `msg_difat_extended` is
+  **59392 bytes / 116 sectors**, not ~7.1 MB. It is not a writer default: `tools/make_msg_fixtures.py`'s
+  `_fixture_difat_extended` reassembles `_fixture_headers_html`'s bytes so the header declares **110 FAT
+  sectors** of which only the first is real (the other 109 are `FREESECT` padding the file does not hold), the
+  directory / miniFAT / mini stream shift to 110 / 111 / 112, and the **110th** FAT id lives in **one** extended
+  DIFAT sector at 114. `olefile` reads it with zero `parsing_issues` (`fat_length = 115`); `cfb.py` reports
+  `extended_difat=True`, `difat_sectors=(114,)`, `fat_sector_ids = range(110)`, `unaccounted = 0`.
+- **D4 (applied, unchanged).** `open_cfb` returns, never raises; the whole-file result is `CfbFile | CfbRefusal`
+  with a reason in `CFB_REFUSAL_REASONS` (the three names plus the three cap ids); a per-stream result is
+  `read_stream(...) -> (bytes, fault)` with `fault in FAULT_KINDS`. The two named reasons are already members of
+  `parse.NAMED_ERROR_REASONS`; `cfb.py` is a leaf (stdlib imports only, no `olefile`/`walk`/`model`/`parse`), and
+  a fresh interpreter that loads the module pulls in nothing else.
+
+### The declared work bound and the measured maximum
+
+The bound is stated in the module docstring **before** the fuzz: `WORK_PER_SECTOR = 300`, `WORK_BASE = 4096`, so
+`open_cfb` plus a full read of every stream is at most `300 * sector_count + 4096` steps. Over every fixture and
+all **900** fuzz mutants the measured maximum is **317 steps** (`msg_outlook_layout_handbuilt`, 17 sectors,
+budget 9196 -- 3.4% of it); the worst fixture-or-mutant ratio is the same **0.034**, so the bound holds with
+~29x headroom. It is deliberately loose: the per-call chain bound derived in the docstring is E2's
+`4 * sector_count + 16`, and the cap/table terms are upper bounds, not observed costs.
+
+### The 14 E2 regression inputs (re-run beside the E2 table, `msg-architecture.md` 6.E2)
+
+Every input's outcome class equals the E2 result; `cfb.py` spells the per-stream faults in lower case
+(`cycle` for E2's `CYCLE`). `mutant_truncated_1200` is the one that first differed -- see the next section.
+
+| E2 input | E2 outcome | `cfb.py` outcome |
+|---|---|---|
+| `mutant_bad_header_shift` | `cfb_header_unsupported` | `cfb_header_unsupported` |
+| `mutant_bad_header_version` | `cfb_header_unsupported` | `cfb_header_unsupported` |
+| `mutant_directory_loop` | `cfb_directory_loop` | `cfb_directory_loop` |
+| `mutant_directory_self_reference` | `cfb_directory_loop` | `cfb_directory_loop` |
+| `mutant_fat_cycle` | `CYCLE` | opens, `big` stream `cycle` |
+| `mutant_size_2_40` | `SHORT_CHAIN` | opens, `short_chain` |
+| `mutant_size_ffffffff` | `SHORT_CHAIN` | opens, `short_chain` |
+| `mutant_start_out_of_range` | `OUT_OF_RANGE` | opens, `out_of_range` |
+| `mutant_truncated_1200` | `OUT_OF_RANGE` | opens, `out_of_range` (+ downstream `short_chain`) |
+| `trio_4095` / `trio_4096` / `trio_4097` | clean / clean / clean | clean / clean / clean |
+| `v4_sector_4096` | clean | clean |
+| `wellformed_base` | clean | clean |
+
+### The three mutations (run against `cfb.py`, then restored; each must fail a named test)
+
+| mutation | failing test(s) |
+|---|---|
+| the visited-set check removed in `chain_sectors` | `tests/test_cfb_hostile.py::test_a_fat_cycle_is_one_streams_fault` |
+| a cap check `>=` instead of `>` | `tests/test_cfb.py::test_check_caps_reports_the_three_cfb_caps` |
+| `classify_sectors` counts the mini stream's sectors as `free` | `tests/test_sector_accounting.py::test_the_eight_classes_sum_to_the_file_length`, `::test_free_and_slack_are_explicit`, `::test_a_cyclic_chain_is_visible_as_unaccounted` |
+
+**A finding, reported not papered over.** The visited-set mutation was *invisible* at first: with the check
+removed, a cyclic chain still returns `CYCLE`, caught by the E2 step bound (`4 * sector_count + 16`) rather than
+by the visited set, so the outcome class was identical and no test failed. The visited set is what stops the
+chain at the *revisit* instead of at the bound; `test_a_fat_cycle_is_one_streams_fault` now asserts that
+(`big_stream.sectors == (4,)`, `available == 512`), which is the invariant that distinguishes the two guards.
+With that assertion the mutation fails the named test as the brief requires; the two guards are now both
+load-bearing and both tested.
+
+### Disagreements between `cfb.py`, the typed tables and `olefile`
+
+- **`olefile` cross-check (`cross_check`), 6 well-formed fixtures: none survived.** The two readers agree on the
+  layout numbers, every stream's path, size and **bytes**, and the directory's entries, on the in-memory build
+  and the bytes on disk. One real, benign difference was found and is handled, not hidden: `olefile` skips EMPTY
+  directory slots (its `direntries` holds `None` for them) while `cfb.py` returns them, so `cross_check` compares
+  only the non-empty entries. `msg_mini_cutoff_boundary` is a well-formed CFB that is **not a message** -- it has
+  three plain streams and no `__properties_version1.0` -- so it is cross-checked with `require_properties=False`;
+  `open_cfb`'s default still refuses it `not_a_message`.
+- **E2's `mutant_truncated_1200`: `cfb_directory_loop` -> `out_of_range` (fixed).** The first run of the 14 gave
+  `cfb_directory_loop` where E2 says `OUT_OF_RANGE`. Cause: `_entry_paths` set the directory-loop flag for a link
+  pointing *outside* the directory (`node >= total`), not only for a revisit; the truncated file's last
+  right-link points one past the three loaded entries, which is a lie, not a loop. Fixed: a stray link is now the
+  observation `directory_link_out_of_range` (recorded on the root entry) instead of the whole-file loop, so the
+  file opens and the per-stream class is E2's `out_of_range` -- which is also what the brief's `walk_directory`
+  row names (a *revisit*, a self-reference or a duplicate root is `cfb_directory_loop`; a stray link is not). The
+  other 13 inputs matched on the first run.
+- **Tables: none survived.** The DIFAT-extended table (`MSG_DIFAT_EXTENDED`) and the hostile expectations are
+  what `cfb.py` is compared to; nothing was read back from `cfb.py` and pasted in.
+
+### `classify_sectors` closing the sum
+
+Never failed to close: `sum(eight classes) + unaccounted == len(data)` on every fixture, every seed, every cut
+length of `msg_headers_only` from 0 to its size, all 900 mutants, and the two `free`/`slack` probes; `unaccounted`
+is **0** on every well-formed fixture and non-zero, never absorbed, on a cyclic chain (3584 bytes on
+`msg_fat_cycle`) and on a directory loop (a refusal). `slack` needs a partial tail window no chain reaches -- no
+*cut* of a committed fixture can produce one (the last body window is always a used sector), so the check builds
+it by extending `msg_headers_only` with 100 bytes; the `free` check clears two FAT slots so a whole unreached
+sector is `free`, not `unaccounted`.
+
+### `msg_difat_extended` -- size and construction
+
+**59392 bytes, 116 sectors (115 body + the header's own 4096-byte window is a v4 thing -- here 512).** Built as
+described in D3: `_fixture_headers_html`'s bytes moved past a 109-sector padding run, with the extended DIFAT
+sector (114) holding the 110th FAT id and `ENDOFCHAIN`, the header's 109 inline DIFAT slots all used (0..108),
+and the header's FAT count, directory/miniFAT starts and DIFAT start/count patched to match. Every hand-typed
+offset is asserted against the bytes before the patch. `fixtures/msg/SHA256SUMS` freezes it.
+
+### Existing tests edited, and why
+
+- `tests/test_msg_fixtures.py` -- the SHA256SUMS, real-message-listing and hash-seed determinism checks now
+  enumerate `ALL_FIXTURE_NAMES` (all nine committed fixtures, hostile included); the DIFAT-padding check no
+  longer demands a `FREESECT` tail when the inline DIFAT is **full** (the extended-DIFAT fixture); and
+  `_class_problems` gained a `difat` group and subtracts the DIFAT sectors from `free`, so the DIFAT sector is
+  not double-counted. The construction-table loop still runs over `CONSTRUCTION` (the six well-formed fixtures).
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `1b.3`.
+- `tests/test_phase1_scope.py` -- **not in the brief's allow-list, but it cannot stay green otherwise**: the
+  module census gains `cfb.py` in `EXPECTED_LIBRARY`, and `FORBIDDEN_NAME_PARTS` loses `cfb` (Turn 1b.3 is the
+  turn that adds the CFB reader, so a `cfb`-named class is this phase's, not a later one's). Every other
+  forbidden part (`olefile`, `msg_reader`, `read_msg`, the routing/threading names) still holds.
+- `tests/ledger/label_ledger.json` -- the three changed `tests/support/*.py` hashes hand-edited (the ledger is
+  additions-only and refuses a changed recorded file).
+- `docs/design/phase1-turn-declarations.md` -- the `turn=1b.3` block mirrored (identical to the ledger's copy),
+  with the three extra tests declared so the "an undeclared test fails" rule holds.
+- `tests/test_fixture_census.py` -- **not edited** (green unchanged).
+
+### What Turn 1b.4 and 1b.5 need from this turn
+
+- **`cfb.py`'s public API.** `open_cfb(data: bytes, *, limits=DEFAULT_CFB_LIMITS, require_properties=True,
+  work=None) -> CfbFile | CfbRefusal`; the frozen dataclasses `CfbLimits`, `CfbRefusal(reason, detail,
+  observation)` and `CfbFile` (with `.layout()`, `.accounting_map()`, `.faults`, `.unaccounted`, `.extended_difat`,
+  `.difat_sectors`, `.difat_fault`, `.root`, `.streams`); the named tuples `CfbHeader`, `CfbEntry`, `ChainWalk`,
+  `DifatWalk`, `DirectoryWalk`, `StreamResult`, `CapObservation`; the functions `parse_header`, `walk_difat`,
+  `read_fat`, `read_minifat`, `walk_directory`, `lookup_entry`, `chain_sectors`, `read_stream`, `classify_sectors`,
+  `check_caps`. `read_stream(cfb, path_or_entry)` takes a posix path (`"<root>"` for the root's mini stream) or a
+  `CfbEntry`.
+- **`CfbRefusal` -> `NamedError`.** `refused.reason` is already a `parse.NAMED_ERROR_REASONS` member for the two
+  whole-file names (`cfb_header_unsupported`, `cfb_directory_loop`) and `not_a_message`; the three cap ids are
+  `walk.CFB_CAP_REASONS`, so 1b.5 builds the `CapRecord`s from `refused.observation` (`cap_id`, `value`,
+  `observed`).
+- **A stream fault -> `Status.TRUNCATED`.** `cfb.FAULT_REASON_IDS[fault]` is the reason id
+  (`cycle -> declared_length_mismatch`, `out_of_range`/`short_chain -> stream_ended_early`), `cfb.FAULT_STATUS`
+  is `"TRUNCATED"`, and `CfbFile.faults` is already the `msg.stream_faults` shape `(stream, fault, reason)`.
+- **`msg.cfb_difat_extended`** is exposed as `CfbFile.extended_difat` (the read-through observation), with
+  `difat_sectors` (the extended-chain sector ids) and `difat_fault` (only a broken chain faults, O1).

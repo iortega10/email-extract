@@ -164,6 +164,12 @@ these.
 - `seed_size_lie_ffffffff`: a declared size of `0xFFFFFFFF`.
 - `seed_root_self_reference`: the root's child pointing to itself.
 
+**Turn 1b.3 builds `seed_size_lie_2pow40`, `seed_size_lie_ffffffff` and `seed_root_self_reference` inside
+`tests/test_cfb.py::_seeds`** (from a fixture, by patching one field at a `cfb_raw.header` offset) rather than
+committing them: the reader's fault contract is what they exercise, and a built seed cannot drift from its
+base. They are the same named seeds this catalogue lists; the committed `fixtures/msg/seeds/` files, and the
+other four seeds, are the later turns' (1b.7).
+
 ## Census: the fixture set is a superset of the design's Phase 1b list
 
 The design's Phase 1b paragraph (`email-extraction-design.md`, "Phasing") names ten fixtures:

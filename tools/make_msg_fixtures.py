@@ -1,4 +1,4 @@
-"""Turn 1b.2: the first ``.msg`` fixtures, built from hand-typed descriptions.
+"""Turn 1b.2/1b.3: the first ``.msg`` fixtures, built from hand-typed descriptions.
 
 Each fixture is described here as a storage tree of named streams with exact byte
 content, handed to ``tools/cfb_writer.py`` (the deterministic minimal CFB writer).
@@ -7,6 +7,12 @@ The writer is deliberately *dumb about MAPI*: it never knows a property tag, a
 top-level property header, the ``(propType << 16) | propId`` property entries, a
 ``__nameid_version1.0`` storage's three binary streams -- is typed here as ordinary
 bytes.
+
+Turn 1b.3 adds the hostile fixtures at the bottom: the same writer's output with one
+32-bit word patched, because the writer cannot produce a malformed file honestly. The
+word's offset is derived here from the sector layout the writer fixes (FAT, directory,
+miniFAT, mini stream, then the FAT streams), and every hand-typed offset is asserted
+against the bytes at build time rather than trusted.
 
 Two rules, matching ``tools/make_fixtures.py``:
 
@@ -17,11 +23,12 @@ Two rules, matching ``tools/make_fixtures.py``:
   `.msg` files this writes are tiny and hand-built.
 
 The sidecars (``*.expected.json``) are typed by hand and independently; no code in
-this file writes, reads or knows about a sidecar.
+this file writes, reads or knows about a sidecar. The hostile fixtures deliberately
+have none: their expectations are typed in ``tests/support/msg_construction.py``.
 
 Usage::
 
-    python tools/make_msg_fixtures.py           # write the five fixtures + SHA256SUMS
+    python tools/make_msg_fixtures.py           # write the fixtures + SHA256SUMS
     python tools/make_msg_fixtures.py --check   # exit 1 unless the bytes already match
 """
 
@@ -35,9 +42,24 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from cfb_writer import Storage, build_cfb, storage, stream  # noqa: E402
+from cfb_writer import (  # noqa: E402
+    ENDOFCHAIN,
+    FATSECT,
+    FREESECT,
+    NOSTREAM,
+    Storage,
+    build_cfb,
+    storage,
+    stream,
+)
 
-__all__ = ["FIXTURE_NAMES", "build_all", "build_fixture"]
+__all__ = [
+    "ALL_FIXTURE_NAMES",
+    "FIXTURE_NAMES",
+    "HOSTILE_FIXTURE_NAMES",
+    "build_all",
+    "build_fixture",
+]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MSG = REPO_ROOT / "fixtures" / "msg"
@@ -217,15 +239,222 @@ def _fixture_outlook_layout_handbuilt() -> bytes:
     )
 
 
+# ------------------------------------------------------- the byte-patched fixtures
+
+#: Every fixture in this file is version 3: 512-byte sectors, so sector *n* occupies
+#: bytes ``(n + 1) * 512`` onwards (the header owns window 0). The one exception is
+#: ``msg_v4_sectors``, which no offset below applies to.
+SECTOR_BYTES = 512
+#: [MS-CFB] 2.2: the 109 inline DIFAT entries begin right after the 76-byte header.
+INLINE_DIFAT_OFFSET = 76
+INLINE_DIFAT_SLOTS = 109
+#: [MS-CFB] 2.3.1: a DIFAT sector holds 127 FAT ids and, in slot 127, the next DIFAT.
+DIFAT_IDS_PER_SECTOR = SECTOR_BYTES // 4 - 1
+#: [MS-CFB] 2.2 header field offsets, as the reader's ``HEADER`` struct orders them.
+HEADER_NUM_FAT_SECTORS = 44
+HEADER_FIRST_DIR_SECTOR = 48
+HEADER_FIRST_MINIFAT_SECTOR = 60
+HEADER_FIRST_DIFAT_SECTOR = 68
+HEADER_NUM_DIFAT_SECTORS = 72
+#: [MS-CFB] 2.6.1 field offsets inside one 128-byte directory entry.
+DIR_ENTRY_BYTES = 128
+DIR_ENTRY_LEFT = 68
+DIR_ENTRY_START = 116
+DIR_ENTRY_SIZE_LOW = 120
+
+#: ``big_stream`` is exactly the 4096-byte cutoff, so the writer puts it in the FAT:
+#: eight sectors. It is the base's only FAT-addressed stream, so the base lays out in
+#: 12 sectors -- 0 FAT, 1 directory, 2 miniFAT, 3 mini stream (64 + 160 = 224 bytes),
+#: 4..11 ``big_stream`` -- and is 6144 bytes.
+HOSTILE_BIG_BYTES = 4096
+HOSTILE_BIG_START = 4
+HOSTILE_BASE_SECTORS = 12
+#: Directory ids, in the declaration order the base's storage gives them.
+HOSTILE_PROPERTIES_ENTRY = 1
+HOSTILE_BIG_ENTRY = 3
+
+#: The three words the hostile fixtures patch, each derived from the layout above.
+#: The FAT is sector 0, so slot 4 of it is at window 1 + four 4-byte slots; the
+#: directory is sector 1, so entry *n*'s field ``f`` is at window 2 + 128n + f.
+HOSTILE_FAT_WORD = SECTOR_BYTES + HOSTILE_BIG_START * 4
+HOSTILE_LOOP_WORD = (
+    2 * SECTOR_BYTES + HOSTILE_PROPERTIES_ENTRY * DIR_ENTRY_BYTES + DIR_ENTRY_LEFT
+)
+HOSTILE_SIZE_WORD = 2 * SECTOR_BYTES + HOSTILE_BIG_ENTRY * DIR_ENTRY_BYTES + DIR_ENTRY_SIZE_LOW
+#: ``msg_truncated_stream``'s declared size: two sectors more than the chain holds.
+HOSTILE_SIZE_LIE = 2 * HOSTILE_BIG_BYTES
+
+
+def _word(data: bytes, offset: int) -> int:
+    """``data``'s little-endian 32-bit word at ``offset`` (for the asserts below)."""
+    return struct.unpack_from("<L", data, offset)[0]
+
+
+def _patch_u32(data: bytes, offset: int, value: int) -> bytes:
+    """A copy of ``data`` with the little-endian 32-bit word at ``offset`` replaced."""
+    patched = bytearray(data)
+    struct.pack_into("<L", patched, offset, value)
+    return bytes(patched)
+
+
+def _window(data: bytes, index: int) -> bytes:
+    """The bytes of sector ``index`` (sector *n* starts at byte ``(n + 1) * 512``)."""
+    start = (index + 1) * SECTOR_BYTES
+    return data[start : start + SECTOR_BYTES]
+
+
+def _fixture_hostile_base() -> bytes:
+    """The base every hostile fixture patches: a well-formed three-stream message."""
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", _message_property_stream(0, 0)),
+            stream("__substg1.0_10130102", _html_body()),
+            stream("big_stream", _filler(HOSTILE_BIG_BYTES, seed=11)),
+        )
+    )
+
+
+def _checked_hostile_base() -> bytes:
+    """The base, with every offset the three patches use asserted before patching."""
+    base = _fixture_hostile_base()
+    assert len(base) == (HOSTILE_BASE_SECTORS + 1) * SECTOR_BYTES, len(base)
+    assert _word(base, HOSTILE_FAT_WORD) == HOSTILE_BIG_START + 1, "not big_stream's slot"
+    assert _word(base, HOSTILE_SIZE_WORD) == HOSTILE_BIG_BYTES, "not big_stream's size"
+    # The base's three siblings sort by (name length, name.upper()): the entry 1, 2, 3
+    # insertion order gives a tree whose root is entry 2, over leaves 3 and 1. So
+    # entry 1 -- the one whose link the loop patch overwrites -- is a leaf.
+    assert _word(base, HOSTILE_LOOP_WORD) == NOSTREAM, "entry 1 is not a leaf"
+    return base
+
+
+def _fixture_fat_cycle() -> bytes:
+    """``big_stream``'s FAT chain re-enters its own first sector ([MS-CFB] 2.3.2)."""
+    base = _checked_hostile_base()
+    return _patch_u32(base, HOSTILE_FAT_WORD, HOSTILE_BIG_START)
+
+
+def _fixture_directory_loop() -> bytes:
+    """``__properties_version1.0``'s left link re-enters its own entry ([MS-CFB] 2.6.4)."""
+    base = _checked_hostile_base()
+    return _patch_u32(base, HOSTILE_LOOP_WORD, HOSTILE_PROPERTIES_ENTRY)
+
+
+def _fixture_truncated_stream() -> bytes:
+    """``big_stream`` declares 8192 bytes over a chain that holds 4096 ([MS-CFB] 2.5)."""
+    base = _checked_hostile_base()
+    return _patch_u32(base, HOSTILE_SIZE_WORD, HOSTILE_SIZE_LIE)
+
+
+#: ``msg_difat_extended`` is reassembled from ``_fixture_headers_html`` rather than
+#: appended to, so that every byte of it is written here. That base has no
+#: FAT-addressed stream at all -- 0 FAT, 1 directory, 2 miniFAT, 3..4 the 742-byte
+#: mini stream -- and it is the bytes of sectors 1, 2, 3 and 4 that move. The header
+#: then claims 110 FAT sectors, the first real and 1..109 all ``FREESECT`` padding,
+#: and puts the 110th FAT id in one extended DIFAT sector, which is why the file
+#: needs it: 115 sectors, 59392 bytes.
+DIFAT_FAT_SECTORS = 110
+DIFAT_DIR_SECTOR = 110
+DIFAT_MINIFAT_SECTOR = 111
+DIFAT_MINI_START = 112
+DIFAT_MINI_SECTORS = 2
+DIFAT_SECTOR = 114
+DIFAT_EXTENDED_FATS = 1
+DIFAT_SECTORS = 115
+#: ``_fixture_headers_html``'s own layout, which the reassembly reads from.
+DIFAT_BASE_SECTORS = 5
+DIFAT_BASE_DIR_SECTOR = 1
+DIFAT_BASE_MINIFAT_SECTOR = 2
+DIFAT_BASE_MINI_START = 3
+
+
+def _difat_fat() -> bytes:
+    """The one real FAT sector: it covers its own declared sectors and the four used.
+
+    The sector's remaining slots are zero, as the writer's own padding is, because the
+    reader cuts the table to the file's sector count anyway.
+    """
+    values = [FATSECT] * DIFAT_FAT_SECTORS
+    values += [FREESECT] * (DIFAT_SECTORS - DIFAT_FAT_SECTORS)
+    values[DIFAT_DIR_SECTOR] = ENDOFCHAIN
+    values[DIFAT_MINIFAT_SECTOR] = ENDOFCHAIN
+    values[DIFAT_MINI_START] = DIFAT_MINI_START + 1
+    values[DIFAT_MINI_START + DIFAT_MINI_SECTORS - 1] = ENDOFCHAIN
+    return struct.pack("<%dL" % len(values), *values).ljust(SECTOR_BYTES, b"\x00")
+
+
+def _difat_sector() -> bytes:
+    """One extended DIFAT sector: the 110th FAT id, then ``FREESECT``, then the end."""
+    values = [FREESECT] * DIFAT_IDS_PER_SECTOR
+    values[0] = DIFAT_FAT_SECTORS - 1
+    values.append(ENDOFCHAIN)
+    return struct.pack("<%dL" % (SECTOR_BYTES // 4), *values)
+
+
+def _fixture_difat_extended() -> bytes:
+    """A FAT reached through an extended DIFAT chain ([MS-CFB] 2.2, 2.3.1)."""
+    base = _fixture_headers_html()
+    assert len(base) == (DIFAT_BASE_SECTORS + 1) * SECTOR_BYTES, len(base)
+    directory = bytearray(_window(base, DIFAT_BASE_DIR_SECTOR))
+    assert _word(directory, DIR_ENTRY_START) == DIFAT_BASE_MINI_START, "root start"
+
+    header = bytearray(base[:SECTOR_BYTES])
+    for offset, value in (
+        (HEADER_NUM_FAT_SECTORS, DIFAT_FAT_SECTORS),
+        (HEADER_FIRST_DIR_SECTOR, DIFAT_DIR_SECTOR),
+        (HEADER_FIRST_MINIFAT_SECTOR, DIFAT_MINIFAT_SECTOR),
+        (HEADER_FIRST_DIFAT_SECTOR, DIFAT_SECTOR),
+        (HEADER_NUM_DIFAT_SECTORS, DIFAT_EXTENDED_FATS),
+    ):
+        struct.pack_into("<L", header, offset, value)
+    for slot in range(INLINE_DIFAT_SLOTS):
+        struct.pack_into("<L", header, INLINE_DIFAT_OFFSET + 4 * slot, slot)
+    # The mini stream keeps its bytes and moves; only the root entry's start changes.
+    struct.pack_into("<L", directory, DIR_ENTRY_START, DIFAT_MINI_START)
+
+    body = {index: bytes(SECTOR_BYTES) for index in range(1, DIFAT_FAT_SECTORS)}
+    body[0] = _difat_fat()
+    body[DIFAT_DIR_SECTOR] = bytes(directory)
+    body[DIFAT_MINIFAT_SECTOR] = _window(base, DIFAT_BASE_MINIFAT_SECTOR)
+    for offset in range(DIFAT_MINI_SECTORS):
+        body[DIFAT_MINI_START + offset] = _window(base, DIFAT_BASE_MINI_START + offset)
+    body[DIFAT_SECTOR] = _difat_sector()
+    assert sorted(body) == list(range(DIFAT_SECTORS)), "one 512-byte sector per index"
+    data = bytes(header) + b"".join(body[index] for index in range(DIFAT_SECTORS))
+    assert len(data) == (DIFAT_SECTORS + 1) * SECTOR_BYTES, len(data)
+    return data
+
+
 FIXTURES = {
     "msg_headers_only": _fixture_headers_only,
     "msg_headers_html": _fixture_headers_html,
     "msg_v4_sectors": _fixture_v4_sectors,
     "msg_mini_cutoff_boundary": _fixture_mini_cutoff_boundary,
     "msg_outlook_layout_handbuilt": _fixture_outlook_layout_handbuilt,
+    "msg_difat_extended": _fixture_difat_extended,
+    "msg_fat_cycle": _fixture_fat_cycle,
+    "msg_directory_loop": _fixture_directory_loop,
+    "msg_truncated_stream": _fixture_truncated_stream,
 }
 
-FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)
+#: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,
+#: then the three hostile mutants.
+ALL_FIXTURE_NAMES: tuple[str, ...] = tuple(FIXTURES)
+#: The fixtures that are the hostile base's bytes with one 32-bit word patched. They have
+#: **no** construction table -- their expected behaviour is hand-typed in
+#: ``tests/support/msg_construction.py`` (``HOSTILE_EXPECTATIONS``) -- and the ``olefile``
+#: oracle never judges one (E1).
+HOSTILE_FIXTURE_NAMES: tuple[str, ...] = (
+    "msg_fat_cycle",
+    "msg_directory_loop",
+    "msg_truncated_stream",
+)
+#: The well-formed fixtures: the five from Turn 1b.2 plus ``msg_difat_extended``. Every one
+#: has a construction table and is judged by the oracle; this is the set the ``olefile``
+#: tests iterate.
+FIXTURE_NAMES: tuple[str, ...] = tuple(
+    name for name in ALL_FIXTURE_NAMES if name not in HOSTILE_FIXTURE_NAMES
+)
 
 
 def build_fixture(name: str) -> bytes:
@@ -234,8 +463,8 @@ def build_fixture(name: str) -> bytes:
 
 
 def build_all() -> dict[str, bytes]:
-    """Every fixture's bytes, keyed by name."""
-    return {name: build_fixture(name) for name in FIXTURE_NAMES}
+    """Every committed fixture's bytes, keyed by name."""
+    return {name: build_fixture(name) for name in ALL_FIXTURE_NAMES}
 
 
 def _sha256(name: str, data: bytes) -> str:
@@ -243,7 +472,9 @@ def _sha256(name: str, data: bytes) -> str:
 
 
 def _sums_text() -> str:
-    return "".join(f"{_sha256(name, build_fixture(name))}  {name}.msg\n" for name in FIXTURE_NAMES)
+    return "".join(
+        f"{_sha256(name, build_fixture(name))}  {name}.msg\n" for name in ALL_FIXTURE_NAMES
+    )
 
 
 def _emit(target: Path, data: bytes, check: bool) -> bool:
@@ -260,7 +491,7 @@ def _emit(target: Path, data: bytes, check: bool) -> bool:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="generate the Turn 1b.2 .msg fixtures")
+    parser = argparse.ArgumentParser(description="generate the .msg fixtures")
     parser.add_argument("--check", action="store_true", help="exit 1 unless the files on disk already match")
     args = parser.parse_args()
 
