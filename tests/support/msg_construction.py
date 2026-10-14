@@ -288,6 +288,220 @@ MSG_DIFAT_EXTENDED: Mapping[str, Any] = {
     },
 }
 
+#: Turn 1b.4 (the five property-layer fixtures). All five are version 3, 512-byte
+#: sectors, mini-cutoff 4096 and entirely mini-resident (no stream reaches the cutoff),
+#: so the writer lays out: header, one FAT sector, the directory, one miniFAT sector,
+#: then the root's mini stream in the FAT ([MS-CFB] 2.4). Every number below is typed
+#: from that layout, never read out of a reader.
+def _property_layer_table(
+    *,
+    directory: list[tuple[str, int, int]],
+    streams: dict[str, dict[str, Any]],
+    dir_sectors: int,
+    mini_fat_sector: int,
+    stream_bytes: int,
+    file_length: int,
+) -> Mapping[str, Any]:
+    """One all-mini v3 property-layer fixture's construction table (Turn 1b.4)."""
+    return {
+        "version": 3,
+        "sector_size": 512,
+        "sector_shift": 9,
+        "mini_sector_shift": 6,
+        "mini_cutoff": 4096,
+        "num_fat_sectors": 1,
+        "num_dir_sectors": 0,
+        "first_dir_sector": 1,
+        "num_mini_fat_sectors": 1,
+        "first_mini_fat_sector": mini_fat_sector,
+        "num_difat_sectors": 0,
+        "difat_used": [0],
+        "file_length": file_length,
+        "sector_count": file_length // 512,
+        "directory_entries": dir_sectors * 4,
+        "sector_accounting": _accounting(512, 512, 512, dir_sectors * 512, stream_bytes),
+        "directory": directory,
+        "streams": streams,
+    }
+
+
+#: ``msg_non_ipm_note``: ``IPM.Appointment``, plus a subject and a recipient the gate
+#: never opens. Layout: FAT 0, directory 1-2, miniFAT 3, mini stream 4.
+MSG_NON_IPM_NOTE_TABLE: Mapping[str, Any] = _property_layer_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 320),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        ("__substg1.0_001A001F", STGTY_STREAM, 30),
+        ("__substg1.0_0037001E", STGTY_STREAM, 27),
+        ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 24),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 30, "sectors": 1},
+        "__substg1.0_0037001E": {"mini": True, "start": 3, "size": 27, "sectors": 1},
+        "__recip_version1.0_#00000000/__properties_version1.0":
+            {"mini": True, "start": 4, "size": 24, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 320, "sectors": 1},
+    },
+    dir_sectors=2,
+    mini_fat_sector=3,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_signed_class``: the same shape with ``IPM.Note.SMIME.MultipartSigned`` (60 bytes).
+MSG_SIGNED_CLASS_TABLE: Mapping[str, Any] = _property_layer_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 320),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        ("__substg1.0_001A001F", STGTY_STREAM, 60),
+        ("__substg1.0_0037001E", STGTY_STREAM, 27),
+        ("__recip_version1.0_#00000000", STGTY_STORAGE, 0),
+        ("__properties_version1.0", STGTY_STREAM, 24),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 60, "sectors": 1},
+        "__substg1.0_0037001E": {"mini": True, "start": 3, "size": 27, "sectors": 1},
+        "__recip_version1.0_#00000000/__properties_version1.0":
+            {"mini": True, "start": 4, "size": 24, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 320, "sectors": 1},
+    },
+    dir_sectors=2,
+    mini_fat_sector=3,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_unknown_tags``: ``IPM.Note`` plus four unmodelled tag:type pairs (D4).
+MSG_UNKNOWN_TAGS_TABLE: Mapping[str, Any] = _property_layer_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 384),
+        ("__properties_version1.0", STGTY_STREAM, 144),
+        ("__substg1.0_001A001F", STGTY_STREAM, 16),
+        ("__substg1.0_6827001F", STGTY_STREAM, 36),
+        ("__substg1.0_65230102", STGTY_STREAM, 4),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 144, "sectors": 3},
+        "__substg1.0_001A001F": {"mini": True, "start": 3, "size": 16, "sectors": 1},
+        "__substg1.0_6827001F": {"mini": True, "start": 4, "size": 36, "sectors": 1},
+        "__substg1.0_65230102": {"mini": True, "start": 5, "size": 4, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 384, "sectors": 1},
+    },
+    dir_sectors=2,
+    mini_fat_sector=3,
+    stream_bytes=512,
+    file_length=3072,
+)
+
+#: ``msg_named_properties``: ``__nameid_version1.0`` (160/440/3090 bytes, B1) and a
+#: named property (``0x8005``) whose stream carries the ``-00000000`` suffix.
+MSG_NAMED_PROPERTIES_TABLE: Mapping[str, Any] = _property_layer_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 4032),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        ("__nameid_version1.0", STGTY_STORAGE, 0),
+        ("__substg1.0_00020102", STGTY_STREAM, 160),
+        ("__substg1.0_00030102", STGTY_STREAM, 440),
+        ("__substg1.0_00040102", STGTY_STREAM, 3090),
+        ("__substg1.0_001A001F", STGTY_STREAM, 16),
+        ("__substg1.0_8005001F-00000000", STGTY_STREAM, 40),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__nameid_version1.0/__substg1.0_00020102":
+            {"mini": True, "start": 2, "size": 160, "sectors": 3},
+        "__nameid_version1.0/__substg1.0_00030102":
+            {"mini": True, "start": 5, "size": 440, "sectors": 7},
+        "__nameid_version1.0/__substg1.0_00040102":
+            {"mini": True, "start": 12, "size": 3090, "sectors": 49},
+        "__substg1.0_001A001F": {"mini": True, "start": 61, "size": 16, "sectors": 1},
+        "__substg1.0_8005001F-00000000": {"mini": True, "start": 62, "size": 40, "sectors": 1},
+        "<root>": {"mini": False, "start": 4, "size": 4032, "sectors": 8},
+    },
+    dir_sectors=2,
+    mini_fat_sector=3,
+    stream_bytes=4096,
+    file_length=6656,
+)
+
+#: ``msg_codepage_disagree``: internet 28591 against message 1252, disagreeing on ``0x93``.
+MSG_CODEPAGE_DISAGREE_TABLE: Mapping[str, Any] = _property_layer_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 256),
+        ("__properties_version1.0", STGTY_STREAM, 96),
+        ("__substg1.0_001A001F", STGTY_STREAM, 16),
+        ("__substg1.0_0037001E", STGTY_STREAM, 19),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 96, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_0037001E": {"mini": True, "start": 3, "size": 19, "sectors": 1},
+        "<root>": {"mini": False, "start": 3, "size": 256, "sectors": 1},
+    },
+    dir_sectors=1,
+    mini_fat_sector=2,
+    stream_bytes=512,
+    file_length=2560,
+)
+
+#: Turn 1b.4: what ``mapi.py`` must read from each property-layer fixture, typed from
+#: B1-B4 and the fixture description **before** ``mapi.py`` ran. There are no ``.msg``
+#: sidecars (``evals/labels.py`` still accepts only ``.eml``; 1b.10's file set), so this
+#: is the ``HOSTILE_EXPECTATIONS``-style literal the tests hold the reader against.
+MAPI_EXPECTATIONS: Mapping[str, Mapping[str, Any]] = {
+    "msg_non_ipm_note": {
+        "class_verdict": "not_ipm_note",
+        "message_class": "IPM.Appointment",
+        "stopped": True,
+        "recipient_rows": 0,
+        "unknown_tags": [],
+        "named_tags": [],
+        "observations": ["msg.class_not_ipm_note"],
+    },
+    "msg_signed_class": {
+        "class_verdict": "signed_or_encrypted",
+        "message_class": "IPM.Note.SMIME.MultipartSigned",
+        "stopped": True,
+        "recipient_rows": 0,
+        "unknown_tags": [],
+        "named_tags": [],
+        "observations": ["msg.class_not_ipm_note"],
+    },
+    "msg_unknown_tags": {
+        "class_verdict": "ipm_note",
+        "message_class": "IPM.Note",
+        "stopped": False,
+        "unknown_tags": ["6200:0003", "6523:0102", "6748:0014", "6827:001f"],
+        "named_tags": [],
+        "observations": ["msg.property_tag_unknown"],
+    },
+    "msg_named_properties": {
+        "class_verdict": "ipm_note",
+        "message_class": "IPM.Note",
+        "stopped": False,
+        "unknown_tags": [],
+        "named_tags": ["8005"],
+        "nameid_present": True,
+        "nameid_sizes": [160, 440, 3090],
+        "observations": ["msg.named_property_unresolved"],
+    },
+    "msg_codepage_disagree": {
+        "class_verdict": "ipm_note",
+        "message_class": "IPM.Note",
+        "stopped": False,
+        "internet_codepage": 28591,
+        "message_codepage": 1252,
+        "subject_text": "synthetic \u0093 subject",
+        "subject_source": "internet_cpid",
+        "unknown_tags": [],
+        "named_tags": [],
+        "observations": [],
+    },
+}
+
 #: Every **well-formed** committed fixture, keyed by stem (the five from Turn 1b.2 plus
 #: ``msg_difat_extended``). The three hostile mutants are deliberately absent: they are
 #: the base's bytes with one word patched, and their expectations are below.
@@ -298,6 +512,11 @@ CONSTRUCTION: Mapping[str, Mapping[str, Any]] = {
     "msg_mini_cutoff_boundary": MSG_MINI_CUTOFF_BOUNDARY,
     "msg_outlook_layout_handbuilt": MSG_OUTLOOK_LAYOUT_HANDBUILT,
     "msg_difat_extended": MSG_DIFAT_EXTENDED,
+    "msg_non_ipm_note": MSG_NON_IPM_NOTE_TABLE,
+    "msg_signed_class": MSG_SIGNED_CLASS_TABLE,
+    "msg_unknown_tags": MSG_UNKNOWN_TAGS_TABLE,
+    "msg_named_properties": MSG_NAMED_PROPERTIES_TABLE,
+    "msg_codepage_disagree": MSG_CODEPAGE_DISAGREE_TABLE,
 }
 
 #: Turn 1b.3: what each **hostile** fixture must do, typed from [MS-CFB] and the E2 table

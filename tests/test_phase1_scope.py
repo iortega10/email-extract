@@ -44,6 +44,7 @@ EXPECTED_LIBRARY = {
     "htmltree.py",
     "ids.py",
     "ingest.py",
+    "mapi.py",
     "mediatype.py",
     "model.py",
     "parse.py",

@@ -65,6 +65,10 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 MSG = REPO_ROOT / "fixtures" / "msg"
 SUMS = MSG / "SHA256SUMS"
 
+sys.path.insert(0, str(REPO_ROOT / "tests"))
+
+from support import mapi_table  # noqa: E402  (property-table bytes, typed from [MS-OXMSG])
+
 #: The transport-header stream's UTF-16LE byte length, typed here so the fixtures'
 #: construction tables can name it. It is a whole number of UTF-16 code units.
 TRANSPORT_HEADER_BYTES = 518
@@ -425,6 +429,150 @@ def _fixture_difat_extended() -> bytes:
     return data
 
 
+# --------------------------------------- the Turn 1b.4 property-layer fixtures
+
+#: The class strings the class-gate fixtures carry (D6).
+CLASS_IPM_NOTE = "IPM.Note"
+CLASS_APPOINTMENT = "IPM.Appointment"
+CLASS_SIGNED = "IPM.Note.SMIME.MultipartSigned"
+#: ``msg_codepage_disagree``'s two code pages: internet 28591, then message 1252 (B4).
+DISAGREE_CODEPAGES = (28591, 1252)
+#: ``msg_codepage_disagree``'s subject: byte ``0x93`` is a C1 control in iso-8859-1 and a
+#: curly quote in cp1252, so the two code pages decode it differently (the internet wins).
+DISAGREE_SUBJECT = b"synthetic \x93 subject"
+#: The recipient storage the stopped-class fixtures carry, to prove the gate never reads it.
+STOPPED_RECIPIENT = "__recip_version1.0_#00000000"
+
+
+def _property_stream(entries, *, recipients=0, attachments=0, codepages=(1252, 1252)) -> bytes:
+    """A top-level table: the 32-byte header, the code pages, then ``entries``."""
+    return mapi_table.message_table(
+        entries, recipients=recipients, attachments=attachments, codepages=codepages
+    )
+
+
+def _class_bytes(class_text: str) -> bytes:
+    return class_text.encode("utf-16-le")
+
+
+def _class_entry(class_text: str) -> bytes:
+    return mapi_table.variable_entry(
+        mapi_table.PROP_MESSAGE_CLASS, mapi_table.PT_UNICODE, len(_class_bytes(class_text))
+    )
+
+
+def _class_stream_name() -> str:
+    return mapi_table.substg_name(mapi_table.PROP_MESSAGE_CLASS, mapi_table.PT_UNICODE)
+
+
+def _class_gate_fixture(class_text: str) -> bytes:
+    """A stopped-class fixture: the class, plus a subject and a recipient the gate never reads."""
+    subject = b"synthetic turn 1b.4 subject"
+    table = _property_stream(
+        [
+            _class_entry(class_text),
+            mapi_table.variable_entry(mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8, len(subject)),
+        ],
+        recipients=1,
+    )
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(class_text)),
+            stream(mapi_table.substg_name(mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8), subject),
+            storage(
+                STOPPED_RECIPIENT,
+                stream(
+                    "__properties_version1.0",
+                    mapi_table.sub_table([mapi_table.long_entry(mapi_table.PROP_RECIPIENT_TYPE, 1)]),
+                ),
+            ),
+        )
+    )
+
+
+def _fixture_non_ipm_note() -> bytes:
+    """The class gate's ``not_ipm_note`` case: an appointment (D6, ``msg_non_ipm_note``)."""
+    return _class_gate_fixture(CLASS_APPOINTMENT)
+
+
+def _fixture_signed_class() -> bytes:
+    """The class gate's ``signed_or_encrypted`` case (D6/O8, ``msg_signed_class``)."""
+    return _class_gate_fixture(CLASS_SIGNED)
+
+
+def _fixture_unknown_tags() -> bytes:
+    """``IPM.Note`` plus property entries whose tags are not modelled (hex only, D4)."""
+    unicode_stream = mapi_table.utf16("unmodelled unicode")
+    binary_stream = b"\xde\xad\xbe\xef"
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.long_entry(0x6200, 7),
+            mapi_table.fixed_entry(0x6748, mapi_table.PT_I8, struct.pack("<q", 1234)),
+            mapi_table.variable_entry(0x6827, mapi_table.PT_UNICODE, len(unicode_stream)),
+            mapi_table.variable_entry(0x6523, mapi_table.PT_BINARY, len(binary_stream)),
+        ]
+    )
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            stream("__substg1.0_6827001F", unicode_stream),
+            stream("__substg1.0_65230102", binary_stream),
+        )
+    )
+
+
+def _fixture_named_properties() -> bytes:
+    """``__nameid_version1.0`` present; a named property (``0x8005``) is not resolved (D5)."""
+    named_stream = mapi_table.utf16("named property value")
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.variable_entry(0x8005, mapi_table.PT_UNICODE, len(named_stream)),
+        ]
+    )
+    nameid = {size: _filler(size, seed=size) for size in NAMEID_SIZES}
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            storage(
+                mapi_table.NAMEID_STORAGE,
+                stream("__substg1.0_00020102", nameid[160]),
+                stream("__substg1.0_00030102", nameid[440]),
+                stream("__substg1.0_00040102", nameid[3090]),
+            ),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            stream("__substg1.0_8005001F-00000000", named_stream),
+        )
+    )
+
+
+def _fixture_codepage_disagree() -> bytes:
+    """Internet 28591 against message 1252, disagreeing on one byte (D2, B4)."""
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.variable_entry(
+                mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8, len(DISAGREE_SUBJECT)
+            ),
+        ],
+        codepages=DISAGREE_CODEPAGES,
+    )
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            stream(mapi_table.substg_name(mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8), DISAGREE_SUBJECT),
+        )
+    )
+
+
 FIXTURES = {
     "msg_headers_only": _fixture_headers_only,
     "msg_headers_html": _fixture_headers_html,
@@ -435,6 +583,11 @@ FIXTURES = {
     "msg_fat_cycle": _fixture_fat_cycle,
     "msg_directory_loop": _fixture_directory_loop,
     "msg_truncated_stream": _fixture_truncated_stream,
+    "msg_non_ipm_note": _fixture_non_ipm_note,
+    "msg_signed_class": _fixture_signed_class,
+    "msg_unknown_tags": _fixture_unknown_tags,
+    "msg_named_properties": _fixture_named_properties,
+    "msg_codepage_disagree": _fixture_codepage_disagree,
 }
 
 #: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,

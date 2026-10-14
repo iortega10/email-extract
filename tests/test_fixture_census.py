@@ -109,9 +109,9 @@ def committed_stems() -> set[str]:
     return {path.stem for directory in FIXTURE_DIRS for path in directory.glob("*.eml")}
 
 
-def _msg_family_d_rows(text: str) -> dict[str, str]:
-    """``name -> turn`` for the Phase 1b ``Family D`` table's rows (``phase1b-fixtures.md``)."""
-    start = text.index("## Family D")
+def _msg_family_rows(text: str, header: str) -> dict[str, str]:
+    """``name -> turn`` for one Phase 1b family table's rows (``phase1b-fixtures.md``)."""
+    start = text.index(header)
     end = text.index("\n## ", start + 1)
     rows: dict[str, str] = {}
     for line in text[start:end].splitlines():
@@ -121,6 +121,16 @@ def _msg_family_d_rows(text: str) -> dict[str, str]:
         if len(cells) >= 5:
             rows[cells[0].strip("`")] = cells[-1]
     return rows
+
+
+def _msg_family_d_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family D`` table's rows (``phase1b-fixtures.md``)."""
+    return _msg_family_rows(text, "## Family D")
+
+
+def _msg_family_e_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family E`` table's rows (``phase1b-fixtures.md``)."""
+    return _msg_family_rows(text, "## Family E")
 
 
 def sidecar_stems() -> set[str]:
@@ -239,12 +249,24 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     # sidecars cannot land yet -- the Phase 1 oracle's loader refuses a non-`.eml` fixture
     # (D2, recorded in phase1b-ledgers.md) -- so this census checks the `.msg` files only,
     # and the sidecar rows are added in the turn that lifts that limit.
-    msg_rows = _msg_family_d_rows(PHASE1B_CATALOGUE.read_text(encoding="utf-8"))
+    catalogue_text = PHASE1B_CATALOGUE.read_text(encoding="utf-8")
+    msg_rows = _msg_family_d_rows(catalogue_text)
+    family_e = _msg_family_e_rows(catalogue_text)
     built_this_turn = {name for name, turn in msg_rows.items() if "1b.2" in turn}
     assert len(built_this_turn) == 5, sorted(built_this_turn)
+    # Turn 1b.4 lands five more: two Family D rows (`msg_unknown_tags`,
+    # `msg_named_properties`) and three Family E rows (the class gate and the code pages).
+    built_in_1b4 = {
+        name
+        for name, turn in {**msg_rows, **family_e}.items()
+        if "1b.4" in turn
+    }
+    assert len(built_in_1b4) == 5, sorted(built_in_1b4)
     committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
+    catalogue_rows = set(msg_rows) | set(family_e)
     assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
-    assert committed_msg <= set(msg_rows), sorted(committed_msg - set(msg_rows))
+    assert built_in_1b4 <= committed_msg, sorted(built_in_1b4 - committed_msg)
+    assert committed_msg <= catalogue_rows, sorted(committed_msg - catalogue_rows)
     # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
     missing = sorted(built_this_turn)[0]
     problems = [f"catalogue row {missing!r} is committed but has no fixture file"] if missing not in (

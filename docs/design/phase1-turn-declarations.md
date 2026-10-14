@@ -1411,3 +1411,35 @@ test: tests/test_sector_accounting.py::test_free_and_slack_are_explicit
 test: tests/test_sector_accounting.py::test_a_cyclic_chain_is_visible_as_unaccounted
 stop: after the hostile set and the seeded fuzz, before MAPI
 ```
+
+```declaration turn=1b.4
+module: emailextract/mapi.py
+module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/mapi_table.py
+module: tests/test_mapi.py
+module: tests/test_mapi_ladder.py
+module: tests/test_mapi_hostile.py
+test: tests/test_mapi.py::test_property_tables_use_the_32_and_8_byte_headers
+test: tests/test_mapi.py::test_entry_decode_fixed_variable_and_storage_backed
+test: tests/test_mapi.py::test_the_class_gate_records_the_class_verbatim
+test: tests/test_mapi.py::test_named_properties_are_recognised_not_resolved
+test: tests/test_mapi.py::test_recipients_are_read_from_the_recipient_tables
+test: tests/test_mapi.py::test_an_unknown_tag_is_hex_only
+test: tests/test_mapi.py::test_the_class_gate_stops_before_recipients_and_properties
+test: tests/test_mapi.py::test_the_handbuilt_outlook_layout_matches_the_b1_b4_values
+test: tests/test_mapi_ladder.py::test_the_ladder_reads_both_code_pages_as_fixed_entries
+test: tests/test_mapi_ladder.py::test_internet_cpid_wins_over_message_cpid
+test: tests/test_mapi_ladder.py::test_the_trailing_nul_is_stripped_and_recorded
+test: tests/test_mapi_ladder.py::test_001e_goes_through_the_ladder_and_001f_is_utf16le
+test: tests/test_mapi_ladder.py::test_ascii_and_utf8_rungs_record_their_source
+test: tests/test_mapi_ladder.py::test_multivalued_strings_keep_every_value
+test: tests/test_mapi_hostile.py::test_a_lone_surrogate_is_recorded_not_raised
+test: tests/test_mapi_hostile.py::test_an_odd_length_utf16_stream_is_recorded_not_raised
+test: tests/test_mapi_hostile.py::test_a_recipient_count_mismatch_is_recorded
+test: tests/test_mapi_hostile.py::test_every_property_mutant_returns_a_closed_message
+test: tests/test_mapi_hostile.py::test_the_mapi_work_bound_holds
+test: tests/test_mapi_hostile.py::test_the_mutant_numbers_are_stable_across_hash_seeds
+test: tests/test_mapi_hostile.py::test_the_mapi_vocabulary_matches_the_registry_model_and_imports
+stop: after the ladder, the class gate and the recipients, before the container
+```

@@ -54,6 +54,22 @@ Its turn is recorded here as **1b.2** after a three-way disagreement the reviewe
 1b.9 row says "Outlook layout", this table said 1b.3, and the binding `declaration turn=1b.2` block names
 `test_the_outlook_layout_fixture_is_typed_from_b1_b4` in 1b.2. The declaration wins, so it is built here.
 
+**Construction tables: the five Turn 1b.4 property-layer fixtures** (`msg_unknown_tags`,
+`msg_named_properties`, `msg_non_ipm_note`, `msg_signed_class`, `msg_codepage_disagree`). Two
+share one shape: `msg_non_ipm_note` (class `IPM.Appointment`) and `msg_signed_class` (class
+`IPM.Note.SMIME.MultipartSigned`) each carry the class (`001A:001F`), a `001E` subject
+(`0037:001E`) and one `__recip_version1.0_#00000000` table (`0C15:0003 = 1`) -- the class gate
+must stop before either is opened. `msg_unknown_tags` is `IPM.Note` plus four unmodelled
+entries (`6200:0003`, `6748:0014`, `6827:001F`, `6523:0102`). `msg_named_properties` carries
+`__nameid_version1.0` (B1's 160/440/3090-byte binary streams) and one named property
+(`8005:001F`, stream `__substg1.0_8005001F-00000000`, B1's named-property suffix).
+`msg_codepage_disagree` declares internet **28591** against message **1252** and one `001E`
+subject whose byte `0x93` the two code pages decode differently. All five are version 3,
+512-byte sectors and entirely mini-resident, so the writer lays them out header, one FAT
+sector, the directory, one miniFAT sector, then the root's mini stream in the FAT; every byte
+is typed by hand in `tests/support/msg_construction.py` and built through
+`tests/support/mapi_table.py` (property bytes from [MS-OXMSG], never from `mapi.py`).
+
 **Construction tables: the other four Turn 1b.2 fixtures** (hand-typed before any writer output; the writer's
 `tools/cfb_writer.py` lays sectors out header, FAT, directory, mini-FAT, mini stream, FAT streams).
 
@@ -184,7 +200,7 @@ catalogue row exists for each and, once built, a committed fixture with that ste
 
 | family | committed fixtures | turn |
 |---|---|---|
-| D container / layout / hostile | 11 | 1b.2-1b.3 |
+| D container / layout / hostile | 11 | 1b.2-1b.4 |
 | E class / recipients / time / code pages | 12 | 1b.4/1b.6 |
 | F body streams | 8 | 1b.5/1b.8 |
 | G attachments / embedded | 10 | 1b.7 |

@@ -317,6 +317,9 @@ Allow-list (`turn=1b.3`): the block's list -- `emailextract/cfb.py`, `emailextra
 
 ```declaration turn=1b.4
 module: emailextract/mapi.py
+module: tools/make_msg_fixtures.py
+module: tests/support/msg_construction.py
+module: tests/support/mapi_table.py
 module: tests/test_mapi.py
 module: tests/test_mapi_ladder.py
 module: tests/test_mapi_hostile.py
@@ -326,6 +329,8 @@ test: tests/test_mapi.py::test_the_class_gate_records_the_class_verbatim
 test: tests/test_mapi.py::test_named_properties_are_recognised_not_resolved
 test: tests/test_mapi.py::test_recipients_are_read_from_the_recipient_tables
 test: tests/test_mapi.py::test_an_unknown_tag_is_hex_only
+test: tests/test_mapi.py::test_the_class_gate_stops_before_recipients_and_properties
+test: tests/test_mapi.py::test_the_handbuilt_outlook_layout_matches_the_b1_b4_values
 test: tests/test_mapi_ladder.py::test_the_ladder_reads_both_code_pages_as_fixed_entries
 test: tests/test_mapi_ladder.py::test_internet_cpid_wins_over_message_cpid
 test: tests/test_mapi_ladder.py::test_the_trailing_nul_is_stripped_and_recorded
@@ -335,12 +340,22 @@ test: tests/test_mapi_ladder.py::test_multivalued_strings_keep_every_value
 test: tests/test_mapi_hostile.py::test_a_lone_surrogate_is_recorded_not_raised
 test: tests/test_mapi_hostile.py::test_an_odd_length_utf16_stream_is_recorded_not_raised
 test: tests/test_mapi_hostile.py::test_a_recipient_count_mismatch_is_recorded
+test: tests/test_mapi_hostile.py::test_every_property_mutant_returns_a_closed_message
+test: tests/test_mapi_hostile.py::test_the_mapi_work_bound_holds
+test: tests/test_mapi_hostile.py::test_the_mutant_numbers_are_stable_across_hash_seeds
+test: tests/test_mapi_hostile.py::test_the_mapi_vocabulary_matches_the_registry_model_and_imports
 stop: after the ladder, the class gate and the recipients, before the container
 ```
 
-Allow-list (`turn=1b.4`): `emailextract/mapi.py`, `emailextract/versions.py`, `fixtures/msg/`,
-`tests/test_mapi.py`, `tests/test_mapi_ladder.py`, `tests/test_mapi_hostile.py`, `tests/ledger/label_ledger.json`,
-`docs/design/phase1b-ledgers.md`.
+Allow-list (`turn=1b.4`): the block's list -- `emailextract/mapi.py`, `emailextract/versions.py`,
+`fixtures/msg/`, `tests/test_mapi.py`, `tests/test_mapi_ladder.py`, `tests/test_mapi_hostile.py`,
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `tools/make_msg_fixtures.py`,
+`tests/support/msg_construction.py`, `tests/support/mapi_table.py` (new), `tests/test_msg_fixtures.py`,
+`tests/test_fixture_census.py`, `tests/test_turn_declarations.py`, `tests/test_phase1_scope.py`
+(one changed line: `EXPECTED_LIBRARY` gains `"mapi.py"`; the import-ban list is unchanged, because
+`mapi.py` reaches its sibling as `from . import cfb`, which names no banned import root),
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`.
 
 ```declaration turn=1b.5
 module: emailextract/msgcontainer.py
@@ -890,3 +905,210 @@ offset is asserted against the bytes before the patch. `fixtures/msg/SHA256SUMS`
   is `"TRUNCATED"`, and `CfbFile.faults` is already the `msg.stream_faults` shape `(stream, fault, reason)`.
 - **`msg.cfb_difat_extended`** is exposed as `CfbFile.extended_difat` (the read-through observation), with
   `difat_sectors` (the extended-chain sector ids) and `difat_fault` (only a broken chain faults, O1).
+
+## Turn 1b.4 -- outcome (`mapi.py`, the string ladder, the class gate, named properties and recipients)
+
+Built: `emailextract/mapi.py` (the MAPI property layer -- stdlib plus the sibling `cfb`, a **leaf**, never
+raises, not wired into `parse`/`container`/`walk`), `tests/support/mapi_table.py` (property-table bytes typed
+from [MS-OXMSG] 2.2.1.1 -- the *independent* builder the fixtures and the tests both use), the five committed
+fixtures (`msg_non_ipm_note`, `msg_signed_class`, `msg_unknown_tags`, `msg_named_properties`,
+`msg_codepage_disagree`, with their `fixtures/msg/SHA256SUMS` lines and five new construction tables in
+`tests/support/msg_construction.py`), the `MAPI_EXPECTATIONS` literals (there are still no `.msg` sidecars:
+`evals/labels.py` accepts only `.eml`, 1b.10's file set), and the three declared test files (**21** test
+functions: the 15 the block names plus the six checks the brief asks for beyond them, declared in the same
+block). Green both interpreters: **2092 passed, 2 skipped** on 3.14.3 and on the repo's 3.11.15, and
+`make_msg_fixtures.py --check`, `make_fixtures.py --check`, `update_eml_golden.py --check`,
+`update_behavior_ledger.py --check`, `update_label_ledger.py --check` all exit 0 on both. Interpreter hearth
+used: CPython 3.14.3 (the `python` on PATH).
+
+### D1-D7: the reviewer's decisions, applied (no decision changed)
+
+- **D1 (applied, unchanged).** One failure convention: a value that cannot be decoded is `None` with a
+  `fault` from the closed tuple `mapi.FAULTS` (**nine**: `stream_cycle`, `stream_out_of_range`,
+  `stream_short_chain` -- carried from `cfb.read_stream` --, `stream_absent`, `utf16_odd_length`,
+  `utf16_lone_surrogate`, `cp1252_undefined_byte`, `entry_truncated`, `table_size_misfit`) and the sha256 of
+  the raw bytes is always carried beside it. No U+FFFD, no `errors="replace"`, no `surrogatepass`, no latin-1
+  fallback. `mapi.py` never raises: the fuzz (450 mutants) and the three hostile cases prove it, and every
+  text of every fixture and mutant UTF-8-encodes (a `_strings` walk asserts it; a lone surrogate would raise).
+- **D2 (applied, unchanged).** `CODEPAGES` is the four hand-typed rows (`1252`, `20127`, `28591`, `65001`)
+  and nothing else resolves. The two code pages come from the **fixed entries** `0x3FDE`/`0x3FFD` of the
+  top-level table (B4) -- `msg_codepage_disagree` has no `__substg1.0_3FDE*`/`__substg1.0_3FFD*` stream at
+  all. One trailing U+0000 is stripped and `trailing_nul=True` recorded (a second stays); the raw digest is of
+  the bytes before the strip. `001F` is strict UTF-16LE with no ladder (`encoding_source=None`).
+- **D3 (applied, unchanged).** `parse_property_table(data, *, header_size)` over the stream: 32 bytes at the
+  top level, 8 for a recipient table (B2); entries 16 bytes, `u32 = (tag << 16) | type`; `(size-header) % 16
+  != 0` records `table_size_misfit` and every complete entry still decodes; a stream shorter than its header
+  records the misfit with no entries. Fixed types decode inline (`PT_SYSTIME` keeps the raw `u64` plus its
+  16-digit lowercase hex); a varible type reads its `__substg1.0_<TAG><TYPE>` stream and carries any stream
+  fault; `000D` is a `StorageRef`-style name in `Property.storage` and is **not** read; multi-valued types
+  iterate the streams that **exist** (one directory pass, `_substg_streams`), never a declared count.
+- **D4 (applied, unchanged).** `KNOWN_TAGS` is 13 rows `(tag, name, expected types, source)` with `source` in
+  `{"B3", "MS-OXPROPS"}`; everything else is unknown, hex only -- nothing is frozen by a document. **`mapi.py`
+  does not emit a gap per unknown property.** The distinct-unknown-pair counts: `msg_outlook_layout_handbuilt`
+  yields **0** unknown pairs from the tables 1b.4 reads (its top-level table holds only the two code pages; its
+  recipient table is `3001:0003`/`3002:001F`/`3003:001F`, all known) and its attachment storage's table would
+  add **4** (`3705:0003`, `3707:001f`, `370b:0003`, `370e:001f`) -- that table is 1b.7's and is correctly not
+  read here; `msg_unknown_tags` yields exactly **4** (`6200:0003`, `6523:0102`, `6748:0014`, `6827:001f`).
+  B3 saw 236 across eleven real files, so one record per pair would be noise.
+- **D5 (applied, unchanged).** A tag in `0x8000-0xFFFE` is flagged `named=True` and still decoded per its own
+  type; `__nameid_version1.0`'s presence and its three streams' sizes are recorded and its contents are
+  **never** parsed. `msg_named_properties` records `(True, (160, 440, 3090))` and the observation
+  `msg.named_property_unresolved` with `["8005"]`; `8005:001F` (stream `__substg1.0_8005001F-00000000`, B1's
+  named-property suffix, resolved by a fallback that never guesses an index) decodes to `"named property
+  value"`.
+- **D6 (applied; one reading spelled out).** `0x001A` is read first (`001F`, or `001E` through the ladder) and
+  classified ASCII case-insensitively; the class string is returned **verbatim**. `ipm_note` is exactly
+  `IPM.Note` or `IPM.Note.` + anything but the signed/encrypted prefixes; `signed_or_encrypted` starts
+  `IPM.Note.SMIME`/`IPM.Note.Secure`; `IPM.Notebook`/`IPM.NoteX` are `not_ipm_note`. **`class_absent` covers
+  both a missing `0x001A` and an empty one** (the brief's "no readable class"), and `class_unreadable` is a
+  present class whose bytes fault (`decode_unicode`/ladder fault). For any verdict but `ipm_note`,
+  `read_message` stops: no recipient, named-property or other-tag decode (the gate is proved by
+  `test_the_class_gate_stops_before_recipients_and_properties`, which monkeypatches `decode_entry` and
+  `read_recipients` to raise). `msg.class_not_ipm_note` is raised only for `not_ipm_note` and
+  `signed_or_encrypted`. No `Status` is chosen here (O8 stays the owner's).
+- **D7 (applied, unchanged).** The rows are the directory's `__recip_version1.0_#XXXXXXXX` storages, ordered by
+  the hex index; a non-hex suffix makes that row unreadable (and raises `msg.recipient_table_unreadable`). Each
+  row is decoded with the 8-byte-header table: `kind` (`0C15`: `1/2/3 -> to/cc/bcc`, else `unknown` with the
+  raw integer kept), `display_name` (`3001`), `address_type` (`3002`: `SMTP -> smtp`, `EX -> ex`, else
+  `unknown`, with the raw string kept), `address` (`39FE` if present and non-empty, else `3003`). The
+  top-level header's `@16` count is compared with the directory's storages: a mismatch records the
+  disagreement and raises `msg.recipient_table_unreadable`, and the rows are still returned. `msg.recipients`
+  as a **fact** is not built here.
+
+### The D2 registry-sentence discrepancy (reported, not worked around)
+
+`docs/design/phase0-gaps.md:673-674` names `msg_codepage_disagree` as a committed fixture for
+`msg.codepage_unresolved_ladder_used`. It cannot be one: with internet **28591** resolving the bytes, ladder
+rung 1 fires, `encoding_source = internet_cpid`, and the gap is **not** emitted -- which is exactly what
+`test_internet_cpid_wins_over_message_cpid` asserts (and why the registry also cannot use the `msg_string8_*`
+family, whose internet code page resolves too). The brief predicted this. As instructed, the ladder was
+**not** bent to fit the sentence: the gap is driven by an in-memory table whose two declared code pages do not
+resolve (`test_ascii_and_utf8_rungs_record_their_source`, `codepages=(99999, 99998)`), and
+`msg_codepage_disagree` is kept as the "internet wins, no gap" counter-example. **The registry sentence should
+be corrected** (the fixture list for that id should keep the `msg_string8_*` family only if a
+non-resolving-code-page member is added there; today the in-memory case is the driver).
+
+### The ladder table (every fixture and every in-memory case)
+
+Fixtures: only `msg_codepage_disagree` decodes a laddered value -- `0037:001e` ->
+`[internet, 28591, internet_cpid]`, text `"synthetic \u0093 subject"` (iso-8859-1 keeps `0x93` as U+0093; the
+message page 1252 would make it U+201C). The other fixtures' string properties are all `001F` (no ladder);
+`msg_non_ipm_note`/`msg_signed_class` also carry a `0037:001e`, but the class gate stops before it. Every
+fixture's recorded code pages: `1252/1252`, except `msg_codepage_disagree` at `28591/1252`.
+
+In-memory cases (each asserted): internet wins forward (`28591/1252` -> `internet_cpid`, 28591) and reversed
+(`1252/28591` -> `internet_cpid`, 1252, U+201C); the `001F` case records no ladder;
+`codepages=(99999, 99998)` + all-ASCII -> `[none, null, ascii]`; + a UTF-8 byte sequence ->
+`[none, null, utf8_strict]`; a multi-valued `001E` (`0x101E`) keeps all three values, each
+`internet_cpid` with the resolving cp.
+
+### The three mutations (run, reported, restored)
+
+1. **Swap the internet and message rungs** -> 3 fail:
+   `tests/test_mapi_ladder.py::test_internet_cpid_wins_over_message_cpid`,
+   `::test_001e_goes_through_the_ladder_and_001f_is_utf16le`, `::test_multivalued_strings_keep_every_value`.
+2. **32-byte header for a recipient table** -> 2 fail:
+   `tests/test_mapi.py::test_recipients_are_read_from_the_recipient_tables`,
+   `tests/test_mapi_hostile.py::test_a_recipient_count_mismatch_is_recorded`.
+3. **A bare `startswith("IPM.NOTE")`** -> 1 fails:
+   `tests/test_mapi.py::test_the_class_gate_records_the_class_verbatim`.
+
+### Disagreements between `mapi.py`, the typed tables and the hand-built layout fixture
+
+There was **no** disagreement between `mapi.py` and the typed tables: `tests/support/olefile_oracle.py`
+agreed with all five new construction tables and with the decoded values on the first run
+(`test_olefile_agrees_on_every_well_formed_fixture` and `test_every_fixture_matches_its_construction_table`
+green unchanged). One real disagreement is worth recording, and its resolution is a **fixture is left alone**:
+
+- **`msg_outlook_layout_handbuilt`'s recipient tags are named per its own 1b.2 typing, not per MS-OXPROPS.**
+  That fixture's recipient table is `3001:0003 = 1` (its "type"), `3003:001F = ""` (its "email type") and
+  `3002:001F = "Ada"` (its "display"), whereas `mapi.py` decodes by the MS-OXPROPS names (`0x3001` is the
+  display name, `0x3002` the address type, `0x3003` the email address, `0x0C15` the recipient type). The
+  reader therefore reads that row as `kind=unknown` (no `0C15`), `address_type=unknown` (`"ADA"`), `display_name=None`
+  and `address=""`. The brief forbids editing an existing fixture and the tag identification is
+  "verify by probe P4" until Turn 1b.7, so the fixture was **not** touched: the breaker test
+  (`test_the_handbuilt_outlook_layout_matches_the_b1_b4_values`) checks the values B1-B4 type for that fixture
+  -- the `@16`/`@20` counts `(1, 1)`, `0x3FDE`/`0x3FFD` as fixed entries at 1252, the `0102` HTML stream at 160
+  bytes, **one** recipient row and the 160/440/3090 nameid sizes -- through the building blocks, not through
+  `read_message`. The fixture has no `0x001A` at all, so its gate stops at `class_absent`; that is why the
+  breaker uses `parse_property_table`/`decode_entry`/`read_recipients`/`named_properties` directly.
+- Minor: the reader's `MapiMessage` fields for the two code pages are `internet_cp`/`message_cp`, not
+  `internet_codepage`/`message_codepage`. `tests/test_contracts.py::test_no_email_module_declares_a_sibling_address_field`
+  bans the substring `page` (the sibling address words are `page`/`cell`/`sheet`/`slide`) in any class-level
+  field name in `emailextract/**`, and that test is **not** in this turn's allow-list -- so the field was
+  renamed rather than the test edited. The `container_facts` keys `internet_codepage`/`message_codepage`
+  (1b.5's, an open `str -> str` mapping) are unaffected and keep their spec names.
+
+### Existing tests and non-test files edited, and why
+
+- `tests/test_fixture_census.py` -- `_msg_family_d_rows` split into `_msg_family_rows(text, header)` plus the
+  `D`/`E` wrappers; the `.msg` census block now unions the Family E rows (three of the five new fixtures are
+  Family E) and asserts the five 1b.4 rows are committed. `committed_msg <= set(D) | set(E)`.
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `"1b.4"`.
+- `tests/test_phase1_scope.py` -- **one** line: `EXPECTED_LIBRARY` gains `"mapi.py"`. The import-ban list is
+  unchanged: `mapi.py` reaches its sibling as `from . import cfb` (an `ImportFrom` with no module), so no
+  banned root (`cfb` above all) is named and the ban needs no exception.
+- `tests/ledger/label_ledger.json` -- `tests/support/mapi_table.py` appended; `tests/support/msg_construction.py`'s
+  hash line updated (the ledger is additions-only and refuses a changed recorded file; label_ledger.json is in
+  the allow-list).
+- `docs/design/phase1-turn-declarations.md` -- the `turn=1b.4` block appended, verbatim the ledger's copy, so
+  the four extras are declared and "an undeclared test fails" stays true.
+- `docs/design/phase1b-fixtures.md` -- the five fixtures' construction-table paragraph; the counts table's
+  Family D turn range (`1b.2-1b.3` -> `1b.2-1b.4`).
+- `tests/test_msg_fixtures.py` and `tests/test_olefile_oracle.py` -- **not edited**: green unchanged once the
+  five fixtures were added to `FIXTURE_NAMES`/`CONSTRUCTION`.
+- `tests/test_contracts.py` -- **not edited** (see the field rename above).
+
+### The declared work bound
+
+`MAPI_WORK_PER_BYTE = 8`, `MAPI_WORK_BASE = 1024`; a full `read_message` costs at most
+`cfb.WORK_PER_SECTOR * sector_count + cfb.WORK_BASE + 8 * len(data) + 1024`. Measured worst over every fixture
+and the 450 mutants: **0.0038** (`msg_named_properties`) and **0.0024** (the fuzz's worst, a 3072-byte
+recipient base) -- a real read costs something and stays strictly under the bound. Every counted loop iterates
+the bytes present (a table's 16-byte entries, the directory's entries, the substreams that exist); stream
+*resolution* is `cfb.read_stream`'s and is uncounted there too. The multi-valued lookup is **one** directory
+pass per read (`_substg_streams`), not a scan per entry, so the read stays linear in the bytes present.
+
+### The five committed fixtures
+
+- `msg_non_ipm_note` -- `IPM.Appointment`, plus a `001E` subject and one `__recip_version1.0_#00000000`
+  (`0C15:0003 = 1`) the gate must not reach. `class_not_ipm_note` verdict, `msg.class_not_ipm_note`.
+- `msg_signed_class` -- `IPM.Note.SMIME.MultipartSigned`, the same shape. `signed_or_encrypted` verdict,
+  `msg.class_not_ipm_note`; no `Status` chosen (O8).
+- `msg_unknown_tags` -- `IPM.Note` plus `6200:0003`, `6748:0014`, `6827:001F`, `6523:0102`; four distinct
+  unknown pairs, one `msg.property_tag_unknown`.
+- `msg_named_properties` -- `__nameid_version1.0` (160/440/3090) and one named property `8005:001F`;
+  `msg.named_property_unresolved`.
+- `msg_codepage_disagree` -- internet 28591 against message 1252 and one `001E` subject; **no** gap.
+
+### What Turn 1b.5 needs from this turn
+
+- **`mapi.py`'s public API.** `read_message(cfb_file) -> MapiMessage`; the building blocks
+  `parse_property_table(data, *, header_size) -> PropertyTable` (`.header`, `.header_size`, `.entries`,
+  `.fault`, `.first(tag)`), `decode_entry(entry, cfb_file, *, internet_codepage, message_codepage, storage,
+  index) -> Property`, `decode_string8(raw, *, internet_codepage, message_codepage) -> TextValue`,
+  `decode_unicode(raw) -> TextValue`, `classify_class(text, fault=None) -> str`,
+  `read_recipients(cfb_file, *, ...) -> tuple[RecipientRow, ...]`,
+  `named_properties(cfb_file) -> (bool, tuple[int, ...])`,
+  `declared_counts(table) -> (recipients, attachments)`, `render_unknown_tags(properties)`; the records
+  `MapiMessage`, `Property`, `RecipientRow`, `TextValue`, `RawEntry`, `PropertyTable`; the constants
+  `FAULTS`, `OBSERVATION_IDS`, `ENCODING_SOURCES`, `CODEPAGES`, `KNOWN_TAGS`, `CLASS_VERDICTS`,
+  `PROPERTY_TYPES`, `FIXED_TYPES`, `MV_FLAG`, `NAMED_TAG_MIN/MAX`, `HEADER_SIZE_TOP/SUB`, `MAPI_WORK_*`.
+  The id constants are `mapi.MSG_*_*` (e.g. `MSG_CLASS_NOT_IPM_NOTE`), each a registered id.
+- **An observation is a string id, not a record.** `MapiMessage.observations` is the tuple of gap ids raised
+  at message level, in `OBSERVATION_IDS` order (`msg.class_not_ipm_note`, `msg.named_property_unresolved`,
+  `msg.codepage_unresolved_ladder_used`, `msg.recipient_table_unreadable`, and `msg.property_tag_unknown`
+  **once**); building a `gaps.later` row from one (its locator, phase, reason) is 1b.5's. Per-property detail
+  rides the records: `MapiMessage.unknown_tags` (sorted distinct `tag:type` pairs), `MapiMessage.named_tags`
+  (sorted tag hex), each `Property.key`, and each `TextValue`'s `source_kind`/`declared_cp`/
+  `encoding_source` (the `msg.codepage_ladder` row is `[surface, source_kind, declared_cp, encoding_source]`
+  -- a pure projection).
+- **A `None` value becomes `unknown` text.** Every record carries `fault` (from `FAULTS`) exactly when the
+  value is `None`; 1b.5 maps a faulted text to the document's `unknown(reason)` form, and the raw
+  `raw_sha256`/`byte_length` are there so nothing is lost. A faulted stream maps via
+  `cfb.FAULT_REASON_IDS`/`FAULT_STATUS` to `Status.TRUNCATED` (1b.3's contract, unchanged here).
+- **The open question.** `msg.property_tag_unknown` is raised **once per message** here (this turn's reading
+  of D4's "do not emit one gap per unknown property"), with the pairs on `unknown_tags`. 1b.5 must decide the
+  `gaps.later` granularity: one aggregate row per message, or one row per distinct pair (B3's 236 would be
+  noise), or a `container_facts` count. The pairs and their count are available either way.
+
