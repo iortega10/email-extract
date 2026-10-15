@@ -28,17 +28,17 @@ your employer in writing, and publish from a personal PyPI account.
 
 0. Confirm the working tree is clean and green: `python -m pytest -q` on 3.11 and 3.14,
    `python -m emailextract.evals`, and the three `--check` tools.
-1. Set `version` in `pyproject.toml` to the exact version you will tag (`0.1.0rc1` for the dry run,
-   `0.1.0` for the real one); the workflow refuses a tag that does not match.
-2. Dry run: tag `v0.1.0rc1` -> TestPyPI. In a clean virtualenv:
+1. Set `version` in `pyproject.toml` to the exact version you will tag (`0.2.0rc1` for the dry run,
+   `0.2.0` for the real one); the workflow refuses a tag that does not match.
+2. Dry run: tag `v0.2.0rc1` -> TestPyPI. In a clean virtualenv:
 
    ```sh
    pip install --index-url https://test.pypi.org/simple/ \
-       --extra-index-url https://pypi.org/simple/ email-extract==0.1.0rc1
+       --extra-index-url https://pypi.org/simple/ email-extract==0.2.0rc1
    python -c "import emailextract; print(emailextract.__version__)"
    ```
 
-3. Real release: set `0.1.0`, tag `v0.1.0` -> PyPI. Verify with a fresh `pip install email-extract`.
+3. Real release: set `0.2.0`, tag `v0.2.0` -> PyPI. Verify with a fresh `pip install email-extract`.
 
 ## Verification commands
 

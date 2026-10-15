@@ -1,8 +1,8 @@
 """Turn 1b.10b: the hostile ``.msg`` run -- one inventory, the whole pipeline, one file.
 
 Every hostile ``.msg`` input this phase knows is gathered here as an **inventory** and driven
-through ``parse`` -> ``MsgContainer`` -> ``assemble`` -> ``store_document`` under
-``Limits.untrusted()``: the whole committed ``.msg`` corpus (the well-formed fixtures and the three
+through ``ingest_path`` (which runs ``parse`` -> ``MsgContainer`` -> ``assemble`` -> ``store_document``)
+under ``Limits.untrusted()``: the whole committed ``.msg`` corpus (the well-formed fixtures and the three
 hostile mutants), the test-built seeds the earlier turns typed (the size lies and the directory
 self-loop, the recipient-count mismatch, the two hostile UTF-16 shapes and the attachment-no-data
 shapes) and one mutant per ``(base, operator)`` of the seeded mutation operators the CFB and MAPI
@@ -13,11 +13,11 @@ reduces no existing test. The outcome contract is the one those tests state: eve
 document or a named refusal, nothing raises, the caps hold, no published string fails UTF-8, and
 the digest of the outcomes is identical under two ``PYTHONHASHSEED``\\ s.
 
-**One FINDING**, pinned below and reported in ``docs/phase1b-report.md``:
-``ingest_path`` cannot ingest a ``.msg`` at all (``ingest._container_for`` hands ``MsgContainer``
-a material it refuses). The store step is exercised directly and the entry point's raise is pinned
-so the finding cannot be lost or silently pass; ``ingest.py`` is not on this turn's allow-list, so
-it is reported, not fixed.
+Turn 1b.10c fixed the one FINDING this run used to carry: ``ingest._container_for`` handed
+``MsgContainer`` a ``MemoryMaterial`` while ``MsgContainer.__init__`` takes ``bytes`` and raises
+``TypeError``, so the entry point could not ingest a ``.msg`` at all. The run no longer pins that
+raise -- it drives ``ingest_path`` over the whole inventory, so every file is a document or a named
+skip and a reintroduced ``TypeError`` fails the run.
 
 ``inventory()`` is the run itself; the report embeds the table it returns.
 """
@@ -57,14 +57,6 @@ LIMITS = Limits.untrusted()
 
 #: How far the operator scan may go looking for each distinct operator per base.
 OPERATOR_SCAN_CAP = 200
-
-#: FINDING (Turn 1b.10b): ``ingest_path`` cannot ingest a ``.msg`` at all.
-#:
-#: ``ingest._container_for`` hands ``MsgContainer`` a ``MemoryMaterial`` while
-#: ``MsgContainer.__init__`` takes ``bytes`` and raises ``TypeError`` for anything else, so the
-#: first ``cfb_msg`` file in a directory aborts the whole ``ingest_path`` run. This substring is
-#: the raise the test pins; the finding is reported in the outcome note and the report.
-INGEST_MSG_DEFECT = "msgcontainer takes bytes"
 
 #: The container kinds ``parse`` can decide on.
 DECISIONS = ("rfc822", "cfb_msg")
@@ -148,25 +140,32 @@ def _strings(document, container) -> list[str]:
     return strings
 
 
-def _ingest_state(root: Path) -> str:
-    """The ingest entry point's state over a directory of ``.msg`` files, or the pinned FINDING."""
-    try:
-        ingest_path(root, store.document_store(root / "_ingest_store"), limits=LIMITS)
-    except TypeError as defect:
-        assert INGEST_MSG_DEFECT in str(defect), defect
-        return f"raise:TypeError({INGEST_MSG_DEFECT})"
-    raise AssertionError(
-        "FINDING is stale: ingest_path ingested a .msg -- update tests/test_phase1b_hostile_run.py "
-        "and docs/phase1b-report.md (the .msg half of the ingest path works now)"
-    )
+def _ingest_manifest(root: Path) -> dict[str, object]:
+    """Run ``ingest_path`` over a directory of ``.msg`` files: its rows, or a raised defect.
+
+    This is the entry point the README headlines. It must ingest the whole directory -- a
+    ``TypeError`` (the Turn 1b.10c defect) or any other exception propagates and fails the run.
+    """
+    manifest = ingest_path(root, store.document_store(root / "_ingest_store"), limits=LIMITS)
+    by_path = {row.path: row for row in manifest.rows}
+    assert set(by_path) == {path.name for path in root.glob("*.msg")}, "a file produced no manifest row"
+    return {
+        "by_path": by_path,
+        "rows": len(manifest.rows),
+        "written": manifest.written,
+        "hits": manifest.hits,
+        "skipped": manifest.skipped,
+    }
 
 
 def inventory() -> dict[str, object]:
-    """Run every hostile input through the pipeline; return the outcomes and the inventory table.
+    """Run every hostile input through ``ingest_path``; return the outcomes and the inventory table.
 
-    Per input: ``parse`` -> ``MsgContainer`` -> ``assemble`` -> ``store_document`` (the store step
-    the ingest path would take). A ``parse`` refusal short-circuits to a named refusal row. The
-    ingest entry point's own raise is pinned once (:func:`_ingest_state`).
+    The entry point ingests the whole directory once (:func:`_ingest_manifest`): each file's
+    manifest row is the store step the run records. Per input the run also drives ``parse`` ->
+    ``MsgContainer`` -> ``assemble`` for the table's status and reason columns; a ``parse`` refusal
+    short-circuits to a named refusal row, and its manifest row must be ``skipped`` with that same
+    reason.
     """
     cases = _cases()
     rows: list[dict[str, object]] = []
@@ -174,13 +173,17 @@ def inventory() -> dict[str, object]:
         root = Path(handle)
         for cls, name, data in cases:
             (root / f"{cls}__{name}.msg").write_bytes(data)
-        ingest = _ingest_state(root)
-        artifact_store = store.document_store(root / "_artifact_store")
+        ingest = _ingest_manifest(root)
+        by_path = ingest["by_path"]
         for cls, name, data in cases:
             rel = f"{cls}__{name}.msg"
+            manifest_row = by_path[rel]
             decision = parse(data, limits=LIMITS)
             if decision.error is not None:
                 assert decision.error.reason_id, rel
+                # The entry point's own verdict for this file agrees with the parser's refusal.
+                assert manifest_row.outcome == "skipped", (rel, manifest_row)
+                assert manifest_row.reason_id == decision.error.reason_id, (rel, manifest_row)
                 rows.append(
                     {
                         "class": cls,
@@ -188,7 +191,7 @@ def inventory() -> dict[str, object]:
                         "decision": f"refused:{decision.error.reason_id}",
                         "status": None,
                         "reason": decision.error.reason_id,
-                        "ingest": ingest,
+                        "ingest": manifest_row.outcome,
                         "store": "skipped",
                     }
                 )
@@ -208,8 +211,10 @@ def inventory() -> dict[str, object]:
                     len(data), cfb.sector_windows(len(data), cfb_file.sector_size)
                 )
                 assert cfb_file.steps <= budget, (rel, cfb_file.steps, budget)
-            artifact, created = store.store_document(container, artifact_store, limits=LIMITS)
-            assert artifact.container_hash == container.container_hash(), rel
+            # The entry point stored this file: its manifest row is written or hit, never skipped,
+            # and it names the container's own hash.
+            assert manifest_row.outcome in ("written", "hit"), (rel, manifest_row)
+            assert manifest_row.container_hash == container.container_hash(), rel
             rows.append(
                 {
                     "class": cls,
@@ -217,10 +222,10 @@ def inventory() -> dict[str, object]:
                     "decision": decision.kind,
                     "status": status.status.value,
                     "reason": status.reason,
-                    "ingest": ingest,
+                    "ingest": manifest_row.outcome,
                     # A mutant that wrote a word to the value it already held rebuilds the base's
                     # bytes exactly, so the store legitimately reports a hit rather than a write.
-                    "store": "written" if created else "hit",
+                    "store": manifest_row.outcome,
                 }
             )
     by_class = Counter(row["class"] for row in rows)
@@ -229,7 +234,12 @@ def inventory() -> dict[str, object]:
         "rows": rows,
         "by_class": dict(by_class),
         "by_outcome": dict(by_outcome),
-        "ingest": ingest,
+        "ingest": {
+            "rows": ingest["rows"],
+            "written": ingest["written"],
+            "hits": ingest["hits"],
+            "skipped": ingest["skipped"],
+        },
     }
 
 
@@ -245,11 +255,11 @@ def digest() -> str:
 
 
 def test_every_hostile_msg_input_yields_a_document_or_a_named_refusal() -> None:
-    """The whole inventory runs the pipeline: no input raises, every outcome is closed.
+    """The whole inventory runs through ``ingest_path``: no input raises, every outcome is closed.
 
     The inventory is also the report's table, so this test asserts it is not vacuous: every class
-    present, at least one named refusal, every status a known one, and the ingest FINDING pinned
-    rather than assumed.
+    present, at least one named refusal, every status a known one, and the entry point's own ingest
+    witnesses every file (a reintroduced ``TypeError`` would raise out of ``inventory()``).
     """
     result = inventory()
     rows = result["rows"]
@@ -262,14 +272,20 @@ def test_every_hostile_msg_input_yields_a_document_or_a_named_refusal() -> None:
         if row["status"] is not None:
             assert row["status"] in known, row
             assert row["store"] in ("written", "hit"), row
+            assert row["ingest"] in ("written", "hit"), row
         else:
             assert str(row["decision"]).startswith("refused:"), row
             assert row["store"] == "skipped", row
-        assert row["ingest"] == result["ingest"], row
+            assert row["ingest"] == "skipped", row
     refused = {row["decision"] for row in rows if str(row["decision"]).startswith("refused:")}
     assert refused, "the inventory must carry at least one named refusal"
     assert sum(result["by_outcome"].values()) == len(rows)
-    assert INGEST_MSG_DEFECT in str(result["ingest"])
+    # The entry point ingested every file in the inventory directory: its own row count is the
+    # case count, and every row is a document or a named skip.
+    ingest = result["ingest"]
+    assert ingest["rows"] == len(rows), ingest
+    assert ingest["written"] + ingest["hits"] + ingest["skipped"] == len(rows), ingest
+    assert ingest["skipped"] >= 1 and ingest["written"] >= 1, ingest
 
 
 def test_the_hostile_inventory_is_stable_across_hash_seeds() -> None:

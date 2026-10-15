@@ -46,8 +46,15 @@ Not threading and not time reconciliation (`TimeEvent` is Phase 3); not embedded
 (`children_axis` is Phase 2); not RTF-to-text; not a `.msg` writer; not `.pst`/`.ost`/`.oft`/TNEF;
 not a verifier of signed or encrypted mail (the class is recorded, the body is not opened). The
 `.msg` evidence is a **synthetic** corpus: no real message has been read, and every tag outside the
-first eleven spike files is public-spec only until the probes P1-P6 are run. One defect is carried
-into this release: `ingest_path` cannot ingest a `.msg` (recorded in `docs/phase1b-report.md`).
+first eleven spike files is public-spec only until the probes P1-P6 are run.
+
+### Fixed
+
+* **`ingest_path` ingests `.msg`.** The directory-ingest entry point
+  (`emailextract/ingest.py::_container_for`) handed `MsgContainer` a `MemoryMaterial`, which its
+  `__init__` refuses, so directory ingest of any `.msg` raised `TypeError` and aborted the run;
+  the `cfb_msg` branch now passes the bytes. Fixed in Turn 1b.10c, with the `.msg` ingest tests in
+  `tests/test_ingest_msg.py` and the hostile run driving the entry point itself.
 
 ## 0.1.0 (2026-10-07)
 

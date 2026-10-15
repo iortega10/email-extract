@@ -108,7 +108,7 @@ the answer.
 | the `.msg` corpus is a second ledger list, so no `.eml` line and no golden key moves | `tests/test_behavior_ledger.py::test_the_committed_ledger_agrees_with_the_code` |
 | the runtime dependency is exactly `docextract-core`; `olefile` is a `[dev]` extra | `tests/test_phase1_scope.py::test_no_runtime_dependency_beyond_docextract_core` |
 | no GPL/AGPL/LGPL is reachable through this tree's declared dependencies | `tests/test_licence_audit.py::test_the_form_extra_does_not_request_the_agpl_pdf_extra` |
-| `ingest_path` cannot ingest a `.msg`: **finding**, not fixed (see below) | `tests/test_phase1b_hostile_run.py::test_every_hostile_msg_input_yields_a_document_or_a_named_refusal` |
+| `ingest_path` ingests every committed `.msg` (fixed in Turn 1b.10c; see the hostile run) | `tests/test_ingest_msg.py::test_ingest_path_ingests_every_committed_msg` |
 
 ## Coverage
 
@@ -172,8 +172,9 @@ census, `SHA256SUMS`, the label ledger). The gate closes it with a case built in
 
 ### The hostile run
 
-One inventory, **108** hostile inputs, each driven through `parse` -> `MsgContainer` -> `assemble`
--> `store_document` under `Limits.untrusted()`
+One inventory, **108** hostile inputs, each driven through `ingest_path` (which runs `parse` ->
+`MsgContainer` -> `assemble` -> `store_document`) under `Limits.untrusted()`; the entry point
+ingested the whole inventory in one run -- **89** written, **3** hit, **16** named skips
 (`tests/test_phase1b_hostile_run.py::test_every_hostile_msg_input_yields_a_document_or_a_named_refusal`):
 
 | class | count | outcome |
@@ -192,14 +193,16 @@ By outcome: `cfb_msg/parsed` **81**, `cfb_msg/truncated` **9**, `cfb_msg/unsuppo
 of the outcomes is identical under `PYTHONHASHSEED=0` and `PYTHONHASHSEED=1234567`
 (`tests/test_phase1b_hostile_run.py::test_the_hostile_inventory_is_stable_across_hash_seeds`).
 
-**The one finding this run leaves open (reported, not fixed):** `ingest_path` cannot ingest a `.msg`
-at all. `emailextract/ingest.py::_container_for` hands `MsgContainer` a `MemoryMaterial`, while
-`MsgContainer.__init__` takes `bytes` and raises `TypeError("msgcontainer takes bytes, got
-MemoryMaterial")`, so the first `cfb_msg` file aborts the whole run. The hostile run therefore
-exercises the store step directly (`store_document`) and **pins** the raise, so the defect cannot be
-lost or silently start passing. `emailextract/ingest.py` and `emailextract/msgcontainer.py` are not
-on Turn 1b.10b's allow-list, so the fix is the owner's call; it needs one line (pass the bytes, not
-the material) and a store/re-ingest test.
+**The one finding this run carried (resolved in Turn 1b.10c):** `ingest_path` could not ingest a
+`.msg` at all. Root cause: `emailextract/ingest.py::_container_for` handed `MsgContainer` a
+`MemoryMaterial`, while `MsgContainer.__init__` takes `bytes` and raises
+`TypeError("msgcontainer takes bytes, got MemoryMaterial")`, so the first `cfb_msg` file aborted the
+whole run. The defect landed in Turn 1b.5 and survived because no test ever ingested a `.msg`
+through the entry point (`tests/test_ingest.py`'s only `.msg` case is refused by `parse` before a
+container is built). The fix is one line (`MsgContainer(raw)`, leaving `EmlContainer` as it was); the
+hostile run now drives `ingest_path` itself, and the new `.msg` ingest tests
+(`tests/test_ingest_msg.py`, declared by Turn 1b.10c) pin the readable corpus, the re-ingest no-op,
+the mixed directory, the cross-seed/interpreter digest and the over-cap skip.
 
 ## Label-versus-parser findings
 
@@ -283,7 +286,5 @@ What Phase 1b deliberately leaves to the owner or to a later phase:
   full width is not claimed.
 * **The projection's stage gaps are not persisted** into a `.msg` record: `gaps.later` carries the
   container's document-level gaps, never the virtual framing's stage gaps (contract section 8).
-* **`ingest_path` cannot ingest a `.msg`** (the one open finding above): reported, pinned by a test,
-  and unfixed because `ingest.py` is outside this turn's allow-list.
 * **Every tag outside the first eleven spike files is public-spec only** until the owner runs the
   probes P1-P6 over real mail; **no real `.msg` has been read** by this package.

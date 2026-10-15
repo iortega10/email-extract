@@ -638,6 +638,36 @@ allow-list named none of `labels.py`, `tools/behavior_ledger.py`, `fixtures/msg/
 the facts exist, measurable and labelled; **1b.10b** adds the gates, the hostile run, the scope test, the
 three ledger components, the report and `0.2.0`.
 
+```declaration turn=1b.10c
+module: emailextract/ingest.py
+module: tests/test_ingest_msg.py
+module: tests/test_phase1b_hostile_run.py
+module: tests/test_turn_declarations.py
+module: docs/phase1b-report.md
+module: docs/design/phase1b-ledgers.md
+module: docs/design/phase1-turn-declarations.md
+module: CHANGELOG.md
+test: tests/test_ingest_msg.py::test_ingest_path_ingests_every_committed_msg
+test: tests/test_ingest_msg.py::test_re_ingesting_a_msg_directory_is_a_no_op
+test: tests/test_ingest_msg.py::test_an_oversized_msg_is_skipped_before_a_container_is_built
+test: tests/test_ingest_msg.py::test_a_mixed_eml_and_msg_directory_ingests_both
+test: tests/test_ingest_msg.py::test_the_msg_manifest_is_byte_identical_across_seeds_and_interpreters
+test: tests/test_ingest_msg.py::test_a_hostile_msg_directory_yields_documents_or_named_skips
+stop: `ingest_path` ingests every committed `.msg`, the hostile run goes through the entry point, the report and CHANGELOG say the finding was fixed, and nothing is committed or tagged
+```
+
+Allow-list (`turn=1b.10c`): `emailextract/ingest.py` (the `cfb_msg` branch of `_container_for`, and
+the `memory_bytes` import only if it became unused), `tests/test_ingest_msg.py` (new),
+`tests/test_phase1b_hostile_run.py` (the flip, and the inventory's entry-point exercise),
+`tests/test_turn_declarations.py` (`BUILT_TURNS` gains `"1b.10c"`), `docs/phase1b-report.md`,
+`docs/design/phase1b-ledgers.md`, `docs/design/phase1-turn-declarations.md` (the mirror),
+`CHANGELOG.md`, `tests/ledger/label_ledger.json` (re-recorded only if `update_label_ledger --check`
+says a recorded file changed). **Not**: `msgcontainer.py`, `container.py`, `cfb.py`, `mapi.py`,
+`rtf.py`, `attach.py`, `walk.py`, `assemble.py`, `parse.py`, `store.py`, `model.py`, `versions.py`,
+`pyproject.toml` (`0.2.0` stays), `evals/**`, `tools/**`, `tests/ledger/behavior_ledger.json`,
+`corpus.json`, `facts_ledger.json`, the `.eml` golden, any fixture or sidecar, `docs/releasing.md`,
+`CLAUDE.md`. No new `.msg`, `.eml` or sidecar.
+
 ## (g) The committed final report
 
 **Path:** `docs/phase1b-report.md`, committed as the **last** artifact of Turn 1b.10. Required sections (a test
@@ -2484,6 +2514,9 @@ MemoryMaterial")`. The run exercises `store_document` directly and **pins** the 
 (`INGEST_MSG_DEFECT`), so the defect cannot be lost or silently start passing. One line fixes it
 (pass the bytes), but `ingest.py`/`msgcontainer.py` are outside the allow-list.
 
+> **Resolved in Turn 1b.10c** -- the one-line fix, the `.msg` ingest tests and the flipped pin are
+> recorded in the Turn 1b.10c outcome note below.
+
 ### The scope test's evidence
 
 `tests/test_phase1b_scope.py`: the bare-interpreter probe (reused from `tests/test_phase1_scope.py`)
@@ -2593,5 +2626,149 @@ Do **not** tag, build or publish from this turn.
 * `CODEPAGES` width (`msg_string8_message_cpid` uses cp 437);
 * running the probes **P1-P6** on real mail before trusting any tag outside the first eleven spike
   files;
-* (new) the `ingest_path` `.msg` defect -- one line plus a store/re-ingest test, and the finding
-  pin in `tests/test_phase1b_hostile_run.py` flips with it.
+* (resolved in Turn 1b.10c) the `ingest_path` `.msg` defect -- the one-line fix, a store/re-ingest
+  test and the flipped pin in `tests/test_phase1b_hostile_run.py` all landed together.
+
+## Turn 1b.10c -- outcome (`ingest_path` ingests a `.msg`: the one-line defect and the tests that missed it)
+
+**Green.** `python -m pytest`: **2615 passed, 2 skipped** on CPython **3.14.3** (263.30s) and
+**2615 passed, 2 skipped** on CPython **3.11.15** (`$LOCALAPPDATA/Temp/wbv311b/Scripts/python.exe`,
+361.26s). All five `--check` tools (`make_msg_fixtures`, `make_fixtures`, `update_eml_golden`,
+`update_behavior_ledger`, `update_label_ledger`) and `python -m emailextract.evals` exit 0 on
+**both** interpreters. **Nothing committed and nothing tagged.**
+
+### The failing-first evidence
+
+A new `tests/test_ingest_msg.py::test_ingest_path_ingests_every_committed_msg` (and the other five
+new tests) failed on the tree at the start of the turn with exactly:
+
+```
+emailextract/ingest.py:256: in _container_for
+    return MsgContainer(memory_bytes(raw))
+emailextract/msgcontainer.py:465: in __init__
+    raise TypeError(f"msgcontainer takes bytes, got {type(data).__name__}")
+TypeError: msgcontainer takes bytes, got MemoryMaterial
+```
+
+`ingest._container_for` passed `memory_bytes(raw)` (a `MemoryMaterial`) to `MsgContainer`, whose
+`__init__` takes plain `bytes`. `EmlContainer` accepts both (`container._material_of`), which is why
+the `.eml` path worked and the line was written that way. No test ever ingested a `.msg` through
+`ingest_path`: `tests/test_ingest.py`'s only `.msg` case is refused by `parse` as `not_a_message`
+before a container is built, and 1b.9/1b.10b ingested through `store_document` directly.
+
+### D3's call-site grep (before the edit)
+
+`grep -rn "MsgContainer(" emailextract/ tools/` finds exactly three constructions: the defect at
+`emailextract/ingest.py:256`, plus `emailextract/evals/l1.py:1592` (`MsgContainer(raw)`) and
+`tools/behavior_ledger.py:603` (`MsgContainer(payload)`) -- **both pass bytes**, so neither was the
+same root cause in a second call site. `EmlContainer(` sites (`evals/gates.py`, `evals/l1.py`,
+`tools/behavior_ledger.py:501`, `tools/update_eml_golden.py:254`) all pass a material or a payload
+its adapter accepts. `memory_bytes(` sites are `container.py` (its own definition, `_material_of`,
+`FakeContainer`) and `ingest.py:257`. `emailextract/__init__.py` re-exports only -- **it constructs
+no container**, so no public helper builds one from `memory_bytes`.
+
+### The one-line fix
+
+```diff
+--- a/emailextract/ingest.py
++++ b/emailextract/ingest.py
+@@ -256,7 +256,7 @@
+     if kind == "cfb_msg":
+-        return MsgContainer(memory_bytes(raw))
++        return MsgContainer(raw)
+     return EmlContainer(memory_bytes(raw))
+```
+
+The `memory_bytes` import stays (line 257 still uses it); `MsgContainer.__init__` is **not** widened
+(D1). `tools/update_behavior_ledger.py --check`, `tools/update_eml_golden.py --check`,
+`tools/update_label_ledger.py --check`, `tools/make_fixtures.py --check` and
+`tools/make_msg_fixtures.py --check` all exit 0: the line moves **no** ledger fingerprint and **no**
+`.eml` golden byte (`tests/ledger/label_ledger.json` is untouched, so it was not re-recorded).
+
+### D3's run over every committed `.msg` (the crash's hiding place)
+
+With the `TypeError` gone, `ingest_path` ran the whole pipeline over all **52** committed
+`fixtures/msg/*.msg` for the first time through its own entry point, under `Limits.untrusted()`:
+**50 written, 2 named skips** (`msg_directory_loop.msg` -> `cfb_directory_loop`,
+`msg_mini_cutoff_boundary.msg` -> `not_a_message`), every row's `container_hash` the file's own
+`sha256`, every document re-reading to `container_kind == cfb_msg` with a matching hash, and the
+whole thing byte-identical on a second run. **Findings: none** -- nothing else was hiding behind the
+crash.
+
+### The new tests (`tests/test_ingest_msg.py`, declared by `turn=1b.10c`)
+
+* `test_ingest_path_ingests_every_committed_msg` -- every readable `fixtures/msg/*.msg` is `WRITTEN`
+  with `container_hash == sha256(file bytes)`; the two refused fixtures are `SKIPPED` with their named
+  reason; one document per written row re-reads to a `cfb_msg` `EmailDocument` naming that hash;
+* `test_re_ingesting_a_msg_directory_is_a_no_op` -- a second run is all `hit` and writes no document
+  (the README's promise); the manifest the first run stored is unchanged and still read back by value;
+* `test_an_oversized_msg_is_skipped_before_a_container_is_built` -- an over-cap `.msg` is
+  `file_over_cap` and `ingest._container_for` is never called (`max_input_bytes` is checked first);
+* `test_a_mixed_eml_and_msg_directory_ingests_both` -- `.eml` and `.msg` (including the cross-container
+  pair's `.msg` half and an `.eml` built by `pair_eml_bytes`) ingest together, the manifest is
+  bytewise-ordered, and each `.eml` document is identical whether or not a `.msg` sits beside it;
+* `test_the_msg_manifest_is_byte_identical_across_seeds_and_interpreters` -- the `.msg` manifest and
+  its identity projections hash to the constant `e3e431c3...` under `PYTHONHASHSEED=0` and `=1` and on
+  both interpreters;
+* `test_a_hostile_msg_directory_yields_documents_or_named_skips` -- the 1b.10b hostile builders
+  (imported, not copied) through `ingest_path`: every file a document or a named skip, never an
+  exception, under `Limits.untrusted()`.
+
+### The report and CHANGELOG edits
+
+* `docs/phase1b-report.md` -- the named-resolutions row at **line 111** now reads "`ingest_path`
+  ingests every committed `.msg` (fixed in Turn 1b.10c ...)" citing the new test; the hostile-run
+  paragraph at **lines 175-177** names `ingest_path` and the entry point's own counts (89 written,
+  3 hit, 16 named skips); the open-finding paragraph at **line 196** is rewritten as "resolved in Turn
+  1b.10c" with the root cause, the fix and the new test file; the `ingest_path` bullet was removed
+  from **`## Not done`**. History and other sections are untouched.
+* `CHANGELOG.md` -- the `0.2.0` defect sentence (old line 50) is gone and a `### Fixed` line
+  (`ingest_path` ingests `.msg`) is added at **lines 51-57**.
+* `docs/design/phase1b-ledgers.md` -- the `turn=1b.10c` declaration block and allow-list (section
+  (f)), a resolution back-pointer under 1b.10b's Finding 1 (**line 2517**) and this note;
+  `docs/design/phase1-turn-declarations.md` -- the mirrored `turn=1b.10c` block.
+* `README.md` says nothing about `.msg` and ingest, so it is unchanged.
+* `tests/test_phase1b_report.py` does not pin the old finding's wording, so it is unchanged.
+
+### Existing tests edited (and why)
+
+* `tests/test_phase1b_hostile_run.py` (D4): the module docstring's FINDING paragraph now says the
+  defect was fixed; the `INGEST_MSG_DEFECT` constant is removed (`_ingest_state`'s `try/except
+  TypeError` is gone); `_ingest_state` becomes `_ingest_manifest`, which runs `ingest_path` over the
+  whole directory with **no** exception handler, so a reintroduced `TypeError` fails the run;
+  `inventory()` now fills each row's `store`/`ingest` from the entry point's own manifest row and
+  asserts a refused file's manifest reason equals the parser's; the test's `INGEST_MSG_DEFECT in
+  ...` pin is replaced by entry-point coverage assertions (the entry point saw every file, and
+  `written + hits + skipped == rows`). Nothing is weakened.
+* `tests/test_turn_declarations.py`: `BUILT_TURNS` gains `"1b.10c"`.
+
+The hostile inventory's table (`by_class`, `by_outcome`) is **unchanged** (`cfb_msg/parsed` 81,
+`cfb_msg/truncated` 9, `cfb_msg/unsupported` 2, `refused:not_a_message` 9,
+`refused:cfb_directory_loop` 4, `refused:cfb_header_unsupported` 3). Its per-row `store` column's
+totals are unchanged too (89 written, 3 hit, 16 skipped), but **four rows swapped `written`<->`hit`**:
+`committed/msg_headers_only` and `committed/msg_v4_sectors` are now `hit` (the entry point visits
+files in path order, so the `committed__*` name is seen before the `cfb_mutant__*` name that rebuilds
+its bytes), and `cfb_mutant/msg_headers_only_fat_entry` / `cfb_mutant/msg_v4_sectors_entry_start` are
+now `written`. The outcome digest changes accordingly (it is compared across seeds, not to a
+constant).
+
+### Mutations (each run, restored, and reported)
+
+1. `MsgContainer(memory_bytes(raw))` reintroduced -- `test_ingest_path_ingests_every_committed_msg`
+   **and** the flipped `test_every_hostile_msg_input_yields_a_document_or_a_named_refusal` both fail
+   with the `TypeError`.
+2. `_container_for` builds an `EmlContainer` for a `cfb_msg` kind -- `container_kind == cfb_msg`
+   fails (`test_ingest_path_ingests_every_committed_msg`,
+   `test_a_mixed_eml_and_msg_directory_ingests_both`).
+3. The `max_input_bytes` check skipped for a `.msg` -- the over-cap `.msg` is refused by `parse` as
+   `input_over_cap` instead of `file_over_cap`; `test_an_oversized_msg_is_skipped_before_a_container_is_built`
+   fails.
+4. A second ingest keyed per run (rewriting a `.msg` document) -- `second.written` is non-zero;
+   `test_re_ingesting_a_msg_directory_is_a_no_op` fails.
+
+### What the owner still decides before tagging
+
+`docs/releasing.md`'s `0.1.0` lines (**31-32**, **37**, **41** -> `0.2.0` / `v0.2.0`), the commit,
+and the `v0.2.0` tag, plus the standing items: the two unmet floors (`msg.recipients` 4/10,
+`msg.time_facts` 1/4), `msg.rtf`, the pair's committed `.eml`, the `MELA` CRC leniency, `CODEPAGES`
+width, and the probes P1-P6 on real mail.

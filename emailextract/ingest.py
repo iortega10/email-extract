@@ -253,7 +253,7 @@ def _row_for(root: Path, relative: str, store: Collection[DocumentArtifact], *, 
 def _container_for(raw: bytes, kind: str) -> Container:
     """The container the entry point decided on: a ``cfb_msg`` projection, else ``.eml``."""
     if kind == "cfb_msg":
-        return MsgContainer(memory_bytes(raw))
+        return MsgContainer(raw)
     return EmlContainer(memory_bytes(raw))
 
 

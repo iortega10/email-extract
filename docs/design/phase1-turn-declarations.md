@@ -1735,3 +1735,21 @@ test: tests/test_phase1b_report.py::test_the_phase1b_report_names_the_version_bu
 test: tests/test_phase1b_report.py::test_the_phase1b_report_records_the_max_input_bytes_asymmetry
 stop: after the phase1b gap gate, the hostile run, the scope test, the three ledger components, the report and the 0.2.0 edits; the owner commits and tags v0.2.0
 ```
+
+```declaration turn=1b.10c
+module: emailextract/ingest.py
+module: tests/test_ingest_msg.py
+module: tests/test_phase1b_hostile_run.py
+module: tests/test_turn_declarations.py
+module: docs/phase1b-report.md
+module: docs/design/phase1b-ledgers.md
+module: docs/design/phase1-turn-declarations.md
+module: CHANGELOG.md
+test: tests/test_ingest_msg.py::test_ingest_path_ingests_every_committed_msg
+test: tests/test_ingest_msg.py::test_re_ingesting_a_msg_directory_is_a_no_op
+test: tests/test_ingest_msg.py::test_an_oversized_msg_is_skipped_before_a_container_is_built
+test: tests/test_ingest_msg.py::test_a_mixed_eml_and_msg_directory_ingests_both
+test: tests/test_ingest_msg.py::test_the_msg_manifest_is_byte_identical_across_seeds_and_interpreters
+test: tests/test_ingest_msg.py::test_a_hostile_msg_directory_yields_documents_or_named_skips
+stop: `ingest_path` ingests every committed `.msg`, the hostile run goes through the entry point, the report and CHANGELOG say the finding was fixed, and nothing is committed or tagged
+```
