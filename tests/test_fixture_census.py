@@ -143,6 +143,21 @@ def _msg_family_g_rows(text: str) -> dict[str, str]:
     return _msg_family_rows(text, "## Family G")
 
 
+def _msg_family_h_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family H`` (encodings) table's rows (Turn 1b.9)."""
+    return _msg_family_rows(text, "## Family H")
+
+
+def _msg_family_i_rows(text: str) -> dict[str, str]:
+    """``name -> turn`` for the Phase 1b ``Family I`` (the pair) table's rows (Turn 1b.9).
+
+    Unlike the other families these names carry their suffix: ``pair_gmail_reply.msg`` is the
+    committed half and ``pair_gmail_reply.eml`` is built in the test (Turn 1b.9 D1), so the
+    caller strips the one it needs.
+    """
+    return _msg_family_rows(text, "## Family I")
+
+
 def sidecar_stems() -> set[str]:
     return {
         path.name.removesuffix(".expected.json")
@@ -293,14 +308,33 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     # Turn 1b.8 lands the three Family F RTF rows.
     built_in_1b8 = {name for name, turn in family_f.items() if "1b.8" in turn}
     assert len(built_in_1b8) == 3, sorted(built_in_1b8)
+    # Turn 1b.9 lands the ten Family H rows and the pair's committed `.msg` half.
+    family_h = _msg_family_h_rows(catalogue_text)
+    family_i = _msg_family_i_rows(catalogue_text)
+    built_in_1b9_h = {name for name, turn in family_h.items() if "1b.9" in turn}
+    assert len(built_in_1b9_h) == 10, sorted(built_in_1b9_h)
+    built_in_1b9_i = {name for name, turn in family_i.items() if "1b.9" in turn}
+    assert built_in_1b9_i == {"pair_gmail_reply.eml", "pair_gmail_reply.msg"}, sorted(built_in_1b9_i)
+    # The `.eml` half of the pair is built in the test (Turn 1b.9 D1); only the `.msg` half is
+    # a committed fixture, so the ten Family H rows plus `pair_gmail_reply` are the turn's set.
+    built_in_1b9 = built_in_1b9_h | {"pair_gmail_reply"}
+    assert len(built_in_1b9) == 11, sorted(built_in_1b9)
     committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
-    catalogue_rows = set(msg_rows) | set(family_e) | set(family_f) | set(family_g)
+    catalogue_rows = (
+        set(msg_rows)
+        | set(family_e)
+        | set(family_f)
+        | set(family_g)
+        | set(family_h)
+        | {"pair_gmail_reply"}
+    )
     assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
     assert built_in_1b4 <= committed_msg, sorted(built_in_1b4 - committed_msg)
     assert built_in_1b5 <= committed_msg, sorted(built_in_1b5 - committed_msg)
     assert built_in_1b6 <= committed_msg, sorted(built_in_1b6 - committed_msg)
     assert built_in_1b7 <= committed_msg, sorted(built_in_1b7 - committed_msg)
     assert built_in_1b8 <= committed_msg, sorted(built_in_1b8 - committed_msg)
+    assert built_in_1b9 <= committed_msg, sorted(built_in_1b9 - committed_msg)
     assert committed_msg <= catalogue_rows, sorted(committed_msg - catalogue_rows)
     # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
     missing = sorted(built_this_turn)[0]

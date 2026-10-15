@@ -1014,9 +1014,16 @@ class MsgContainer:
         payload = body[: len(body) - (2 if utf16 else 1)] if stripped else body
         byte_lines = _byte_lines(payload)
         rows: list[tuple[bytes, SpanRow]] = []
+        utf16_cursor = 0
         for index, (char_offset, line) in enumerate(_line_spans(text)):
             if utf16:
-                source_offset, source_len = 2 * char_offset, 2 * len(line)
+                # Turn 1b.9 defect fix: the source is UTF-16LE, where a **non-BMP** code
+                # point is two code units, so the byte span is the encoded line's length.
+                # ``2 * len(line)`` is two bytes short per astral character and shifts every
+                # later line's ``source_byte_offset`` (exposed by ``msg_non_bmp_text``).
+                source_offset = utf16_cursor
+                source_len = len(line.encode("utf-16-le"))
+                utf16_cursor += source_len
             elif index < len(byte_lines):
                 source_offset, source_len = byte_lines[index]
             else:  # pragma: no cover - the two splits always agree on LF

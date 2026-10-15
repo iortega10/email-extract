@@ -497,12 +497,24 @@ test: tests/test_msg_encodings.py::test_001e_code_pages_1252_20127_28591_65001
 test: tests/test_msg_encodings.py::test_internet_versus_message_codepage_disagreement
 test: tests/test_msg_encodings.py::test_non_bmp_surrogate_pairs_survive
 test: tests/test_msg_encodings.py::test_the_utf8_bom_and_lf_only_headers
+test: tests/test_msg_encodings.py::test_all_five_rungs_are_covered_by_a_committed_msg
+test: tests/test_msg_encodings.py::test_a_multivalued_string_keeps_every_value_in_order
+test: tests/test_msg_encodings.py::test_a_string8_body_projects_as_utf8_with_the_ladder_rung
+test: tests/test_msg_encodings.py::test_the_two_hostile_utf16_shapes_go_through_the_container
+test: tests/test_msg_encodings.py::test_a_seeded_fuzz_of_the_string8_bytes_closes
+test: tests/test_msg_cross_container.py::test_the_pair_is_never_deduped_by_raw_hash
+test: tests/test_msg_cross_container.py::test_the_pair_is_deterministic_across_hash_seeds
 stop: after the cross-container pair, the Outlook layout and the encodings
 ```
 
 Allow-list (`turn=1b.9`): `emailextract/msgcontainer.py`, `emailextract/mapi.py`, `fixtures/msg/`,
 `tests/test_msg_cross_container.py`, `tests/test_msg_outlook_layout.py`, `tests/test_msg_encodings.py`,
-`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md`.
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`,
+`tests/test_msg_fixtures.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`, `docs/design/msg-architecture.md`.
+**`emailextract/msgcontainer.py` changes only to fix the one defect the non-BMP test exposes** (the
+transport row's UTF-16 source span). **`behavior_ledger.json` and `versions.py` are permissions, not duties.**
 
 ```declaration turn=1b.10
 module: emailextract/evals/gates.py
@@ -1971,3 +1983,128 @@ Full suite **2174 passed, 2 skipped** on `python` (3.14.3, 4m00s) and on the rep
 5m29s) -- the four new tests are the only addition. `make_msg_fixtures --check`, `make_fixtures
 --check`, `update_eml_golden --check`, `update_behavior_ledger --check`, `update_label_ledger --check`
 and `python -m emailextract.evals` all exit 0. Not committed; 1b.9 not started.
+
+## Turn 1b.9 -- outcome (the cross-container pair, the Outlook-layout proof, the encodings)
+
+No new architecture: three proofs over code that already existed, plus **one defect the non-BMP
+fixture exposed**. Full suite **2190 passed, 2 skipped** (16 new test functions over the 1b.8 fix
+baseline's 2174) on both `python` (3.14.3, 3m44s) and the repo's 3.11 (3.11.15, 5m22s). All five
+`--check` tools (`make_msg_fixtures`, `make_fixtures`, `update_eml_golden`,
+`update_behavior_ledger`, `update_label_ledger`) and `python -m emailextract.evals` exit 0 on both.
+
+### D1-D10: the reviewer's decisions, applied
+
+- **D1 -- the pair's `.eml` is built in the test, not committed.** Only `fixtures/msg/pair_gmail_reply.msg`
+  is committed; the `.eml` half is `tests/support/msg_construction.pair_eml_bytes()`, built from the
+  **same** `PAIR_HEADERS`/`PAIR_PLAIN_TEXT`/`PAIR_HTML_BODY` the generator builds the `.msg` from, so
+  `update_eml_golden --check`, the behavior ledger and `tests/ledger/corpus.json` are untouched. The
+  owner alternative (commit the `.eml` and absorb the corpus-version + golden churn in 1b.10) stands.
+- **D2 -- the pair's message and "equal".** `.eml` = `multipart/alternative` (plain + HTML); `.msg` =
+  `IPM.Note` with `0x007D` (the same original headers) and a `0x1013` HTML body of the **same HTML**,
+  no plain stream. The expected `body_digest` is `hashlib.sha256(PAIR_HTML_TEXT.encode("utf-8"))`
+  computed **in the test**, independent of `_content_fingerprint`.
+- **D3 -- one document shape modulo a hand-typed allow-list.** The test walks every dataclass field,
+  asserts each difference is in `ALLOWED_DOCUMENT_FIELDS`/`ALLOWED_PART_FIELDS` with its reason, and
+  asserts the plain part exists only on the `.eml` side as a named difference.
+- **D4 -- "no candidate".** A plain-only `.eml` against an HTML-only `.msg` of the same words: the
+  `body_digest_view`s differ (`PLAIN`/`HTML`) and the two `ContentFingerprint`s are **not equal** even
+  though the text is. No candidate objects are built (the axis is not built in Phase 1b).
+- **D5 -- never dedupe on the raw hash.** Both halves ingested into one store: two documents, two
+  `container_hash`es, equal `body_digest`, no merge, no cross-reference, and re-ingesting either is
+  byte-for-byte a no-op (`store.store_snapshot` before/after).
+- **D6/D7/D8/D9/D10** -- the layout proof, the rung matrix, the Family H fixtures, the header shapes
+  and the two hostile UTF-16 shapes, below.
+
+### The fixtures (11 new committed `.msg`, no sidecar)
+
+Ten Family H: `msg_string8_1252`, `msg_string8_ascii20127`, `msg_string8_utf8_65001`,
+`msg_string8_message_cpid`, `msg_string8_ascii_no_cp`, `msg_string8_utf8_no_cp`,
+`msg_string8_windows_1252_no_cp` (the five ladder rungs, each a committed file), `msg_string8_body`
+(a `0x1000:001E` plain body), `msg_non_bmp_text` (a `001F` subject with an astral emoji) and
+`msg_multivalued_strings` (a `0037:101F` entry with three `-NNNNNNNN` streams). Plus
+`pair_gmail_reply.msg`. Every construction table is typed in `tests/support/msg_construction.py`
+**before** the generator runs; `tools/make_msg_fixtures.py` and `fixtures/msg/SHA256SUMS` follow.
+
+### The tests (3 new files, 16 functions)
+
+- `tests/test_msg_cross_container.py` (5): the three declared pair tests, D5 (never dedupe) and the
+  pair's determinism of both `container_hash`es and digests under two `PYTHONHASHSEED` values.
+- `tests/test_msg_outlook_layout.py` (2): the fixture's layout equals the hand-typed construction
+  table, read through **both** `cfb.py` and `olefile`; and its distinguishing properties are pinned to
+  the B1-B4 observation each cites.
+- `tests/test_msg_encodings.py` (9): the four declared tests, the five-rung matrix, the multi-valued
+  values, the `001E` body through the walker, the two hostile UTF-16 shapes through the container, and
+  the seeded fuzz (225 mutants, 5 of the new fixtures, `produced > 150`).
+
+### The one code fix (a finding)
+
+`MsgContainer._transport_rows` computed a line's source byte span as `2 * len(line)`. On a UTF-16LE
+transport stream a **non-BMP** code point is two code units, so that is two bytes short per astral
+character and shifts every later line's `source_byte_offset`. `msg_non_bmp_text` exposed it; the fix
+encodes the line to UTF-16LE and uses its real length with a running cursor. `mapi.py` was **not**
+changed (the block allow-lists it, but no test demanded an edit).
+
+### Reported, not bent
+
+- **The D7 catalogue contradiction.** `msg_string8_ascii20127` said `(ascii)` and
+  `msg_string8_utf8_65001` said `(utf8_strict)`, but a fixture whose **internet** code page is 20127 or
+  65001 fires the `internet_cpid` rung; `ascii`/`utf8_strict` fire only with no usable code page. The
+  rung column is corrected in `phase1b-fixtures.md`, and the three new no-code-page variants carry the
+  `ascii`/`utf8_strict`/`windows_1252` rungs, so all five are committed.
+- **The Outlook-layout "not writer defaults" is about the declaration, not the CFB scaffold.** The
+  fixture **shares** the writer's layout arithmetic (19 sectors, no tail slack, every non-root stream
+  mini-resident) -- the test states these rather than hiding them; what distinguishes it is the
+  `__nameid_version1.0`/`__recip_version1.0_#00000000`/`__attach_version1.0_#00000000` storages, the
+  `1/1` top-level counts (the default is `0/0`) and the sub-tables.
+- **D10's lone-surrogate/odd-length shapes are built in the test**, not committed (a same-length byte
+  patch cannot produce the odd-length shape), through the same test-side writer
+  `tests/test_mapi_hostile.py` uses. Both go through `MsgContainer` + `assemble`: no exception, the
+  fault is recorded (`mapi.FAULT_UTF16_LONE_SURROGATE`/`FAULT_UTF16_ODD_LENGTH`), no replacement
+  character, and every published string is UTF-8 encodable.
+- **A line-ending fix on `tests/support/msg_construction.py` and `fixtures/msg/SHA256SUMS`.** The
+  prior session wrote both with CRLF (a Windows `write_text` artifact). `.gitattributes` pins
+  `* text=auto eol=lf`, so git would normalise them to LF at commit while the label ledger recorded
+  the **CRLF** hash -- `update_label_ledger --check` would then fail on the release job's LF checkout.
+  Both files are now LF and `msg_construction.py`'s ledger fingerprint is re-recorded over the LF
+  bytes, so the committed blob and the recorded hash agree.
+
+### Mutations (each run, restored, reported)
+
+1. `assemble._content_fingerprint` over `raw` instead of the view's code points ->
+   `test_the_pair_has_different_container_hash_and_equal_body_digest`,
+   `test_the_pair_is_one_document_shape_modulo_d14`,
+   `test_the_pair_with_a_plain_only_view_is_no_candidate`,
+   `test_the_pair_is_never_deduped_by_raw_hash` (4 fail).
+2. `mapi.decode_unicode` with `errors="surrogatepass"` ->
+   `test_the_two_hostile_utf16_shapes_go_through_the_container` and
+   `tests/test_mapi_hostile.py::test_a_lone_surrogate_is_recorded_not_raised` (2 fail).
+3. Swap the internet/message code page precedence in `mapi.decode_string8` ->
+   `test_001e_code_pages_1252_20127_28591_65001`,
+   `test_internet_versus_message_codepage_disagreement`,
+   `test_all_five_rungs_are_covered_by_a_committed_msg`,
+   `test_a_string8_body_projects_as_utf8_with_the_ladder_rung` (4 fail).
+
+### Files changed (all on the allow-list)
+
+New: `tests/test_msg_cross_container.py`, `tests/test_msg_outlook_layout.py`,
+`tests/test_msg_encodings.py`, 11 `fixtures/msg/*.msg`.
+Edited: `emailextract/msgcontainer.py` (the one fix), `tools/make_msg_fixtures.py`,
+`tests/support/msg_construction.py`, `tests/test_fixture_census.py` (`built_in_1b9`),
+`tests/test_turn_declarations.py` (`BUILT_TURNS += "1b.9"`), `tests/ledger/label_ledger.json`
+(`msg_construction.py`'s fingerprint), `fixtures/msg/SHA256SUMS`,
+`docs/design/phase1-turn-declarations.md` (the `declaration turn=1b.9` block),
+`docs/design/phase1b-fixtures.md` (the D7 corrections + the D1 pair note),
+`docs/design/msg-architecture.md` (the pair + layout + encodings section),
+`docs/design/phase1b-ledgers.md` (the declaration block + the allow-list line, this note).
+Unchanged/untouched: `mapi.py`, `assemble.py`, `cfb.py`, `walk.py`, `model.py`, `versions.py`,
+`behavior_ledger.json`, `tests/ledger/corpus.json`, the `.eml` golden, `docs/design/phase0-gaps.md`,
+`tests/test_phase1_scope.py`.
+
+### Owner questions
+
+1. Commit the pair's `.eml` (D1)? The default keeps it in the test; committing it moves the `.eml`
+   golden and the corpus version, which 1b.10 would absorb.
+2. `msg_string8_message_cpid` uses internet cp `437` as its unresolvable internet code page -- 437 is a
+   real code page that is simply **not** in `CODEPAGES` (`{1252, 20127, 28591, 65001}`); if the owner
+   widens `CODEPAGES` this fixture's rung changes.
+3. The `MELA` CRC leniency and the dictionary's unwritten-byte rule (1b.8 fix note) -- still open.

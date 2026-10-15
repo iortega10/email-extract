@@ -182,18 +182,39 @@ before the generator ran, then cross-checked by the raw reader and `olefile`). A
 
 | fixture | committed | what it exercises (one thing) | facts / gap ids | turn |
 |---|---|---|---|---|
-| `msg_string8_1252` | yes | a `001E` string8 decoded through internet cp 1252 | `msg.codepage_ladder` | 1b.9 |
-| `msg_string8_ascii20127` | yes | a `001E` string8 that is all-ASCII (cp 20127) | `msg.codepage_ladder` (`ascii`) | 1b.9 |
-| `msg_string8_utf8_65001` | yes | a `001E` string8 decoded strict UTF-8 (cp 65001) | `msg.codepage_ladder` (`utf8_strict`) | 1b.9 |
+| `msg_string8_1252` | yes | a `001E` string8 decoded through the internet code page 1252 | `msg.codepage_ladder` (`internet_cpid`) | 1b.9 |
+| `msg_string8_ascii20127` | yes | a `001E` string8 whose internet code page is 20127 | `msg.codepage_ladder` (`internet_cpid`) | 1b.9 |
+| `msg_string8_utf8_65001` | yes | a `001E` string8 whose internet code page is 65001 | `msg.codepage_ladder` (`internet_cpid`) | 1b.9 |
+| `msg_string8_message_cpid` | yes | a `001E` string8 whose internet code page is unresolvable, so the message code page wins | `msg.codepage_ladder` (`message_cpid`) | 1b.9 |
+| `msg_string8_ascii_no_cp` | yes | no code pages at all and all-ASCII bytes: the ladder's ASCII rung | `msg.codepage_ladder` (`ascii`) | 1b.9 |
+| `msg_string8_utf8_no_cp` | yes | no code pages and valid multi-byte UTF-8: the strict UTF-8 rung | `msg.codepage_ladder` (`utf8_strict`) | 1b.9 |
+| `msg_string8_windows_1252_no_cp` | yes | no code pages and bytes that are not valid UTF-8: the windows-1252 rung | `msg.codepage_ladder` (`windows_1252`) | 1b.9 |
 | `msg_string8_body` | yes | a `0x1000` plain **body** as `001E` (8-bit), not `001F` | `msg.body_streams`; `msg.codepage_ladder` | 1b.9 |
 | `msg_non_bmp_text` | yes | a `001F` string with a non-BMP character (a UTF-16 surrogate pair) | `msg.message_class`; subject fact | 1b.9 |
 | `msg_multivalued_strings` | yes | a multi-valued string property (every value kept) | subject/`msg.*` facts | 1b.9 |
+
+**Construction table: the ten Family H fixtures.** All ten are version 3, 512-byte sectors,
+entirely mini-resident, with `001A:001F = "IPM.Note"`; the seven `msg_string8_*` rows carry a
+`0037:001E` subject (and, for `msg_string8_body`, a `1000:001E` plain value) plus its
+`__substg1.0_*` stream, `msg_non_bmp_text` a `0037:001F` subject whose text holds one non-BMP
+code point (an astral emoji), `msg_multivalued_strings` a `0037:101F` (`PT_MV_UNICODE`) entry
+with three `__substg1.0_0037001F-NNNNNNNN` streams. Every number is typed in
+`tests/support/msg_construction.py` before the generator runs.
+
+**Catalogue sentences corrected in Turn 1b.9 (D7).** The two rows above read
+`msg_string8_ascii20127` = "all-ASCII (cp 20127)" with the rung `(ascii)` and
+`msg_string8_utf8_65001` = "strict UTF-8 (cp 65001)" with the rung `(utf8_strict)`. A fixture
+whose **internet** code page is 20127 or 65001 fires the `internet_cpid` rung, not `ascii` or
+`utf8_strict`; those two rungs fire only when no code page resolves. The rung column is
+corrected above, and the three new no-code-page variants carry the `ascii`, `utf8_strict` and
+`windows_1252` rungs (`message_cpid` is `msg_string8_message_cpid`), so all five rungs are
+covered by a committed `.msg`.
 
 ## Family I — the cross-container pair (Turn 1b.9)
 
 | fixture | committed | what it exercises (one thing) | facts / gap ids | turn |
 |---|---|---|---|---|
-| `pair_gmail_reply.eml` | yes | one synthetic message as RFC 822 (multipart/alternative, plain + HTML) | `container_hash`, `body_digest` | 1b.9 |
+| `pair_gmail_reply.eml` | no (built in the test) | one synthetic message as RFC 822 (multipart/alternative, plain + HTML) | `container_hash`, `body_digest` | 1b.9 |
 | `pair_gmail_reply.msg` | yes | **the same message** as `.msg` (HTML kept, plain dropped) | `container_hash` differs, `body_digest` equal (HTML view) | 1b.9 |
 
 **Construction table: the pair.** The `.eml` is a `multipart/alternative` with a `text/plain` and a
@@ -201,6 +222,11 @@ before the generator ran, then cross-checked by the raw reader and `olefile`). A
 whose bytes are the **same HTML** (no plain stream). By D14 the two have **different** `container_hash` (the
 file bytes differ) and an **equal** `body_digest` (the selected HTML view's code points as UTF-8), and the
 `.msg` surfaces as **no plain view**. This is the one fixture that proves the D14 cross-container relation.
+**D1:** only the `.msg` half is committed; the `.eml` half is built in the test by
+`tests/support/msg_construction.pair_eml_bytes()` from the same single message definition
+(`PAIR_HEADERS`/`PAIR_PLAIN_TEXT`/`PAIR_HTML_BODY`) the generator builds the `.msg` from, because
+a new committed `.eml` would move the `.eml` golden, the corpus version and
+`tests/ledger/corpus.json`, none of which this turn owns.
 
 ## Test-only hostile seeds (committed seeds, not fixtures)
 

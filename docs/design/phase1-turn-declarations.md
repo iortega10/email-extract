@@ -1587,6 +1587,41 @@ test: tests/test_msg_rtf.py::test_a_real_mela_vector_is_accepted
 stop: after the RTF decompress-and-record minimum (RTF-to-text stays a gap)
 ```
 
+```declaration turn=1b.9
+module: tests/test_msg_cross_container.py
+module: tests/test_msg_outlook_layout.py
+module: tests/test_msg_encodings.py
+module: tests/support/msg_construction.py
+module: tools/make_msg_fixtures.py
+test: tests/test_msg_cross_container.py::test_the_pair_has_different_container_hash_and_equal_body_digest
+test: tests/test_msg_cross_container.py::test_the_pair_is_one_document_shape_modulo_d14
+test: tests/test_msg_cross_container.py::test_the_pair_with_a_plain_only_view_is_no_candidate
+test: tests/test_msg_outlook_layout.py::test_the_handbuilt_layout_matches_the_construction_table
+test: tests/test_msg_outlook_layout.py::test_the_handbuilt_layout_is_not_writer_defaults
+test: tests/test_msg_encodings.py::test_001e_code_pages_1252_20127_28591_65001
+test: tests/test_msg_encodings.py::test_internet_versus_message_codepage_disagreement
+test: tests/test_msg_encodings.py::test_non_bmp_surrogate_pairs_survive
+test: tests/test_msg_encodings.py::test_the_utf8_bom_and_lf_only_headers
+test: tests/test_msg_encodings.py::test_all_five_rungs_are_covered_by_a_committed_msg
+test: tests/test_msg_encodings.py::test_a_multivalued_string_keeps_every_value_in_order
+test: tests/test_msg_encodings.py::test_a_string8_body_projects_as_utf8_with_the_ladder_rung
+test: tests/test_msg_encodings.py::test_the_two_hostile_utf16_shapes_go_through_the_container
+test: tests/test_msg_encodings.py::test_a_seeded_fuzz_of_the_string8_bytes_closes
+test: tests/test_msg_cross_container.py::test_the_pair_is_never_deduped_by_raw_hash
+test: tests/test_msg_cross_container.py::test_the_pair_is_deterministic_across_hash_seeds
+stop: after the cross-container pair, the Outlook layout and the encodings
+```
+
+Allow-list (`turn=1b.9`): `emailextract/msgcontainer.py`, `emailextract/mapi.py`, `fixtures/msg/`,
+`tests/test_msg_cross_container.py`, `tests/test_msg_outlook_layout.py`, `tests/test_msg_encodings.py`,
+`tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named
+additions, written here in the same turn: `tools/make_msg_fixtures.py`, `tests/support/msg_construction.py`,
+`tests/test_msg_fixtures.py`, `tests/test_fixture_census.py`, `tests/test_turn_declarations.py`,
+`docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md` (the D7 corrections and the D1
+pair note), `docs/design/msg-architecture.md` (a short section on the pair and the layout proof).
+**`emailextract/msgcontainer.py` changes only to fix the one defect the non-BMP test exposes** (the
+transport row's UTF-16 source span). **`behavior_ledger.json` and `versions.py` are permissions, not duties.**
+
 Allow-list (`turn=1b.8`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `fixtures/msg/`,
 `tests/test_msg_rtf.py`, `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the
 brief's named additions, written here in the same turn: `emailextract/rtf.py` (new),

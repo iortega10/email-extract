@@ -70,6 +70,7 @@ sys.path.insert(0, str(REPO_ROOT / "tests"))
 
 from support import mapi_table  # noqa: E402  (property-table bytes, typed from [MS-OXMSG])
 from support import rtf_compress  # noqa: E402  (the independent LZFu compressor, Turn 1b.8)
+from support import msg_construction  # noqa: E402  (the pair's one message definition, Turn 1b.9)
 
 #: The transport-header stream's UTF-16LE byte length, typed here so the fixtures'
 #: construction tables can name it. It is a whole number of UTF-16 code units.
@@ -1239,6 +1240,156 @@ def _fixture_duplicate_filenames() -> bytes:
     )
 
 
+# -------------------------------------- Turn 1b.9: the Family H encodings fixtures
+
+#: The 8-bit (``001E``) string payloads, one per ladder rung (D7). Byte ``0x93`` is a C1
+#: control under iso-8859-1 and a curly quote under cp1252, so it separates the rungs.
+H_1252_PAYLOAD = b"synthetic \x93 string8 subject"
+H_ASCII_PAYLOAD = b"synthetic ascii string8 subject"
+H_UTF8_PAYLOAD = "synthetic \u00fcnicode \u4e16\u754c string8 subject".encode("utf-8")
+#: ``msg_string8_body``'s plain ``0x1000`` value as ``001E`` (8-bit, not ``001F``).
+H_STRING8_BODY = b"synthetic turn 1b.9 string8 plain body \xe9\r\n"
+#: ``msg_non_bmp_text``'s subject: one non-BMP code point (a UTF-16 surrogate pair), in
+#: both the transport ``Subject:`` and the ``0x0037`` property, so no disagreement fires.
+H_NON_BMP_SUBJECT = "synthetic \U0001f600 non-bmp subject"
+H_NON_BMP_TRANSPORT = (
+    f"Subject: {H_NON_BMP_SUBJECT}\r\n"
+    "From: Ada Lovelace <ada@example.test>\r\n"
+    "\r\n"
+)
+#: ``msg_multivalued_strings``'s three values, in ``-NNNNNNNN`` stream order.
+H_MULTIVALUED = (
+    "first multivalued value",
+    "second multivalued value",
+    "third multivalued value",
+)
+
+
+def _string8_fixture(payload: bytes, *, codepages) -> bytes:
+    """An ``IPM.Note`` whose ``0x0037`` subject is an 8-bit ``001E`` value (Turn 1b.9).
+
+    ``codepages`` is the ``(internet, message)`` pair or ``None`` for a table with no
+    code-page entries at all, which is what puts the ladder's fall-through rungs in play.
+    """
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.variable_entry(mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8, len(payload)),
+        ],
+        codepages=codepages,
+    )
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            stream(mapi_table.substg_name(mapi_table.PROP_SUBJECT, mapi_table.PT_STRING8), payload),
+        )
+    )
+
+
+def _fixture_string8_1252() -> bytes:
+    return _string8_fixture(H_1252_PAYLOAD, codepages=(1252, 1252))
+
+
+def _fixture_string8_ascii20127() -> bytes:
+    return _string8_fixture(H_ASCII_PAYLOAD, codepages=(20127, 20127))
+
+
+def _fixture_string8_utf8_65001() -> bytes:
+    return _string8_fixture(H_UTF8_PAYLOAD, codepages=(65001, 65001))
+
+
+def _fixture_string8_message_cpid() -> bytes:
+    """Internet ``437`` is outside ``CODEPAGES``, so the message code page wins (D7)."""
+    return _string8_fixture(H_1252_PAYLOAD, codepages=(437, 1252))
+
+
+def _fixture_string8_ascii_no_cp() -> bytes:
+    return _string8_fixture(H_ASCII_PAYLOAD, codepages=None)
+
+
+def _fixture_string8_utf8_no_cp() -> bytes:
+    return _string8_fixture(H_UTF8_PAYLOAD, codepages=None)
+
+
+def _fixture_string8_windows_1252_no_cp() -> bytes:
+    return _string8_fixture(H_1252_PAYLOAD, codepages=None)
+
+
+def _fixture_string8_body() -> bytes:
+    """A ``0x1000`` plain body as ``001E`` (the 8-bit ladder), not ``001F`` (D8)."""
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.variable_entry(
+                mapi_table.PROP_BODY_PLAIN, mapi_table.PT_STRING8, len(H_STRING8_BODY)
+            ),
+        ],
+        codepages=(1252, 1252),
+    )
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            stream(
+                mapi_table.substg_name(mapi_table.PROP_BODY_PLAIN, mapi_table.PT_STRING8),
+                H_STRING8_BODY,
+            ),
+        )
+    )
+
+
+def _fixture_non_bmp_text() -> bytes:
+    """A ``001F`` subject (and header) carrying a non-BMP code point (D8)."""
+    return _t16_fixture(transport=H_NON_BMP_TRANSPORT, subject=H_NON_BMP_SUBJECT, html=None)
+
+
+def _fixture_multivalued_strings() -> bytes:
+    """A multi-valued ``0x0037`` (``101F``): three ``-NNNNNNNN`` streams, every value kept."""
+    payloads = [value.encode("utf-16-le") for value in H_MULTIVALUED]
+    table = _property_stream(
+        [
+            _class_entry(CLASS_IPM_NOTE),
+            mapi_table.variable_entry(
+                mapi_table.PROP_SUBJECT,
+                mapi_table.PT_UNICODE | mapi_table.MV_FLAG,
+                len(payloads[0]),
+            ),
+        ],
+        codepages=(1252, 1252),
+    )
+    children = [
+        stream(
+            mapi_table.multi_substg_name(mapi_table.PROP_SUBJECT, mapi_table.PT_UNICODE, index),
+            payload,
+        )
+        for index, payload in enumerate(payloads)
+    ]
+    return build_cfb(
+        storage(
+            "Root Entry",
+            stream("__properties_version1.0", table),
+            stream(_class_stream_name(), _class_bytes(CLASS_IPM_NOTE)),
+            *children,
+        )
+    )
+
+
+def _fixture_pair_gmail_reply() -> bytes:
+    """The ``.msg`` half of the Family I pair: the original headers and one HTML body (D2).
+
+    The headers and the HTML come from ``tests/support/msg_construction.py``, the same
+    single message definition the ``.eml`` half is built from, so the two cannot drift (D1).
+    """
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=msg_construction.PAIR_HEADERS.encode("utf-16-le"),
+        html=msg_construction.PAIR_HTML_BODY,
+    )
+
+
 FIXTURES = {
     "msg_headers_only": _fixture_headers_only,
     "msg_headers_html": _fixture_headers_html,
@@ -1281,6 +1432,17 @@ FIXTURES = {
     "msg_attachment_zero_size": _fixture_attachment_zero_size,
     "msg_attachments_4095_4096_4097": _fixture_attachments_4095_4096_4097,
     "msg_duplicate_filenames": _fixture_duplicate_filenames,
+    "msg_string8_1252": _fixture_string8_1252,
+    "msg_string8_ascii20127": _fixture_string8_ascii20127,
+    "msg_string8_utf8_65001": _fixture_string8_utf8_65001,
+    "msg_string8_message_cpid": _fixture_string8_message_cpid,
+    "msg_string8_ascii_no_cp": _fixture_string8_ascii_no_cp,
+    "msg_string8_utf8_no_cp": _fixture_string8_utf8_no_cp,
+    "msg_string8_windows_1252_no_cp": _fixture_string8_windows_1252_no_cp,
+    "msg_string8_body": _fixture_string8_body,
+    "msg_non_bmp_text": _fixture_non_bmp_text,
+    "msg_multivalued_strings": _fixture_multivalued_strings,
+    "pair_gmail_reply": _fixture_pair_gmail_reply,
 }
 
 #: Every committed fixture, in build order: the writer's five, ``msg_difat_extended``,

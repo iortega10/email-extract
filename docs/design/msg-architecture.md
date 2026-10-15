@@ -606,3 +606,56 @@ decoder fault -- *also* raises the existing ``msg.stream_truncated`` with the de
 ``0x1009:<fault>`` (the form 1b.5's D0.1 fix gave body faults) and sets the document ``Status`` to
 ``TRUNCATED`` with the contract-section-2 reason. No new gap id and no ``BodyView`` member is added;
 ``msg.rtf_encapsulation_refused`` is **not** created (O2).
+
+## The cross-container pair and the layout proof (Turn 1b.9)
+
+**The pair (D14).** One synthetic message -- a small header set, a plain text and one HTML body --
+is built twice from a **single definition** in `tests/support/msg_construction.py`
+(`PAIR_HEADERS`/`PAIR_PLAIN_TEXT`/`PAIR_HTML_BODY`): as `.eml` (a `multipart/alternative` with
+`text/plain` then `text/html`) and as `.msg` (an `IPM.Note` with `0x007D` carrying the same
+original headers and a `0x1013` HTML body holding the **same HTML**, no plain stream -- the measured
+10-of-11 real shape). Only the `.msg` half is committed (`fixtures/msg/pair_gmail_reply.msg`); the
+`.eml` half is built in the test by `pair_eml_bytes()` (D1: a committed `.eml` would move the `.eml`
+golden, the corpus version and `tests/ledger/corpus.json`). The relation the two prove is D14's:
+`container_hash` **differs** (the file bytes differ) and `content_fingerprint.body_digest` is
+**equal** (it is over the **selected HTML view's code points as UTF-8**, never the transfer bytes),
+`body_digest_view` is `HTML` for both; the `.eml` has a `text/plain` part and the `.msg` has none;
+and the two `EmailDocument`s are **one shape modulo a hand-typed allow-list** -- `container_kind`,
+`container_hash`, `container_facts`, the scaffolding headers (`MIME-Version`/`Content-Type`/
+`Content-Transfer-Encoding`) the `.msg` never carries, the extra alternative + plain leaf, and the
+run record's `run_id`, plus the per-part `part_id`/`parent_part_id`/`selection`/`size_bytes`/
+`sha256`/`encoding_source`/`decode_chain`/`stream_ref`. The plain-only against HTML-only case is
+**no candidate**: the `body_digest_view`s differ (`PLAIN` against `HTML`), so the two
+`ContentFingerprint` records are **not equal** even when the text is equal. And the pair is **never
+deduped on the raw hash**: both halves ingested into one store are two documents with two
+`container_hash`es and equal `body_digest`, no merge and no cross-reference, and re-ingesting either
+is a no-op.
+
+**The Outlook-layout proof.** `msg_outlook_layout_handbuilt` is the one fixture whose declaration
+follows Outlook's observed structure (spike B1-B4) rather than the writer's minimal defaults: a
+`__nameid_version1.0` storage with its three binary streams, one `__recip_version1.0_#00000000` and
+one `__attach_version1.0_#00000000`, a 32-byte top-level property header carrying the counts `1/1`,
+the sub-tables opening on 8 bytes and the entry typings of B3/B4. Two tests prove it: the fixture's
+directory, streams, table lengths, class and recipient/attachment tags equal the **hand-typed**
+construction table in `tests/support/msg_construction.py` (read through both `cfb.py` and
+`olefile`), and the properties that distinguish the declaration from `msg_headers_html` -- the
+writer's default -- are pinned one by one to the observation each cites, with the layout arithmetic
+the two **share** (sector scaffold, mini-residency) stated rather than hidden.
+
+**The encodings (D13).** The `001E` (8-bit) path runs the five-rung ladder
+(`internet_cpid`/`message_cpid`/`ascii`/`utf8_strict`/`windows_1252`) and each rung is a committed
+`.msg`. The critical reading is that the **internet** code page's rung fires whenever that code page
+resolves, whatever its number: a fixture whose internet code page is 20127 or 65001 is
+`internet_cpid`, **not** `ascii`/`utf8_strict` -- those two, and `windows_1252`, fire only when no
+usable code page resolves (the fixtures doc's rows for `msg_string8_ascii20127`/`msg_string8_utf8_65001`
+were corrected in this turn). A non-BMP `001F` string survives as one code point and its **source
+UTF-16 span counts two code units** for the one character (the `_transport_rows` fix below); a
+multi-valued property keeps every value, in `-NNNNNNNN` stream order; a `001E` plain body re-encodes
+to UTF-8 in the projection and carries its ladder rung as its `encoding_source`; and a UTF-8 BOM or
+bare-LF transport header projects the same field list as its CRLF/no-BOM twin, the BOM as a 3-byte
+prelude region and the bare LFs carried verbatim.
+
+**The one code fix (a finding).** `MsgContainer._transport_rows` computed a line's source byte span as
+`2 * len(line)`, which is two bytes short per **astral** character and shifted every later line's
+`source_byte_offset`. `msg_non_bmp_text` exposed it; the fix encodes the line to UTF-16LE and uses
+its real length (a running cursor).
