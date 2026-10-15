@@ -1,0 +1,69 @@
+{
+  "fixture": "msg_v4_sectors.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        4,
+        4096,
+        64,
+        4096,
+        5,
+        32
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          4096
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          4096
+        ],
+        [
+          "minifat",
+          4096
+        ],
+        [
+          "directory",
+          4096
+        ],
+        [
+          "stream",
+          4096
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    }
+  }
+}

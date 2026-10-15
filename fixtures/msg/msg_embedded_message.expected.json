@@ -1,0 +1,120 @@
+{
+  "fixture": "msg_embedded_message.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        12,
+        20
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          2560
+        ],
+        [
+          "stream",
+          2048
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.attachments": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          5,
+          "forwarded.msg",
+          "forwarded.msg",
+          null,
+          null,
+          false,
+          false,
+          null,
+          null
+        ]
+      ]
+    },
+    "msg.embedded_summary": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          "IPM.Note",
+          "Fwd: hello",
+          true,
+          1,
+          0
+        ]
+      ]
+    },
+    "msg.storage_tree_sha256": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          "8681c5965318db9566eaebd887bb289f3796b00251ed8e5001c27bc6b2623d46"
+        ]
+      ]
+    }
+  }
+}

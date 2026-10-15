@@ -29,7 +29,10 @@ from emailextract.evals.labels import DEFAULT_FIXTURES, load_sidecars
 
 ROOT = Path(__file__).resolve().parent.parent
 LEDGER_PATH = Path(__file__).resolve().parent / "ledger" / "facts_ledger.json"
+#: The design fact tables: the phase-1 table (Turn 1.0b) and the Phase 1b table (Turn 1b.0a),
+#: whose 11 ``msg.*`` ids join the same ``phase1`` set (Turn 1b.10a, D6).
 FACTS_DOC = ROOT / "docs" / "design" / "phase1-facts.md"
+FACTS_1B_DOC = ROOT / "docs" / "design" / "phase1b-facts.md"
 
 #: The design's phase-1 fact table row: ``| `id` [(existing)] | 1 | scope | turn | vocabularies | N |``.
 _FLOOR_ROW = re.compile(
@@ -42,12 +45,18 @@ def _load() -> dict[str, Any]:
 
 
 def _design_floors() -> dict[str, int]:
-    """The floors ``docs/design/phase1-facts.md``'s table names, keyed by fact id."""
+    """The floors the design tables name, keyed by fact id.
+
+    Both the phase-1 table and the Phase 1b table (``docs/design/phase1b-facts.md``) are parsed
+    with the same row regex; the Phase 1b ids are phase-1 facts (R13), so their floors join the
+    same mapping.
+    """
     floors: dict[str, int] = {}
-    for line in FACTS_DOC.read_text(encoding="utf-8").splitlines():
-        match = _FLOOR_ROW.match(line)
-        if match:
-            floors[match.group("fact")] = int(match.group("floor"))
+    for doc in (FACTS_DOC, FACTS_1B_DOC):
+        for line in doc.read_text(encoding="utf-8").splitlines():
+            match = _FLOOR_ROW.match(line)
+            if match:
+                floors[match.group("fact")] = int(match.group("floor"))
     return floors
 
 
@@ -184,3 +193,54 @@ def test_the_effective_floor_is_the_achieved_count_at_the_rebase() -> None:
     for fact_id in _phase1_ids():
         assert ledger["floors"][fact_id] == ledger["rebase"]["to"][fact_id], fact_id
         assert ledger["floors"][fact_id] <= measured[fact_id]["labelled"], fact_id
+
+
+#: The eleven Phase 1b fact ids (Turn 1b.10a) whose floors this turn adds.
+PHASE1B_IDS = (
+    "msg.container_layout",
+    "msg.sector_accounting",
+    "msg.message_class",
+    "msg.body_streams",
+    "msg.recipients",
+    "msg.time_facts",
+    "msg.codepage_ladder",
+    "msg.stream_faults",
+    "msg.attachments",
+    "msg.embedded_summary",
+    "msg.storage_tree_sha256",
+)
+
+
+def test_every_phase1b_fact_meets_its_floor() -> None:
+    """Every Phase 1b fact is carried by at least its (effective) floor's worth of sidecars.
+
+    Its *declared* floor (the facts table's) is met, or the shortfall is a recorded finding in
+    ``declared_unmet`` -- the floor is never lowered silently.
+    """
+    ledger = _load()
+    measured = _measured()
+    for fact_id in PHASE1B_IDS:
+        assert fact_id in ledger["floors"], fact_id
+        assert measured[fact_id]["labelled"] >= ledger["floors"][fact_id], (
+            fact_id,
+            measured[fact_id]["labelled"],
+            ledger["floors"][fact_id],
+        )
+        if measured[fact_id]["labelled"] < ledger["declared"][fact_id]:
+            assert {"fact": fact_id, "declared": ledger["declared"][fact_id],
+                    "achieved": measured[fact_id]["labelled"]} in ledger["declared_unmet"], fact_id
+
+
+def test_a_fact_below_its_floor_fails() -> None:
+    """A planted floor past the observed count is a shortfall: the check has teeth."""
+    ledger = _load()
+    measured = _measured()
+    planted = dict(ledger["floors"])
+    fact_id = PHASE1B_IDS[0]
+    planted[fact_id] = measured[fact_id]["labelled"] + 1
+    short = {
+        fid: (measured[fid]["labelled"], planted[fid])
+        for fid in PHASE1B_IDS
+        if measured[fid]["labelled"] < planted[fid]
+    }
+    assert short == {fact_id: (measured[fact_id]["labelled"], planted[fact_id])}

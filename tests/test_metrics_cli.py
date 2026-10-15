@@ -84,7 +84,7 @@ def test_the_cli_exits_zero_on_the_committed_corpus_with_the_quote_facts_live() 
     completed = run_cli()
     assert completed.returncode == 0, completed.stdout + completed.stderr
     output = completed.stdout
-    assert "pass matched=1406 mismatched=0" in output, output
+    assert "pass matched=1689 mismatched=0" in output, output
     assert "no-silent-drop" in output and "pass fixtures=126" in output, output
 
 
@@ -97,7 +97,9 @@ def test_the_table_names_every_gate_it_reports() -> None:
 def test_the_corpus_size_is_counted_by_directory() -> None:
     size = corpus_size()
     assert sum(size["fixtures"].values()) == 126
-    assert sum(size["sidecars"].values()) == 126
+    # Turn 1b.10a adds the 51 committed .msg sidecars (fixtures/msg).
+    assert sum(size["sidecars"].values()) == 177
+    assert size["sidecars"]["msg"] == 51
     assert set(size["fixtures"]) == {"generated", "raw", "time"}
     assert size["fixtures"]["generated"] == 88
     assert size["fixtures"]["time"] == 5
@@ -110,9 +112,11 @@ def test_the_undetermined_count_is_read_from_the_labels() -> None:
 def test_the_falsifiability_line_names_the_uncovered_gaps() -> None:
     covered, exercised, uncovered = falsifiability()
     assert covered == 8
-    assert exercised == 6
-    assert uncovered == ("body.headers_only", "body.no_boundary_found")
-    assert "not exercised by any fixture: body.headers_only, body.no_boundary_found" in render()
+    # Turn 1b.10a: the three .msg fixtures whose virtual projection is empty label
+    # body.headers_only in part.gaps, so it is exercised now; body.no_boundary_found is not.
+    assert exercised == 7
+    assert uncovered == ("body.no_boundary_found",)
+    assert "not exercised by any fixture: body.no_boundary_found" in render()
 
 
 def test_main_returns_zero_on_a_clean_corpus_without_printing_when_quiet(tmp_path, capsys) -> None:

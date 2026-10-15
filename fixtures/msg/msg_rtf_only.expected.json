@@ -1,0 +1,84 @@
+{
+  "fixture": "msg_rtf_only.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        7,
+        8
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          1024
+        ],
+        [
+          "stream",
+          1024
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "rtf"
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "msg.rtf_to_text_unsupported",
+          "1",
+          1,
+          "a 0x1009 RTF body is not converted to text"
+        ]
+      ]
+    }
+  }
+}

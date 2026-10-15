@@ -1,0 +1,98 @@
+{
+  "fixture": "msg_attachment_hidden.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        8,
+        12
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          1536
+        ],
+        [
+          "stream",
+          1024
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.attachments": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          1,
+          "inline-image.png",
+          "inline-image.png",
+          "image/png",
+          null,
+          true,
+          true,
+          17,
+          "1f967b6f87c062d157d8b26611c162f0f4031415aeb5a03356f7323f60ca3ee7"
+        ]
+      ]
+    }
+  }
+}

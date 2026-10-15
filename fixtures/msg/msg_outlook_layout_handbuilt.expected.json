@@ -1,0 +1,120 @@
+{
+  "fixture": "msg_outlook_layout_handbuilt.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        19,
+        20
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          2560
+        ],
+        [
+          "stream",
+          5632
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.recipients": {
+      "phase": 1,
+      "value": [
+        [
+          "to",
+          "Ada Lovelace",
+          "ada@example.test",
+          "smtp"
+        ]
+      ]
+    },
+    "msg.attachments": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          1,
+          "report.txt          ",
+          "report.txt          ",
+          null,
+          null,
+          false,
+          false,
+          40,
+          "f822fdef67f90394d6311787cb2bef7697de706d627797fbbb07732092a243a8"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "msg.property_tag_unknown",
+          "1",
+          1,
+          "a property tag the reader does not recognise"
+        ]
+      ]
+    }
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "fixture": "msg_difat_extended.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        116,
+        4
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          512
+        ],
+        [
+          "fat",
+          56320
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          512
+        ],
+        [
+          "stream",
+          1024
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "msg.cfb_difat_extended",
+          "1",
+          1,
+          "the FAT is reached through an extended DIFAT chain"
+        ]
+      ]
+    }
+  }
+}

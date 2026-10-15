@@ -42,10 +42,15 @@ def _ledger_problems(phases: dict[str, int], ledger: dict) -> list[str]:
 
 
 def test_the_phase1_fact_ids_match_the_ledger() -> None:
-    """The pinned ids are exactly the phase-1 ids of ``FACTS``, and there are twenty."""
+    """The pinned ids are exactly the phase-1 ids of ``FACTS``, and there are thirty-one.
+
+    Turn 1b.10a adds the eleven Phase 1b ids to the same ``phase1`` set (R13: Phase 1b is the
+    container half of the phase-1 parse layer, not a phase of its own), so the count moved from
+    twenty to thirty-one.
+    """
     ledger = _load()
     assert _ledger_problems(dict(FACT_PHASES), ledger) == []
-    assert len(ledger["phase1"]) == len(set(ledger["phase1"])) == 20
+    assert len(ledger["phase1"]) == len(set(ledger["phase1"])) == 31
     assert set(ledger["phase1"]) <= set(FACTS)
     # The oracle is at phase 0, so every pinned fact is declared ahead of the oracle.
     assert CURRENT_PHASE == 0

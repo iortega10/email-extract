@@ -481,6 +481,11 @@ class MsgContainer:
         self.charset_sources: Mapping[str, CharsetOrigin] = {}
         self.cap_observations: Mapping[str, int] = {}
         self.sector_accounting: Mapping[str, int] = {}
+        #: Turn 1b.10a: the 8-bit string ladder's rows, read-only, for the ``msg.codepage_ladder``
+        #: measurer. ``(surface, source_kind, declared_cp, encoding_source)`` -- ``surface`` is
+        #: ``headers``, a body's locator (``1``/``1.1``/``1.2``) or ``prop:<tag hex>`` (a string
+        #: property). Empty for a class-gated or refused file (nothing was decoded).
+        self.codepage_ladder: "tuple[tuple[str, str, int | None, str], ...]" = ()
         self._raw = b""
         self._facts: dict[str, str] = {"adapter": "cfb_msg", "projection": PROJECTION}
 
@@ -532,6 +537,20 @@ class MsgContainer:
 
     def container_facts(self) -> dict[str, str]:
         return dict(self._facts)
+
+    #: Turn 1b.10a: the opened CFB file (read-only), or ``None`` when the open refused (a
+    #: ``cfb.CfbRefusal``) -- the ``msg.container_layout``/``msg.sector_accounting`` measurers
+    #: read the header and the eight-class accounting through it. No behaviour changes: it is
+    #: the same object ``_project`` already holds.
+    @property
+    def cfb_file(self) -> "cfb.CfbFile | None":
+        return self._cfb
+
+    #: Turn 1b.10a: the per-stream chain faults, shaped exactly like ``msg.stream_faults``
+    #: (``(stream, fault, reason)``), read-only. Empty when nothing opened or nothing faulted.
+    @property
+    def stream_faults(self) -> "tuple[tuple[str, str, str], ...]":
+        return tuple(self._cfb.faults) if self._cfb is not None else ()
 
     # --------------------------------------------------------------------- the build
 
@@ -828,6 +847,57 @@ class MsgContainer:
         self._publish_message_facts()
         gaps.extend(self._observation_gaps())
         self.container_gaps = tuple(gaps)
+        self.codepage_ladder = self._build_codepage_ladder(plain.present, html)
+
+    def _build_codepage_ladder(
+        self, plain_present: bool, html: "bytes | None"
+    ) -> "tuple[tuple[str, str, int | None, str], ...]":
+        """Turn 1b.10a: the 8-bit surfaces' ladder rows (``mapi.TextValue`` is the projection).
+
+        One row per decoded **8-bit** surface, in a fixed order: the transport-header stream
+        (``headers``), the body leaves in the projection's locator order, then the 8-bit string
+        properties (the third surface form, ``prop:<tag hex>``). A ``001F`` value has no ladder
+        (``encoding_source`` is ``None``) and is skipped, so only the rungs a real ladder fired
+        are recorded -- exactly the ``source_kind``/``declared_cp``/``encoding_source`` triple the
+        value's own :class:`~emailextract.mapi.TextValue` carries.
+        """
+        assert self._message is not None and self._cfb is not None
+        rows: list[tuple[str, str, "int | None", str]] = []
+
+        def add(surface: str, text: "mapi.TextValue | None") -> None:
+            if text is not None and text.encoding_source is not None:
+                rows.append((surface, text.source_kind or "none", text.declared_cp, text.encoding_source))
+
+        for prop_type in (mapi.PT_UNICODE, mapi.PT_STRING8):
+            name = _stream_name(TRANSPORT_HEADERS, prop_type)
+            if cfb.lookup_entry(self._cfb.entries, name) is None:
+                continue
+            payload, status = cfb.read_stream(self._cfb, name)
+            if status == cfb.FAULT_OK:
+                add("headers", self._decode(payload, prop_type))
+            break
+
+        plain = self._property(BODY_PLAIN)
+        if plain_present and plain is not None:
+            add("1.1" if html is not None else "1", plain.text)
+        if html is not None:
+            add(
+                "1.2" if plain_present else "1",
+                mapi.decode_string8(
+                    html,
+                    internet_codepage=self._message.internet_cp,
+                    message_codepage=self._message.message_cp,
+                ),
+            )
+
+        body_tags = (TRANSPORT_HEADERS, BODY_PLAIN, BODY_RTF, BODY_HTML)
+        for prop in self._message.properties:
+            if prop.tag in body_tags:
+                continue
+            add(f"prop:{prop.tag_hex}", prop.text)
+            for value in prop.texts:
+                add(f"prop:{prop.tag_hex}", value)
+        return tuple(rows)
 
     # ------------------------------------------------------------------- the pieces
 

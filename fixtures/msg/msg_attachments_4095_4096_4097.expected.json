@@ -1,0 +1,130 @@
+{
+  "fixture": "msg_attachments_4095_4096_4097.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ],
+        [
+          "1.1",
+          []
+        ],
+        [
+          "1.2",
+          []
+        ],
+        [
+          "1.3",
+          []
+        ],
+        [
+          "1.4",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        36,
+        20
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          2560
+        ],
+        [
+          "stream",
+          14336
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.attachments": {
+      "phase": 1,
+      "value": [
+        [
+          "1.2",
+          1,
+          "a.bin",
+          "a.bin",
+          "application/octet-stream",
+          null,
+          false,
+          false,
+          4095,
+          "93c67f9d4eef761cd6eeb7a35fb4996acb11f602e9317f540b1651ee6ec950b0"
+        ],
+        [
+          "1.3",
+          1,
+          "b.bin",
+          "b.bin",
+          "application/octet-stream",
+          null,
+          false,
+          false,
+          4096,
+          "4c4fbab41365c5f194aa1f3eadd71d943b8f3739a7ec285c301ef7b142bec829"
+        ],
+        [
+          "1.4",
+          1,
+          "c.bin",
+          "c.bin",
+          "application/octet-stream",
+          null,
+          false,
+          false,
+          4097,
+          "50f1568569a1f3abb17a3fb5105450c82aeb17dd51acfaedbb5a98db4d698e1f"
+        ]
+      ]
+    }
+  }
+}

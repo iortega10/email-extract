@@ -1,0 +1,95 @@
+{
+  "fixture": "msg_string8_windows_1252_no_cp.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        5,
+        4
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          512
+        ],
+        [
+          "stream",
+          512
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.codepage_ladder": {
+      "phase": 1,
+      "value": [
+        [
+          "prop:0037",
+          "none",
+          null,
+          "windows_1252"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "msg.transport_headers_absent",
+          "1",
+          1,
+          "no 0x007D transport-header stream"
+        ],
+        [
+          "msg.codepage_unresolved_ladder_used",
+          "1",
+          1,
+          "the encoding ladder's later rungs were used"
+        ]
+      ]
+    }
+  }
+}

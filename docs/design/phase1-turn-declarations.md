@@ -1653,3 +1653,57 @@ each line named), `tests/test_fixture_census.py`, `tests/test_turn_declarations.
 `docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-fixtures.md`,
 `docs/design/phase1b-ledgers.md`, `docs/design/phase1b-facts.md` (the method-2 sentence only),
 `docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md` (only if a registry sentence is wrong).
+
+```declaration turn=1b.10a
+module: emailextract/evals/l1.py
+module: emailextract/evals/labels.py
+module: emailextract/msgcontainer.py
+module: fixtures/msg/msg_v4_sectors.expected.json
+module: tests/ledger/facts_ledger.json
+module: tests/ledger/label_ledger.json
+module: tests/test_labels.py
+module: tests/test_facts_coverage.py
+module: tests/test_facts_ledger.py
+module: tests/test_l1_gate.py
+module: tests/test_msg_measurers.py
+module: tests/test_turn_declarations.py
+module: docs/design/phase1b-ledgers.md
+module: docs/design/phase1-turn-declarations.md
+module: docs/design/phase1b-facts.md
+test: tests/test_msg_measurers.py::test_measurer_msg_container_layout
+test: tests/test_msg_measurers.py::test_measurer_msg_sector_accounting
+test: tests/test_msg_measurers.py::test_measurer_msg_message_class
+test: tests/test_msg_measurers.py::test_measurer_msg_body_streams
+test: tests/test_msg_measurers.py::test_measurer_msg_recipients
+test: tests/test_msg_measurers.py::test_measurer_msg_time_facts
+test: tests/test_msg_measurers.py::test_measurer_msg_codepage_ladder
+test: tests/test_msg_measurers.py::test_measurer_msg_stream_faults
+test: tests/test_msg_measurers.py::test_measurer_msg_attachments
+test: tests/test_msg_measurers.py::test_measurer_msg_embedded_summary
+test: tests/test_msg_measurers.py::test_measurer_msg_storage_tree_sha256
+test: tests/test_msg_measurers.py::test_every_msg_sidecar_loads_and_names_only_declared_facts
+test: tests/test_msg_measurers.py::test_every_msg_fixture_has_a_sidecar_or_a_recorded_exemption
+test: tests/test_msg_measurers.py::test_the_eml_measurement_is_unchanged_by_the_container_handle
+test: tests/test_msg_measurers.py::test_msg_gaps_ride_the_existing_gaps_later_channel
+test: tests/test_msg_measurers.py::test_the_facts_ledger_pins_the_eleven_ids
+test: tests/test_msg_measurers.py::test_the_measured_values_are_deterministic_under_two_hash_seeds
+test: tests/test_msg_measurers.py::test_hostile_and_fuzzed_bytes_never_raise_out_of_a_measurer
+test: tests/test_facts_coverage.py::test_every_phase1b_fact_meets_its_floor
+test: tests/test_facts_coverage.py::test_a_fact_below_its_floor_fails
+stop: after the eleven msg.* measurers, the .msg sidecars and the coverage floors; 1b.10b is the gates
+```
+
+```declaration turn=1b.10b
+module: emailextract/evals/gates.py
+module: emailextract/evals/falsify.py
+module: tests/test_phase1b_gap_gate.py
+module: tests/test_phase1b_scope.py
+module: tests/test_phase1b_report.py
+module: tests/ledger/behavior_ledger.json
+module: docs/phase1b-report.md
+module: CHANGELOG.md
+module: README.md
+module: pyproject.toml
+module: emailextract/versions.py
+pending: 1b.10b (the phase1b gap gate, the hostile run, the scope test, the three ledger components, the report and the 0.2.0 release) is not built yet
+```

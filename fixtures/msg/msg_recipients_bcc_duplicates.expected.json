@@ -1,0 +1,96 @@
+{
+  "fixture": "msg_recipients_bcc_duplicates.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        11,
+        20
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          2560
+        ],
+        [
+          "stream",
+          1536
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.recipients": {
+      "phase": 1,
+      "value": [
+        [
+          "to",
+          "Ada Lovelace",
+          "ada@example.test",
+          "smtp"
+        ],
+        [
+          "bcc",
+          "Grace Hopper",
+          "grace@example.test",
+          "smtp"
+        ],
+        [
+          "to",
+          "Ada Lovelace",
+          "ada@example.test",
+          "smtp"
+        ]
+      ]
+    }
+  }
+}

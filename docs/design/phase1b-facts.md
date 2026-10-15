@@ -258,7 +258,13 @@ in any `fixtures/**/*.expected.json`, `(C)` grep). So the only findings are forw
 
 - **The `msg.codepage_ladder` row key.** The shape uses `surface = headers | <locator>`. If Turn 1b.4 finds a
   surface that is neither (e.g. a string property outside the header stream and outside a body), a third label
-  form is added here **before** any sidecar uses it, never silently.
+  form is added here **before** any sidecar uses it, never silently. **Decided in Turn 1b.10a:** a decoded
+  **8-bit string property** (a `001E` value outside the transport stream and outside a body -- the `0037`
+  subject of every `msg_string8_*` fixture is one) is a surface, and its label is `prop:<tag hex>` (the
+  property tag, four lowercase hex digits, e.g. `prop:0037`). The rows are, in order: `headers` (the
+  transport-header stream), the body leaves by their locator, then the string properties in property order,
+  and a `001F` value (no ladder) has no row. Without this form `msg_string8_1252` -- a bare `001E` subject and
+  no body -- would have an empty ladder, which the loader refuses to label at all.
 - **`msg.attachments.method` as an int.** The MAPI method is an int in the stream (`0x3705`); the fact renders it
   as an int, not a name, so no method is frozen by a friendly string (spec risk 6). If a later turn wants a name,
   it is a projection over the int, added here first.

@@ -516,43 +516,86 @@ additions, written here in the same turn: `tools/make_msg_fixtures.py`, `tests/s
 **`emailextract/msgcontainer.py` changes only to fix the one defect the non-BMP test exposes** (the
 transport row's UTF-16 source span). **`behavior_ledger.json` and `versions.py` are permissions, not duties.**
 
-```declaration turn=1b.10
-module: emailextract/evals/gates.py
+```declaration turn=1b.10a
 module: emailextract/evals/l1.py
+module: emailextract/evals/labels.py
+module: emailextract/msgcontainer.py
+module: fixtures/msg/msg_v4_sectors.expected.json
+module: tests/ledger/facts_ledger.json
+module: tests/ledger/label_ledger.json
+module: tests/test_labels.py
+module: tests/test_facts_coverage.py
+module: tests/test_facts_ledger.py
+module: tests/test_l1_gate.py
+module: tests/test_msg_measurers.py
+module: tests/test_turn_declarations.py
+module: docs/design/phase1b-ledgers.md
+module: docs/design/phase1-turn-declarations.md
+module: docs/design/phase1b-facts.md
+test: tests/test_msg_measurers.py::test_measurer_msg_container_layout
+test: tests/test_msg_measurers.py::test_measurer_msg_sector_accounting
+test: tests/test_msg_measurers.py::test_measurer_msg_message_class
+test: tests/test_msg_measurers.py::test_measurer_msg_body_streams
+test: tests/test_msg_measurers.py::test_measurer_msg_recipients
+test: tests/test_msg_measurers.py::test_measurer_msg_time_facts
+test: tests/test_msg_measurers.py::test_measurer_msg_codepage_ladder
+test: tests/test_msg_measurers.py::test_measurer_msg_stream_faults
+test: tests/test_msg_measurers.py::test_measurer_msg_attachments
+test: tests/test_msg_measurers.py::test_measurer_msg_embedded_summary
+test: tests/test_msg_measurers.py::test_measurer_msg_storage_tree_sha256
+test: tests/test_msg_measurers.py::test_every_msg_sidecar_loads_and_names_only_declared_facts
+test: tests/test_msg_measurers.py::test_every_msg_fixture_has_a_sidecar_or_a_recorded_exemption
+test: tests/test_msg_measurers.py::test_the_eml_measurement_is_unchanged_by_the_container_handle
+test: tests/test_msg_measurers.py::test_msg_gaps_ride_the_existing_gaps_later_channel
+test: tests/test_msg_measurers.py::test_the_facts_ledger_pins_the_eleven_ids
+test: tests/test_msg_measurers.py::test_the_measured_values_are_deterministic_under_two_hash_seeds
+test: tests/test_msg_measurers.py::test_hostile_and_fuzzed_bytes_never_raise_out_of_a_measurer
+test: tests/test_facts_coverage.py::test_every_phase1b_fact_meets_its_floor
+test: tests/test_facts_coverage.py::test_a_fact_below_its_floor_fails
+stop: after the eleven msg.* measurers, the .msg sidecars and the coverage floors; 1b.10b is the gates
+```
+
+Allow-list (`turn=1b.10a`): `emailextract/evals/l1.py`, `emailextract/evals/labels.py`, `emailextract/msgcontainer.py`
+(read-only accessors only -- `cfb_file`, `stream_faults`, `codepage_ladder`), `fixtures/msg/**/*.expected.json`
+(new files only), `tests/ledger/facts_ledger.json`, `tests/ledger/label_ledger.json` (re-recorded for the
+recorded files), `tests/test_labels.py` (the suffix and the corpus count), `tests/test_facts_coverage.py`,
+`tests/test_facts_ledger.py` (the phase-1 count 20 -> 31), `tests/test_l1_gate.py` (the corpus counts
+126 -> 177 and 1406 -> 1638 -- an **allow-list gap** the brief did not name, see the outcome note),
+`tests/test_msg_measurers.py` (new), `tests/test_turn_declarations.py`, `tests/test_fixture_census.py`,
+`docs/design/phase1b-ledgers.md`, `docs/design/phase1-turn-declarations.md`, `docs/design/phase1b-facts.md`
+(only the third ladder-surface form). **Not**: `emailextract/model.py`, `assemble.py`, `walk.py`, `cfb.py`,
+`rtf.py`, `ingest.py`, `parse.py`, `versions.py`, `tools/behavior_ledger.py`,
+`tests/ledger/behavior_ledger.json`, `tests/ledger/corpus.json`, the `.eml` golden, any `.eml` fixture or
+sidecar, `emailextract/evals/gates.py`, `pyproject.toml`, `CHANGELOG.md`, `README.md`, `NOTICE`, `CLAUDE.md`.
+
+```declaration turn=1b.10b
+module: emailextract/evals/gates.py
 module: emailextract/evals/falsify.py
 module: tests/test_phase1b_gap_gate.py
-module: tests/test_facts_coverage.py
 module: tests/test_phase1b_scope.py
 module: tests/test_phase1b_report.py
-module: tests/test_turn_declarations.py
+module: tests/ledger/behavior_ledger.json
 module: docs/phase1b-report.md
 module: CHANGELOG.md
 module: README.md
 module: pyproject.toml
-module: tests/ledger/facts_ledger.json
-module: tests/ledger/behavior_ledger.json
-test: tests/test_phase1b_gap_gate.py::test_every_msg_gap_id_has_a_mutation_case
-test: tests/test_phase1b_gap_gate.py::test_the_phase1b_gap_gate_fails_when_a_gap_is_dropped
-test: tests/test_phase1b_gap_gate.py::test_the_msg_ids_are_read_off_live_gap_ids
-test: tests/test_facts_coverage.py::test_every_phase1b_fact_meets_its_floor
-test: tests/test_facts_coverage.py::test_a_fact_below_its_floor_fails
-test: tests/test_phase1b_scope.py::test_the_library_imports_with_no_olefile_and_no_gpl
-test: tests/test_phase1b_scope.py::test_no_real_msg_is_in_the_repository
-test: tests/test_phase1b_scope.py::test_fixtures_real_is_empty
-test: tests/test_phase1b_report.py::test_the_report_has_every_required_section_once
-test: tests/test_phase1b_report.py::test_the_report_names_the_version_bumps_and_the_licences
-test: tests/test_phase1b_report.py::test_the_max_input_bytes_asymmetry_is_recorded
-test: tests/test_turn_declarations.py::test_every_phase1b_declared_test_is_collected
-test: tests/test_turn_declarations.py::test_every_undeclared_phase1b_test_fails_the_declaration
-stop: after the gates, the scope test, the ledger components and the report; owner commits and tags 0.2.0
+module: emailextract/versions.py
+pending: 1b.10b (the phase1b gap gate, the hostile run, the scope test, the three ledger components, the report and the 0.2.0 release) is not built yet
 ```
 
-Allow-list (`turn=1b.10`): `emailextract/evals/gates.py`, `emailextract/evals/l1.py`,
-`emailextract/evals/falsify.py`, `tests/test_phase1b_gap_gate.py`, `tests/test_facts_coverage.py`,
-`tests/test_phase1b_scope.py`, `tests/test_phase1b_report.py`, `tests/test_turn_declarations.py`,
-`tests/ledger/facts_ledger.json`, `tests/ledger/behavior_ledger.json`, `tests/ledger/label_ledger.json`,
-`docs/phase1b-report.md`, `docs/design/phase1b-ledgers.md`, `CHANGELOG.md`, `README.md`, `pyproject.toml`,
-`NOTICE`, `emailextract/versions.py`.
+Allow-list (`turn=1b.10b`): `emailextract/evals/gates.py`, `emailextract/evals/falsify.py`,
+`tests/test_phase1b_gap_gate.py`, `tests/test_phase1b_scope.py`, `tests/test_phase1b_report.py`,
+`tests/test_turn_declarations.py`, `tests/ledger/behavior_ledger.json`, `tests/ledger/facts_ledger.json`,
+`tests/ledger/label_ledger.json`, `docs/phase1b-report.md`, `docs/design/phase1b-ledgers.md`, `CHANGELOG.md`,
+`README.md`, `pyproject.toml`, `NOTICE`, `emailextract/versions.py`.
+
+**Split (this turn).** The single `turn=1b.10` block put the measurers, the sidecars and the floors in the
+same turn as the gates, the hostile run, the scope test, the three ledger components, the report and the
+release; the measurers and the labelled corpus are everything else's premise, and the original block's
+allow-list named none of `labels.py`, `tools/behavior_ledger.py`, `fixtures/msg/**/*.expected.json` or the
+`msgcontainer` accessors, so it could not be built inside its own allow-list. **1b.10a** (this turn) makes
+the facts exist, measurable and labelled; **1b.10b** adds the gates, the hostile run, the scope test, the
+three ledger components, the report and `0.2.0`.
 
 ## (g) The committed final report
 
@@ -2108,3 +2151,189 @@ Unchanged/untouched: `mapi.py`, `assemble.py`, `cfb.py`, `walk.py`, `model.py`, 
    real code page that is simply **not** in `CODEPAGES` (`{1252, 20127, 28591, 65001}`); if the owner
    widens `CODEPAGES` this fixture's rung changes.
 3. The `MELA` CRC leniency and the dictionary's unwritten-byte rule (1b.8 fix note) -- still open.
+
+## Turn 1b.10a -- outcome (the eleven `msg.*` measurers, the `.msg` sidecars and the coverage floors)
+
+Built on `261c005` (Turn 1b.9 committed). Not committed (the brief's instruction). Full suite:
+**2578 passed, 2 skipped** on `python` (3.14.3, 3m56s) and on the repo's 3.11 (3.11.15, 6m21s). The
+six `--check` tools and `python -m emailextract.evals` exit 0 on the primary interpreter
+(`behavior_ledger.json` and the `.eml` golden are **untouched**; no `.eml` fixture or sidecar changed).
+
+### D1-D7: the reviewer's decisions, applied
+
+- **D1 -- measurers read the container, not a new document field.** `EmailDocument`, `to_json`,
+  `ContainerFacts` and the schema are unchanged (no second bump). `Measured` gains
+  ``container: Any = None`` and ``_measure`` builds it "beside the walk": a `.msg` fixture is walked
+  through ``MsgContainer(memory_bytes(raw))`` and that container is kept on the ``Measured``; every
+  `.eml` fixture walks through ``EmlContainer`` exactly as before with ``container=None``. The eleven
+  ``msg.*`` measurers live in ``evals/l1.py`` and read the container's public surfaces
+  (``cfb_file``, ``stream_faults``, ``codepage_ladder``, ``message_facts``, ``attachment_facts``,
+  ``container_facts()``, ``container_gaps``). ``labels.py`` still imports nothing from the package; it
+  only accepts the ``.msg`` suffix now. The `.eml` measurement is byte-identical: the ``.eml``
+  sidecars label no ``msg.*`` fact, so no ``msg.*`` measurer is ever invoked for them, and the whole
+  `.eml` corpus (126 sidecars) still compares green (``tests/test_msg_measurers.py::test_the_eml_measurement_is_unchanged_by_the_container_handle``).
+- **D2 -- the eleven facts, the documented shapes.** One measurer per fact id; the value shapes are
+  exactly `phase1b-facts.md`'s (verified by ``tests/test_msg_measurers.py``'s eleven per-fact tests).
+  ``msg.recipients`` drops ``smtp_address``/``fault``/``value_source``; ``msg.time_facts`` is the
+  ``TimeFact`` triple. The **`msg.rtf` question** is a finding, not a 12th id: the ``rtf_facts`` record
+  (comptype, declared/actual sizes, CRC verdict, decompressed digest/length, fault) cannot ride the
+  ``msg.body_streams`` row (a list of the closed body names), so it is not projected at all (see the
+  findings below).
+- **D3 -- the `msg.*` gaps ride the existing `gaps.later` channel.** A new module-level
+  ``l1._container_gap_pairs`` is the container's own channel (like the stages'
+  ``later_gaps``/``body_gaps``/``gap_pairs``): ``container_gaps`` plus the CFB reading's own
+  ``msg.cfb_difat_extended`` (the ``cfb.CfbFile.extended_difat`` presence observation, which nothing
+  had turned into a gap). ``LIVE_GAP_IDS`` gains the twelve ids; ``falsify.EMITTABLE_GAP_IDS`` already
+  derives from ``LIVE_GAP_IDS``, so it grows for free -- but see finding 1 (the phase-1 gap gate).
+- **D4 -- `labels.py` learns `.msg`.** ``FIXTURE_SUFFIXES = (".eml", ".msg")`` and nothing about fact
+  ids. ``tests/test_labels.py`` (the bare-interpreter proof) passes; the corpus counts moved
+  126 -> 177.
+- **D5 -- sidecars hand-typed, from the construction tables / the facts doc.** 51 ``*.expected.json``
+  under ``fixtures/msg/`` (one per readable fixture); each carries ``part.gaps`` (phase 0) and the
+  ``msg.*`` facts its family exercises, with ``provenance: spec``.
+- **D6 -- floors: declared, then met.** The eleven ids are added to ``l1.FACTS`` (phase 1, live), to
+  ``facts_ledger.json``'s ``phase1`` list and to its ``declared``/``floors``/``achieved``/``rebase``
+  records, and the floors are read from **both** design tables (``phase1-facts.md`` and
+  ``phase1b-facts.md``) by the same row regex in ``tests/test_facts_coverage.py``. Two floors are
+  **not** met by the catalogue: see the findings.
+- **D7 -- the coverage test only.** ``tests/test_facts_coverage.py`` gains
+  ``test_every_phase1b_fact_meets_its_floor`` and ``test_a_fact_below_its_floor_fails``. The gap gate,
+  the scope test, the report and the ledger components are 1b.10b.
+
+### The per-fact observed count against each floor
+
+| fact id | declared floor | observed (labelled = compared) | verdict |
+|---|---|---|---|
+| `msg.container_layout` | 45 | 51 | met |
+| `msg.sector_accounting` | 45 | 50 | met (`msg_fat_cycle`'s accounting is broken, so it carries no row) |
+| `msg.message_class` | 40 | 44 | met (6 CFB-layout fixtures read the reader's `"absent"` sentinel and carry no row) |
+| `msg.body_streams` | 20 | 33 | met |
+| `msg.recipients` | 10 | **4** | **shortfall 6 -- finding** |
+| `msg.time_facts` | 4 | **1** | **shortfall 3 -- finding** |
+| `msg.codepage_ladder` | 8 | 8 | met (exactly) |
+| `msg.stream_faults` | 2 | 2 | met |
+| `msg.attachments` | 8 | 11 | met |
+| `msg.embedded_summary` | 2 | 2 | met |
+| `msg.storage_tree_sha256` | 2 | 2 | met |
+| `gaps.later` | 5 | 63 | met |
+
+### Findings
+
+1. **The brief's D3 cannot be built inside 1b.10a's own split (a real contradiction).** The phase-1
+   gap gate (`tests/test_phase1_gap_gate.py`) tiles ``EMITTABLE_GAP_IDS`` against ``PHASE1_CASES`` (a
+   working mutation case each) or ``UNEXERCISED_GAP_IDS``; ``EMITTABLE_GAP_IDS`` reads off
+   ``LIVE_GAP_IDS``, so registering the twelve ids reds the suite unless the twelve mutation cases
+   land in the same turn -- but the brief assigns those to 1b.10b ("the 12 live gap ids' mutation
+   cases") and restricts ``falsify.py`` to the ``EMITTABLE_GAP_IDS`` derivation. There is no reading
+   of D3 + "do not build 1b.10b's parts here" + "green pytest" that holds. I built the eleven cases a
+   committed fixture can carry (``falsify._PHASE1_CASES``) and named the twelfth
+   (``msg.recipient_table_unreadable``, whose only trigger is the test-built seed
+   `seed_recipient_count_mismatch`) in ``UNEXERCISED_GAP_IDS``, and added
+   ``(l1, "_container_gap_pairs")`` to ``falsify.GAP_CHANNELS``. **This is a build of a piece the
+   brief assigned to 1b.10b**; the alternative (leave the ids unregistered) leaves every `msg.*` row
+   deferred (`not_yet`) and grows `tests/ledger/phase1_exit.json` by 32 rows -- a 1b.10b piece too.
+2. **The allow-list omits every test whose hardcoded corpus counts the 51 `.msg` sidecars move.**
+   All are named here and in the `turn=1b.10a` allow-list: ``tests/test_l1_gate.py`` (sidecars
+   126 -> 177, matched 1406 -> 1689), ``tests/test_facts_ledger.py`` (phase-1 ids 20 -> 31),
+   ``tests/test_metrics_cli.py`` (sidecars 177, matched 1689, the `falsifiability` line 6 -> 7
+   exercised), ``tests/test_quote_dom.py`` and ``tests/test_quote_text.py`` (the `.eml`-corpus
+   digest tests now **filter to `.eml` sidecars**, so their pinned digests are unchanged),
+   ``tests/test_label_structure.py`` (a `.msg` sidecar names no span fact, so
+   ``test_every_span_is_non_negative_and_in_range`` skips it -- the `.eml` corpus is still pinned),
+   and ``tests/test_gap_falsifiability.py`` (``INLINE_ONLY`` shrinks; see finding 4).
+3. **`msg.recipients` (4 < 10) and `msg.time_facts` (1 < 4) are catalogue findings, not floors to
+   lower.** Only four committed fixtures carry a recipient table (`msg_recipients_display_only`,
+   `msg_recipients_ex_no_smtp`, `msg_recipients_bcc_duplicates`, `msg_outlook_layout_handbuilt`) and
+   only one carries time properties (`msg_time_property_vs_date_header`). The catalogue
+   (`phase1b-fixtures.md`) claims every floor is met "with room"; it is wrong for these two. Each is
+   recorded in `facts_ledger.json`'s `declared_unmet` and the effective floor is re-based to the
+   count the catalogue carries (4 and 1), the ratchet rule. To close them the catalogue needs six
+   more recipient-carrying fixtures and three more time-carrying ones -- a fixture turn's work, not
+   this one's.
+4. **`container.size_bytes` for a `.msg` is the *virtual* message length, not the file length.** The
+   walker's ``total_bytes`` is the address space every span points into -- for a `.msg` that is the
+   projection's virtual RFC 822 bytes. So D5's "only the exercised facts" leaves a `.msg` sidecar with
+   no ``container.size_bytes``, and the structure test's requirement is guarded (finding 2). A
+   consequence: the empty-projection `.msg` fixtures (`msg_non_ipm_note`, `msg_signed_class`,
+   `msg_mini_cutoff_boundary`) label ``part.gaps`` with ``body.headers_only``, so the **walker**
+   ``body.headers_only`` gap is now exercised by a committed fixture: its falsifiability case moved
+   from inline bytes to ``msg_non_ipm_note`` and ``INLINE_ONLY`` is now ``{body.no_boundary_found}``.
+5. **The `msg.message_class` "absent" sentinel.** The container's flat fact is
+   ``message_class or "absent"``; the six CFB-layout fixtures with no class stream
+   (`msg_headers_only`, `msg_headers_html`, `msg_v4_sectors`, `msg_difat_extended`, `msg_fat_cycle`,
+   `msg_truncated_stream`) read `"absent"`, which is not "the class value", so no sidecar types the
+   fact for them. The catalogue's claim that `msg_headers_only` carries `msg.message_class` is wrong.
+6. **`msg.codepage_ladder`'s third surface form.** A bare ``001E`` string property (the ``0037``
+   subject of every ``msg_string8_*`` fixture) is a surface with no locator, so its label is
+   ``prop:<tag hex>``; the form is added to ``phase1b-facts.md``'s open question, which invited it.
+   Without it `msg_string8_1252` (no transport stream, no body) would have an empty ladder, which the
+   loader refuses to label at all.
+7. **The `.msg` `gaps.later` carries the container's document-level gaps only, never the virtual
+   framing's stage gaps.** The header/body/selection/quote stages measured over the projection
+   describe the reader's own framing, which ``phase1b-contract.md`` section 8 point 7 says is not
+   persisted (the ``part.regions`` rule). Evidence: the top-level region fires ``headers.no_date`` for
+   `msg_headers_only` even though its ``0x007D`` headers **carry a Date** (the body leaf's synthetic
+   headers have none), so a faithful hand-typed `.msg` `gaps.later` would have to reproduce projection
+   artifacts. Every container gap's locator is the message part ``1`` (``ContainerGap`` carries no
+   locator), a small deviation from D3's "part.gaps and gaps.later" wording (no `msg.*` gap rides
+   `part.gaps`).
+8. **`msg.storage_tree_sha256` cannot be hand-typed.** It is a digest, so the two rows were produced
+   by implementing the documented canonical walk **independently** (the same second implementation
+   `tests/test_msg_embedded.py::_canonical_tree` uses) over the raw fixture's streams -- never by the
+   package's private ``_storage_tree_sha256``.
+9. **A CFB-layout fixture that is not a message.** `msg_mini_cutoff_boundary` has no
+   ``__properties_version1.0``, so ``MsgContainer``'s strict open refuses it as ``not_a_message``
+   (D14); the layout/accounting measurers fall back to ``cfb.open_cfb(..., require_properties=False)``
+   (the opener's own ``olefile``-cross-check seam). `msg_directory_loop` refuses outright
+   (``cfb_directory_loop``) and is the one fixture with no sidecar.
+
+### The three mutations (run, restored, reported)
+
+1. **A typed-label disagreement is caught** two ways: (a) a copy of
+   `fixtures/msg/msg_v4_sectors.expected.json` with `container_layout`'s `directory_entries` changed
+   32 -> 33 reports `msg.container_layout: labelled [...] measured [...]`; (b) mutating
+   `_msg_message_class` to return a constant reds
+   `tests/test_msg_measurers.py::test_measurer_msg_message_class` (a measurer that reads the wrong
+   path cannot pass a typed-label test).
+2. **Drop one `msg.*` id from `LIVE_GAP_IDS`** (`GAP_CFB_DIFAT_EXTENDED`) -> **4 fail**:
+   `tests/test_phase1_gap_gate.py::test_every_phase1_gap_id_has_a_mutation_case`,
+   `::test_the_ids_no_fixture_exercises_are_named`,
+   `::test_a_dropped_phase1_gap_fails_the_gate[msg.cfb_difat_extended]`, and
+   `tests/test_msg_measurers.py::test_msg_gaps_ride_the_existing_gaps_later_channel`.
+3. **Raise `msg.container_layout`'s floor past the observed count** (51 -> 100) -> **3 fail**:
+   `tests/test_facts_coverage.py::test_every_phase1_fact_meets_its_coverage_floor`,
+   `::test_the_effective_floor_is_the_achieved_count_at_the_rebase`,
+   `::test_every_phase1b_fact_meets_its_floor`.
+
+### Existing tests edited, and why
+
+`tests/test_labels.py` (the corpus counts, 126 -> 177), `tests/test_facts_coverage.py` (both design
+tables parsed; two new phase-1b tests), `tests/test_facts_ledger.py` (the pinned count 20 -> 31),
+`tests/test_l1_gate.py` (sidecars 177, matched 1689), `tests/test_metrics_cli.py` (sidecars 177,
+matched 1689, `falsifiability` 7 exercised), `tests/test_quote_dom.py` / `tests/test_quote_text.py`
+(filter to `.eml` sidecars; the pinned digests are unchanged),
+`tests/test_label_structure.py` (skip a sidecar that names no span fact),
+`tests/test_gap_falsifiability.py` (`INLINE_ONLY`), and `tests/test_turn_declarations.py`
+(`BUILT_TURNS` gains `"1b.10a"`). Files: `emailextract/evals/l1.py`, `emailextract/evals/labels.py`,
+`emailextract/evals/falsify.py`, `emailextract/msgcontainer.py` (three read-only accessors only:
+`cfb_file`, `stream_faults`, and the ladder built in `_project`), `tests/test_msg_measurers.py` (new),
+`tests/ledger/facts_ledger.json`, `tests/ledger/label_ledger.json` (re-recorded for the changed
+oracle files and the 51 new sidecars), 51 `fixtures/msg/*.expected.json` (new),
+`docs/design/phase1b-facts.md` (the third ladder-surface form),
+`docs/design/phase1-turn-declarations.md` / `docs/design/phase1b-ledgers.md` (the `turn=1b.10a` and
+`turn=1b.10b` blocks). **Not touched:** `emailextract/model.py`, `assemble.py`, `walk.py`, `cfb.py`,
+`rtf.py`, `ingest.py`, `parse.py`, `mapi.py`, `versions.py`, `tools/behavior_ledger.py`,
+`tests/ledger/behavior_ledger.json`, `tests/ledger/corpus.json`, `tests/ledger/phase1_exit.json`,
+the `.eml` golden, any `.eml` fixture or sidecar, `emailextract/evals/gates.py`, `pyproject.toml`,
+`CHANGELOG.md`, `README.md`, `NOTICE`, `CLAUDE.md`.
+
+### What Turn 1b.10b needs
+
+- **The gap gate, the scope test, the report, the three ledger components (`cfb`, `msg_reader`,
+  `msg_projection`) and `0.2.0`.** The twelve `msg.*` ids are already live and their eleven mutation
+  cases are in `falsify.PHASE1_CASES`; the twelfth (`msg.recipient_table_unreadable`) is named in
+  `UNEXERCISED_GAP_IDS` -- 1b.10b adds its committed fixture or seed, the hostile run inventory (the
+  `.msg` mutators in `tests/test_cfb_hostile.py` plus the attachment/embedded mutants), the
+  report's section inputs (the counts above, the three findings, the `max_input_bytes` asymmetry, the
+  licences), and the release edits (`pyproject.toml` `0.2.0`, CHANGELOG, README lines 23-24 and 65,
+  `NOTICE`).

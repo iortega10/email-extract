@@ -1,0 +1,90 @@
+{
+  "fixture": "msg_truncated_stream.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        13,
+        4
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          512
+        ],
+        [
+          "stream",
+          4608
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.stream_faults": {
+      "phase": 1,
+      "value": [
+        [
+          "big_stream",
+          "short_chain",
+          "stream_ended_early"
+        ]
+      ]
+    },
+    "gaps.later": {
+      "phase": 1,
+      "value": [
+        [
+          "msg.transport_headers_absent",
+          "1",
+          1,
+          "no 0x007D transport-header stream"
+        ],
+        [
+          "msg.stream_truncated",
+          "1",
+          1,
+          "a stream chain fault"
+        ]
+      ]
+    }
+  }
+}

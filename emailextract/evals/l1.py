@@ -53,7 +53,18 @@ from .. import selection as selection_stage
 from .. import text as text_stage
 from ..quote import resolve as quote_stage
 from ..quote import text_rules as quote_text_stage
-from ..container import EmlContainer
+from ..container import EmlContainer, span_lookup
+from .. import cfb as cfb_stage
+from .. import mapi as mapi_stage
+from ..msgcontainer import (
+    GAP_ATTACHMENT_METHOD_UNSUPPORTED,
+    GAP_EMBEDDED_DEPTH_CAP,
+    GAP_MAPI_HEADER_PROPERTY_DISAGREE,
+    GAP_RTF_TO_TEXT_UNSUPPORTED,
+    GAP_STREAM_TRUNCATED,
+    GAP_TRANSPORT_HEADERS_ABSENT,
+    MsgContainer,
+)
 from ..parse import Limits
 from ..walk import WalkResult, walk
 from .labels import DEFAULT_FIXTURES, Fact, Sidecar, load_sidecar, load_sidecars
@@ -104,6 +115,7 @@ class Measured:
     result: WalkResult | None
     raw: bytes = b""
     problem: str | None = None
+    container: Any = None
 
     def walked(self) -> WalkResult:
         """The walker's result, or raise the failure walking produced (reported per fact)."""
@@ -240,6 +252,12 @@ WORK_UNITS_PER_INPUT_BYTE: Final[int] = Limits.untrusted().max_field_work_units_
 #: ``attach.cid_dangling`` are typed but emitted by nothing. Those six phase-1 rows the labels
 #: assert cannot be satisfied by the package's emissions without editing a frozen sidecar (which
 #: the label ledger forbids), so they are ``not_yet`` and named in ``tests/ledger/phase1_exit.json``.
+#: Turn 1b.10a: the CFB reading's own gap id -- the ``cfb.CfbFile.extended_difat`` presence
+#: observation (``cfb.py`` documents it as "the presence observation behind
+#: ``msg.cfb_difat_extended``"). ``cfb`` exposes the flag; the oracle turns it into a row through
+#: the existing ``gaps.later`` channel (no new fact type, no ``msgcontainer`` behaviour change).
+GAP_CFB_DIFAT_EXTENDED: Final[str] = "msg.cfb_difat_extended"
+
 LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
     {
         address_stage.GAP_HEADERS_ADDRESS_UNPARSABLE,
@@ -259,6 +277,20 @@ LIVE_GAP_IDS: Final[frozenset[str]] = frozenset(
         selection_stage.htmltree.GAP_BODY_HTML_QUOTE_RULE_GAP,
         quote_text_stage.GAP_I18N_REPLY_MARKER,
         *attach_stage.EMITTED_GAP_IDS,
+        # Turn 1b.10a: the twelve Phase 1b gap ids the ``MsgContainer`` records (the ``.msg``
+        # doc-level gaps ride ``gaps.later``, D3) so the exit gate can compare their rows.
+        GAP_TRANSPORT_HEADERS_ABSENT,
+        GAP_MAPI_HEADER_PROPERTY_DISAGREE,
+        GAP_STREAM_TRUNCATED,
+        GAP_ATTACHMENT_METHOD_UNSUPPORTED,
+        GAP_EMBEDDED_DEPTH_CAP,
+        GAP_RTF_TO_TEXT_UNSUPPORTED,
+        mapi_stage.MSG_CLASS_NOT_IPM_NOTE,
+        mapi_stage.MSG_PROPERTY_TAG_UNKNOWN,
+        mapi_stage.MSG_NAMED_PROPERTY_UNRESOLVED,
+        mapi_stage.MSG_CODEPAGE_UNRESOLVED_LADDER_USED,
+        mapi_stage.MSG_RECIPIENT_TABLE_UNREADABLE,
+        GAP_CFB_DIFAT_EXTENDED,
     }
 )
 
@@ -304,6 +336,24 @@ def _headers_parameters(measured: Measured) -> list[list[Any]]:
     return header_stage.parameter_rows(measured.raw, _region(measured))
 
 
+def _container_gap_pairs(measured: Measured) -> list[tuple[str, str]]:
+    """The ``.msg`` container's document-level gaps as ``(gap_id, locator)`` pairs (Turn 1b.10a).
+
+    Its own channel (like the stages' ``later_gaps``/``body_gaps``/``gap_pairs``): the container's
+    ``container_gaps`` plus the CFB reading's own ``msg.cfb_difat_extended``. Kept a module-level
+    function so ``falsify.GAP_CHANNELS`` can patch it -- dropping one id's pair is the mutation
+    that proves the gate fails. Every ``.msg`` pair's locator is the message part ``1``.
+    """
+    container = measured.container
+    if container is None:
+        return []
+    pairs = [(gap.gap_id, "1") for gap in container.container_gaps]
+    cfb_file = getattr(container, "cfb_file", None)
+    if cfb_file is not None and getattr(cfb_file, "extended_difat", False):
+        pairs.append((GAP_CFB_DIFAT_EXTENDED, "1"))
+    return pairs
+
+
 def _gaps_later(measured: Measured) -> list[list[Any]]:
     """``gaps.later`` rows for this turn's live gap ids: ``[gap_id, locator, phase, reason]``.
 
@@ -319,7 +369,18 @@ def _gaps_later(measured: Measured) -> list[list[Any]]:
     ids whose emissions are broader than the frozen labels (the over-emission finding: see
     :data:`LIVE_GAP_IDS`), so wiring its raw output would flood the fact and turn the labels into
     spurious mismatches that no edit to the package could fix.
+
+    **A ``.msg`` fixture takes the container's channel only** (Turn 1b.10a): the stage gaps below
+    are measured over the ``MsgContainer``'s **virtual framing** (the reader's own projection),
+    which phase1b-contract.md section 8 point 7 says is *not persisted* -- the same rule that
+    keeps ``part.regions`` out of a ``.msg`` record. So a ``.msg`` ``gaps.later`` holds the
+    container's document-level gaps (``container_gaps`` plus the CFB reading's own
+    ``msg.cfb_difat_extended``), and never the virtual message's stage gaps.
     """
+    container = measured.container
+    if container is not None:
+        pairs = _container_gap_pairs(measured)
+        return [[gap_id, locator, 1, ""] for gap_id, locator in pairs if gap_id in LIVE_GAP_IDS]
     pairs = [
         *header_stage.later_gaps(_region(measured)),
         *text_stage.body_gaps(measured.raw, measured.walked()),
@@ -568,6 +629,196 @@ def _attach_decorative(measured: Measured) -> list[list[Any]]:
 def _attach_cid_use(measured: Measured) -> list[list[Any]]:
     """``attach.cid_use`` rows: the cid and whether any body view references it."""
     return attach_stage.cid_use_rows(_attachments(measured))
+
+
+# -------------------------------------- Turn 1b.10a: the eleven MsgContainer-side facts
+
+#: The body-stream fact's flat form in ``container_facts`` -> the sorted closed list of the
+#: fact. Every other value is split on ``+``; the empty body is ``[]``.
+_MSG_BODY_STREAM_ORDER: Final[tuple[str, ...]] = ("plain", "html", "rtf")
+
+
+def _msg_container(measured: Measured) -> MsgContainer:
+    """The ``MsgContainer`` a ``.msg`` fixture was walked through, or raise (reported per fact)."""
+    container = measured.container
+    if not isinstance(container, MsgContainer):
+        raise RuntimeError("this fixture has no .msg container (it is not a .msg fixture)")
+    return container
+
+
+def _msg_cfb_file(measured: Measured) -> "cfb_stage.CfbFile":
+    """The CFB file behind a ``.msg`` fixture, read-only.
+
+    The container's own file when the strict open succeeded; otherwise the container was
+    refused (``not_a_message`` -- a CFB layout fixture with no ``__properties_version1.0``, like
+    ``msg_mini_cutoff_boundary``, D14), so the layout is read with ``require_properties=False``.
+    A genuine refusal (a directory loop) has no layout and raises, reported ``unmeasurable``.
+    """
+    cfb_file = _msg_container(measured).cfb_file
+    if cfb_file is not None:
+        return cfb_file
+    opened = cfb_stage.open_cfb(measured.raw, require_properties=False)
+    if not isinstance(opened, cfb_stage.CfbFile):
+        raise RuntimeError(f"the CFB open refused ({opened.reason}), so there is no layout")
+    return opened
+
+
+def _msg_container_layout(measured: Measured) -> list[int]:
+    """``msg.container_layout``: ``[cfb_version, sector_size, mini_sector_size, mini_cutoff,
+    sector_count, directory_entries]`` -- the CFB header's identity, read-only (D2)."""
+    cfb_file = _msg_cfb_file(measured)
+    return [
+        cfb_file.version,
+        cfb_file.sector_size,
+        cfb_file.mini_sector_size,
+        cfb_file.mini_cutoff,
+        cfb_file.sector_count,
+        cfb_file.directory_entries,
+    ]
+
+
+def _msg_sector_accounting(measured: Measured) -> list[list[Any]]:
+    """``msg.sector_accounting``: the eight ``[class, bytes]`` rows, in the fixed class order."""
+    return [[name, value] for name, value in _msg_cfb_file(measured).accounting]
+
+
+def _msg_message_class(measured: Measured) -> str:
+    """``msg.message_class``: the class property verbatim (the reader's flat fact)."""
+    facts = _msg_container(measured).container_facts()
+    value = facts.get("message_class")
+    if value is None:
+        raise RuntimeError("no message class was read (a refused or class-gated file)")
+    return value
+
+
+def _msg_body_streams(measured: Measured) -> list[str]:
+    """``msg.body_streams``: the body streams present, in the fixed ``plain``/``html``/``rtf`` order."""
+    flat = _msg_container(measured).container_facts().get("body_streams", "none")
+    if flat in ("", "none"):
+        return []
+    present = set(flat.split("+"))
+    return [name for name in _MSG_BODY_STREAM_ORDER if name in present]
+
+
+def _msg_recipients(measured: Measured) -> list[list[Any]]:
+    """``msg.recipients``: ``[[kind, display_name|null, address|null, address_type], ...]`` (D2).
+
+    The container's :class:`~emailextract.msgcontainer.RecipientFact` projected to the fact's
+    four columns -- ``smtp_address``/``fault``/``value_source`` are dropped, never merged into
+    the header stage's address rows (D2/D13).
+    """
+    recipients = _msg_container(measured).message_facts.recipients
+    return [[row.kind, row.display_name, row.address, row.address_type] for row in recipients]
+
+
+def _msg_time_facts(measured: Measured) -> list[list[Any]]:
+    """``msg.time_facts``: the ``[[tag_hex, filetime_hex, utc], ...]`` triple per time property."""
+    times = _msg_container(measured).message_facts.times
+    return [[row.tag_hex, row.filetime_hex, row.utc] for row in times]
+
+
+def _msg_codepage_ladder(measured: Measured) -> list[list[Any]]:
+    """``msg.codepage_ladder``: ``[[surface, source_kind, declared_cp, encoding_source], ...]``.
+
+    One row per decoded 8-bit surface, read from the container's own ladder record (a pure
+    projection of ``mapi.TextValue``): the transport-header stream (``headers``), the body
+    leaves (their locator) and the 8-bit string properties (``prop:<tag hex>``).
+    """
+    return [list(row) for row in _msg_container(measured).codepage_ladder]
+
+
+def _msg_stream_faults(measured: Measured) -> list[list[Any]]:
+    """``msg.stream_faults``: ``[[stream, fault, reason], ...]`` per faulted stream (D2)."""
+    return [list(row) for row in _msg_container(measured).stream_faults]
+
+
+def _attachment_joins(measured: Measured) -> list[tuple[str, Any, Any]]:
+    """Join each attachment occurrence to its container fact through the span table (D2/D6).
+
+    The walker's attachment stage names each occurrence's ``part_id``; the container's
+    ``attachment_facts`` are keyed by ``source_stream``. The join is the span-table one the
+    assembler uses (:func:`emailextract.assemble._attachment_occurrences`): an occurrence's
+    part's raw span indexes the span table, whose row carries the ``source_stream``. Returns
+    ``(part_locator, occurrence_facts, container_fact)`` per occurrence that joins.
+    """
+    container = _msg_container(measured)
+    facts = container.attachment_facts
+    if not facts:
+        return []
+    attach = attach_stage.attachments(
+        measured.raw,
+        measured.walked(),
+        max_depth=HTML_MAX_DEPTH,
+        max_elements=HTML_MAX_ELEMENTS,
+    )
+    by_stream = {fact.source_stream: fact for fact in facts}
+    parts_by_id = {item.part.part_id: item for item in attach.facts}
+    span = span_lookup(container)
+    joins: list[tuple[str, Any, Any]] = []
+    for occurrence in attach.occurrences:
+        item = parts_by_id.get(occurrence.part_id)
+        fact = None
+        if item is not None and span is not None:
+            row = span.get((item.part.raw_span.offset, item.part.raw_span.length))
+            if row is not None:
+                fact = by_stream.get(getattr(row, "source_stream", None))
+        if fact is None:
+            continue
+        joins.append((item.part.path, item, fact))
+    return joins
+
+
+def _msg_attachments(measured: Measured) -> list[list[Any]]:
+    """``msg.attachments``: ``[[part, method, filename_raw, filename_decoded, mime_tag, cid,
+    hidden, inline, size, sha256], ...]``, one row per attachment occurrence (part scope)."""
+    rows: list[list[Any]] = []
+    for locator, item, fact in _attachment_joins(measured):
+        decoded = item.filename_decoded.value if item.filename_decoded.state.value == "value" else None
+        rows.append(
+            [
+                locator,
+                fact.method,
+                fact.filename_raw,
+                decoded,
+                fact.mime_tag,
+                fact.cid,
+                fact.hidden,
+                fact.inline,
+                fact.size,
+                fact.sha256,
+            ]
+        )
+    return rows
+
+
+def _msg_embedded_summary(measured: Measured) -> list[list[Any]]:
+    """``msg.embedded_summary``: ``[[part, message_class, subject|null, has_transport_headers,
+    recipient_count, attachment_count], ...]`` per depth-1 embedded-message attachment."""
+    rows: list[list[Any]] = []
+    for locator, _item, fact in _attachment_joins(measured):
+        summary = fact.embedded_summary
+        if summary is None:
+            continue
+        rows.append(
+            [
+                locator,
+                summary.message_class,
+                summary.subject,
+                summary.has_transport_headers,
+                summary.recipient_count,
+                summary.attachment_count,
+            ]
+        )
+    return rows
+
+
+def _msg_storage_tree_sha256(measured: Measured) -> list[list[Any]]:
+    """``msg.storage_tree_sha256``: ``[[part, "<hex>"], ...]`` per embedded-message storage."""
+    return [
+        [locator, fact.storage_tree_sha256]
+        for locator, _item, fact in _attachment_joins(measured)
+        if fact.storage_tree_sha256 is not None
+    ]
 
 
 #: The document-level axes ``document.axes`` reports, in the closed ``model.AXIS_IDS`` order:
@@ -1019,6 +1270,107 @@ FACTS: Mapping[str, Measure] = MappingProxyType(
             "angle-bracket pair stripped); a cid-less occurrence is ['<part>', null, 'n/a']; live "
             "from Turn 1.8",
         ),
+        # Phase 1b (Turn 1b.10a declaration): the eleven ``MsgContainer``-side facts. Each is
+        # declared at phase 1 (R13 -- Phase 1b is the container half of the phase-1 parse layer)
+        # with its exact value shape and a measurer that reads the container the walk came from.
+        "msg.container_layout": Measure(
+            1,
+            _msg_container_layout,
+            live=True,
+            note="[cfb_version, sector_size, mini_sector_size, mini_cutoff, sector_count, "
+            "directory_entries] -- the CFB header's identity, all ints; cfb_version is 3 or 4 "
+            "and the three size fields are byte counts; live from Turn 1b.10a (the CFB reader's "
+            "own header)",
+        ),
+        "msg.sector_accounting": Measure(
+            1,
+            _msg_sector_accounting,
+            live=True,
+            note="[[class_name, byte_count], ...], one row per class in the fixed order "
+            "header/difat/fat/minifat/directory/stream/free/slack; the eight byte_counts sum to "
+            "the file length (free and slack explicit); live from Turn 1b.10a",
+        ),
+        "msg.message_class": Measure(
+            1,
+            _msg_message_class,
+            live=True,
+            note="a single non-empty string: the class value verbatim, never a friendlier "
+            "name; live from Turn 1b.10a (the reader's flat fact)",
+        ),
+        "msg.body_streams": Measure(
+            1,
+            _msg_body_streams,
+            live=True,
+            note='a sorted list over the closed set plain/html/rtf (the design order): the body '
+            "streams present; present-but-empty is present (a 0x1000 of length 0 is ['plain']); "
+            "live from Turn 1b.10a",
+        ),
+        "msg.recipients": Measure(
+            1,
+            _msg_recipients,
+            live=True,
+            note="[[kind, display_name | null, address | null, address_type], ...] one row per "
+            "recipient table row; kind is to/cc/bcc; address_type is smtp/ex/unknown; the "
+            "container's RecipientFact projected to four columns (smtp_address/fault/"
+            "value_source dropped); live from Turn 1b.10a",
+        ),
+        "msg.time_facts": Measure(
+            1,
+            _msg_time_facts,
+            live=True,
+            note='[[tag_hex, filetime_hex, utc], ...] one row per time property present; tag_hex '
+            "is the 4-digit lowercase hex, filetime_hex the 16-digit lowercase hex of the raw "
+            "u64 (the compared value) and utc the ISO-8601 rendering; no TimeEvent; live from "
+            "Turn 1b.10a",
+        ),
+        "msg.codepage_ladder": Measure(
+            1,
+            _msg_codepage_ladder,
+            live=True,
+            note="[[surface, source_kind, declared_cp, encoding_source], ...] one row per decoded "
+            "8-bit surface; surface is headers, a body locator (1/1.1/1.2) or prop:<tag hex>; "
+            "source_kind is internet/message/none; declared_cp is the number the rung used or "
+            "null when source_kind=none; encoding_source is an EncodingSource member; live from "
+            "Turn 1b.10a",
+        ),
+        "msg.stream_faults": Measure(
+            1,
+            _msg_stream_faults,
+            live=True,
+            note="[[stream, fault, reason], ...] one row per faulted stream; fault is the CFB "
+            "chain fault (cycle/out_of_range/short_chain), reason the mapped Status.TRUNCATED "
+            "reason (declared_length_mismatch/stream_ended_early); empty means no fault; live "
+            "from Turn 1b.10a",
+        ),
+        "msg.attachments": Measure(
+            1,
+            _msg_attachments,
+            live=True,
+            note="[[part, method, filename_raw, filename_decoded, mime_tag, cid, hidden, inline, "
+            "size, sha256], ...] one row per attachment occurrence (part scope); method is the "
+            "numeric MAPI method as an int; filename_raw/filename_decoded are null when the "
+            "ladder found none (long over short over display, both kept); mime_tag (0x370E) and "
+            "cid (0x3712) are null when absent; size/sha256 are the attachment's own bytes; live "
+            "from Turn 1b.10a",
+        ),
+        "msg.embedded_summary": Measure(
+            1,
+            _msg_embedded_summary,
+            live=True,
+            note="[[part, message_class, subject | null, has_transport_headers, recipient_count, "
+            "attachment_count], ...] one row per embedded-message attachment (depth 1, read and "
+            "recorded, not recursed); subject is null when the embedded message has no subject "
+            "property; live from Turn 1b.10a",
+        ),
+        "msg.storage_tree_sha256": Measure(
+            1,
+            _msg_storage_tree_sha256,
+            live=True,
+            note='[[part, "<hex>"], ...] one row per embedded-message storage; the digest is over '
+            "the defined canonical walk of the storage (entries sorted by name; each name, type, "
+            "size and stream bytes) and is never claimed to equal a file's hash; live from Turn "
+            "1b.10a",
+        ),
         # Phase 3: threading and time evidence (D7/D15).
         "thread.claims": Measure(
             3, note="[[message_id, [references], parent_claim_or_null]] header edges as claims (needs D7)"
@@ -1225,13 +1577,23 @@ def deferral_counts(root: Path | str = DEFAULT_FIXTURES) -> dict[str, int]:
 
 
 def _measure(sidecar: Sidecar) -> Measured:
-    """Walk the fixture once; a failure walking is recorded, not raised."""
+    """Walk the fixture once; a failure walking is recorded, not raised.
+
+    A ``.msg`` fixture is walked through the :class:`~emailextract.msgcontainer.MsgContainer`
+    that projects it (Turn 1b.10a, D1), and that container is kept on the ``Measured`` so the
+    ``msg.*`` measurers read the reader's own record; every ``.eml`` fixture walks through
+    ``EmlContainer`` exactly as before and carries ``container=None`` (the ``.msg`` measurers
+    are never invoked for a sidecar that does not label them, so the ``.eml`` path is
+    byte-identical).
+    """
     try:
         raw = sidecar.artifact.read_bytes()
-        result = walk(EmlContainer(raw))
+        if sidecar.artifact.suffix.lower() == ".msg":
+            container = MsgContainer(raw)
+            return Measured(sidecar=sidecar, result=walk(container), raw=raw, container=container)
+        return Measured(sidecar=sidecar, result=walk(EmlContainer(raw)), raw=raw)
     except Exception as error:  # noqa: BLE001 -- reported per fact, see Measured
         return Measured(sidecar=sidecar, result=None, problem=f"{type(error).__name__}: {error}")
-    return Measured(sidecar=sidecar, result=result, raw=raw)
 
 
 def _ordered(sidecar: Sidecar) -> list[Fact]:

@@ -292,12 +292,14 @@ _CASES: tuple[GapCase, ...] = (
     GapCase(
         gap_id=GAP_BODY_HEADERS_ONLY,
         fact_id="part.gaps",
-        inline=HEADERS_ONLY_BYTES,
-        expected_gaps=(("1", (GAP_BODY_HEADERS_ONLY,)),),
+        # Turn 1b.10a: a committed .msg fixture now carries this shape (its virtual projection is
+        # empty, so the walker records body.headers_only on part 1), so the case uses it rather
+        # than inline bytes.
+        fixture="msg_non_ipm_note",
         patch=_drop_headers_only,
         naive=(
             "read a headers-to-EOF message as an ordinary bodyless part and recorded no "
-            "body.headers_only gap (no committed fixture carries this shape)"
+            "body.headers_only gap"
         ),
     ),
     GapCase(
@@ -392,6 +394,9 @@ GAP_CHANNELS: tuple[tuple[Any, str], ...] = (
     (quote_stage, "gap_pairs"),
     (quote_stage, "html_gap_pairs"),
     (l1_module, "_address_gap_pairs"),
+    # Turn 1b.10a: the .msg container's own document-level gap channel (the twelve msg.* ids
+    # plus headers.mapi_header_property_disagree). ``l1._gaps_later`` looks it up at call time.
+    (l1_module, "_container_gap_pairs"),
 )
 
 #: Every phase-1 gap id a wired channel can emit: the ids the oracle compares (``LIVE_GAP_IDS``)
@@ -423,6 +428,10 @@ UNEXERCISED_GAP_IDS: frozenset[str] = frozenset(
         "body.no_boundary_found",
         "headers.date_no_zone",
         "view.quote_level_disagreement",
+        # Turn 1b.10a: live and emitted by MsgContainer, but no committed .msg fixture raises it
+        # (the count-disagreement case is a test-built seed, seed_recipient_count_mismatch), so no
+        # sidecar labels it at a live phase-1 row.
+        "msg.recipient_table_unreadable",
     }
 )
 
@@ -593,6 +602,69 @@ _PHASE1_CASES: tuple[GapCase, ...] = (
         attach_stage.GAP_SECURITY_MACRO_PRESENT,
         "attach_macro_docm",
         "recorded a macro-enabled document without a security.macro_present row",
+    ),
+    # Turn 1b.10a: the twelve MsgContainer-side ids. Eleven have a committed fixture whose sidecar
+    # labels them at a live phase-1 row; msg.recipient_table_unreadable is in UNEXERCISED_GAP_IDS.
+    _phase1_case(
+        "msg.transport_headers_absent",
+        "msg_no_transport_headers",
+        "projected a message with no 0x007D transport-header stream without recording "
+        "msg.transport_headers_absent (an absent header region is not an empty one)",
+    ),
+    _phase1_case(
+        "headers.mapi_header_property_disagree",
+        "msg_property_vs_header_conflict",
+        "took the MAPI property as canonical and recorded no header/property disagreement",
+    ),
+    _phase1_case(
+        "msg.stream_truncated",
+        "msg_fat_cycle",
+        "followed a cyclic FAT chain as if it ended and recorded no msg.stream_truncated row",
+    ),
+    _phase1_case(
+        "msg.attachment_method_unsupported",
+        "msg_attachment_by_reference",
+        "followed a by-reference attachment's path instead of recording "
+        "msg.attachment_method_unsupported (no path is read)",
+    ),
+    _phase1_case(
+        "msg.embedded_depth_cap",
+        "msg_embedded_depth_two",
+        "descended into the embedded message's own embedded attachment instead of stopping at "
+        "depth 1 and recording msg.embedded_depth_cap",
+    ),
+    _phase1_case(
+        "msg.rtf_to_text_unsupported",
+        "msg_rtf_only",
+        "converted the 0x1009 RTF body to text instead of recording msg.rtf_to_text_unsupported "
+        "(RTF is not a body view, O2)",
+    ),
+    _phase1_case(
+        "msg.class_not_ipm_note",
+        "msg_non_ipm_note",
+        "opened a message whose class is not IPM.Note without recording msg.class_not_ipm_note "
+        "and stopping at the gate",
+    ),
+    _phase1_case(
+        "msg.property_tag_unknown",
+        "msg_unknown_tags",
+        "dropped an unmodelled property tag silently instead of recording msg.property_tag_unknown",
+    ),
+    _phase1_case(
+        "msg.named_property_unresolved",
+        "msg_named_properties",
+        "resolved a named property's id without a name-to-id mapping and recorded no "
+        "msg.named_property_unresolved",
+    ),
+    _phase1_case(
+        "msg.codepage_unresolved_ladder_used",
+        "msg_string8_ascii_no_cp",
+        "used a fall-through ladder rung without recording msg.codepage_unresolved_ladder_used",
+    ),
+    _phase1_case(
+        "msg.cfb_difat_extended",
+        "msg_difat_extended",
+        "walked the FAT through the extended DIFAT chain without recording msg.cfb_difat_extended",
     ),
 )
 

@@ -1,26 +1,37 @@
 {
-  "_comment": "Turn 1.10a: the three coverage artefacts of build spec decision 4, plus the pinned phase-1 id list (Turn 1.0b). 'declared' is each phase-1 fact's floor as docs/design/phase1-facts.md names it; 'floors' is the EFFECTIVE floor (the ratchet value tests/test_facts_coverage.py enforces, = the achieved labelled count at the last rebase); 'achieved' is the committed corpus's labelled (sidecars carrying the fact) and compared (sidecars the oracle measured) counts at this commit; 'zero_labelled' is the closed list of phase-1 facts no sidecar labels; 'declared_unmet' records every declared floor the corpus does not meet (a FINDING, never lowered silently); 'rebase' is the recorded, owner-signed change from the declared floors to the effective ones. Turn 1.12 refreshes 'achieved' and 'declared_unmet' for the seven new header-less fixtures: the corpus grew, so decision 4's ledger must track the new labelled/compared counts; no declared floor and no effective floor moved, and the ratchet only rises.",
+  "_comment": "Turn 1.10a: the three coverage artefacts of build spec decision 4, plus the pinned phase-1 id list (Turn 1.0b). 'declared' is each phase-1 fact's floor as docs/design/phase1-facts.md and docs/design/phase1b-facts.md name it; 'floors' is the EFFECTIVE floor (the ratchet value tests/test_facts_coverage.py enforces, = the achieved labelled count at the last rebase); 'achieved' is the committed corpus's labelled (sidecars carrying the fact) and compared (sidecars the oracle measured) counts at this commit; 'zero_labelled' is the closed list of phase-1 facts no sidecar labels; 'declared_unmet' records every declared floor the corpus does not meet (a FINDING, never lowered silently); 'rebase' is the recorded change from the declared floors to the effective ones. Turn 1b.10a adds the eleven Phase 1b 'msg.*' ids (R13: phase 1) and their floors; the corpus meets nine of them and falls short on two (msg.recipients 10 declared / 4 achieved, msg.time_facts 4 / 1) -- both reported in 'declared_unmet' as catalogue findings, not floors to lower. The ratchet only rises.",
   "phase1": [
+    "attach.cid_use",
+    "attach.decorative",
+    "attach.filename",
+    "attach.manifest",
+    "attach.types",
+    "body.alternative_group",
+    "body.cid_refs",
+    "body.html_spans",
+    "body.plain_effectively_empty",
+    "body.quote_boundaries",
+    "body.selection",
+    "body.text",
+    "body.view_levels",
     "document.axes",
-    "headers.projection",
+    "gaps.later",
     "headers.addresses",
     "headers.date",
     "headers.decoded",
     "headers.parameters",
-    "body.text",
-    "body.alternative_group",
-    "body.selection",
-    "body.html_spans",
-    "body.cid_refs",
-    "body.plain_effectively_empty",
-    "body.quote_boundaries",
-    "body.view_levels",
-    "attach.manifest",
-    "attach.types",
-    "attach.filename",
-    "attach.decorative",
-    "attach.cid_use",
-    "gaps.later"
+    "headers.projection",
+    "msg.attachments",
+    "msg.body_streams",
+    "msg.codepage_ladder",
+    "msg.container_layout",
+    "msg.embedded_summary",
+    "msg.message_class",
+    "msg.recipients",
+    "msg.sector_accounting",
+    "msg.storage_tree_sha256",
+    "msg.stream_faults",
+    "msg.time_facts"
   ],
   "deferred": [],
   "declared": {
@@ -43,29 +54,51 @@
     "headers.date": 12,
     "headers.decoded": 8,
     "headers.parameters": 4,
-    "headers.projection": 60
+    "headers.projection": 60,
+    "msg.attachments": 8,
+    "msg.body_streams": 20,
+    "msg.codepage_ladder": 8,
+    "msg.container_layout": 45,
+    "msg.embedded_summary": 2,
+    "msg.message_class": 40,
+    "msg.recipients": 10,
+    "msg.sector_accounting": 45,
+    "msg.storage_tree_sha256": 2,
+    "msg.stream_faults": 2,
+    "msg.time_facts": 4
   },
   "floors": {
     "attach.cid_use": 2,
     "attach.decorative": 1,
     "attach.filename": 2,
-    "attach.manifest": 9,
-    "attach.types": 5,
-    "body.alternative_group": 13,
+    "attach.manifest": 11,
+    "attach.types": 7,
+    "body.alternative_group": 14,
     "body.cid_refs": 3,
     "body.html_spans": 15,
     "body.plain_effectively_empty": 2,
-    "body.quote_boundaries": 24,
-    "body.selection": 15,
-    "body.text": 37,
-    "body.view_levels": 24,
-    "document.axes": 103,
-    "gaps.later": 38,
+    "body.quote_boundaries": 28,
+    "body.selection": 21,
+    "body.text": 42,
+    "body.view_levels": 28,
+    "document.axes": 110,
+    "gaps.later": 63,
     "headers.addresses": 7,
     "headers.date": 6,
     "headers.decoded": 6,
     "headers.parameters": 6,
-    "headers.projection": 12
+    "headers.projection": 12,
+    "msg.attachments": 11,
+    "msg.body_streams": 33,
+    "msg.codepage_ladder": 8,
+    "msg.container_layout": 51,
+    "msg.embedded_summary": 2,
+    "msg.message_class": 44,
+    "msg.recipients": 4,
+    "msg.sector_accounting": 50,
+    "msg.storage_tree_sha256": 2,
+    "msg.stream_faults": 2,
+    "msg.time_facts": 1
   },
   "achieved": {
     "attach.cid_use": {
@@ -125,8 +158,8 @@
       "compared": 110
     },
     "gaps.later": {
-      "labelled": 39,
-      "compared": 30
+      "labelled": 63,
+      "compared": 54
     },
     "headers.addresses": {
       "labelled": 7,
@@ -147,6 +180,50 @@
     "headers.projection": {
       "labelled": 12,
       "compared": 12
+    },
+    "msg.attachments": {
+      "labelled": 11,
+      "compared": 11
+    },
+    "msg.body_streams": {
+      "labelled": 33,
+      "compared": 33
+    },
+    "msg.codepage_ladder": {
+      "labelled": 8,
+      "compared": 8
+    },
+    "msg.container_layout": {
+      "labelled": 51,
+      "compared": 51
+    },
+    "msg.embedded_summary": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "msg.message_class": {
+      "labelled": 44,
+      "compared": 44
+    },
+    "msg.recipients": {
+      "labelled": 4,
+      "compared": 4
+    },
+    "msg.sector_accounting": {
+      "labelled": 50,
+      "compared": 50
+    },
+    "msg.storage_tree_sha256": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "msg.stream_faults": {
+      "labelled": 2,
+      "compared": 2
+    },
+    "msg.time_facts": {
+      "labelled": 1,
+      "compared": 1
     }
   },
   "zero_labelled": [],
@@ -200,6 +277,16 @@
       "fact": "headers.projection",
       "declared": 60,
       "achieved": 12
+    },
+    {
+      "fact": "msg.recipients",
+      "declared": 10,
+      "achieved": 4
+    },
+    {
+      "fact": "msg.time_facts",
+      "declared": 4,
+      "achieved": 1
     }
   ],
   "rebase": {
@@ -224,31 +311,53 @@
       "headers.date": 12,
       "headers.decoded": 8,
       "headers.parameters": 4,
-      "headers.projection": 60
+      "headers.projection": 60,
+      "msg.attachments": 8,
+      "msg.body_streams": 20,
+      "msg.codepage_ladder": 8,
+      "msg.container_layout": 45,
+      "msg.embedded_summary": 2,
+      "msg.message_class": 40,
+      "msg.recipients": 10,
+      "msg.sector_accounting": 45,
+      "msg.storage_tree_sha256": 2,
+      "msg.stream_faults": 2,
+      "msg.time_facts": 4
     },
     "to": {
       "attach.cid_use": 2,
       "attach.decorative": 1,
       "attach.filename": 2,
-      "attach.manifest": 9,
-      "attach.types": 5,
-      "body.alternative_group": 13,
+      "attach.manifest": 11,
+      "attach.types": 7,
+      "body.alternative_group": 14,
       "body.cid_refs": 3,
       "body.html_spans": 15,
       "body.plain_effectively_empty": 2,
-      "body.quote_boundaries": 24,
-      "body.selection": 15,
-      "body.text": 37,
-      "body.view_levels": 24,
-      "document.axes": 103,
-      "gaps.later": 38,
+      "body.quote_boundaries": 28,
+      "body.selection": 21,
+      "body.text": 42,
+      "body.view_levels": 28,
+      "document.axes": 110,
+      "gaps.later": 63,
       "headers.addresses": 7,
       "headers.date": 6,
       "headers.decoded": 6,
       "headers.parameters": 6,
-      "headers.projection": 12
+      "headers.projection": 12,
+      "msg.attachments": 11,
+      "msg.body_streams": 33,
+      "msg.codepage_ladder": 8,
+      "msg.container_layout": 51,
+      "msg.embedded_summary": 2,
+      "msg.message_class": 44,
+      "msg.recipients": 4,
+      "msg.sector_accounting": 50,
+      "msg.storage_tree_sha256": 2,
+      "msg.stream_faults": 2,
+      "msg.time_facts": 1
     },
-    "reason": "The design's floors were set before the fixture catalogue; the committed corpus meets 9 of the 20 and falls short on 11 (the quote increment note in docs/design/phase1-fixtures.md). Turn 1.10a re-bases each floor to the count the committed corpus achieves -- a ratchet, coverage may never fall -- and records every unmet declared floor here and in 'declared_unmet'. The owner signs by committing with a non-empty signed_by.",
+    "reason": "The design's floors were set before the fixture catalogue; the committed corpus meets some and falls short on the rest (the quote increment note in docs/design/phase1-fixtures.md). Turn 1.10a re-based each floor onto the count the committed corpus achieves -- a ratchet, coverage may never fall -- and records every unmet declared floor in 'declared_unmet'. Turn 1b.10a extends the same record to the eleven Phase 1b 'msg.*' ids: nine meet their declared floor (and re-base to it), two (msg.recipients, msg.time_facts) fall short of their declared floor and re-base to the count the catalogue's fixtures can carry, recorded in 'declared_unmet'. The owner signs by committing with a non-empty signed_by.",
     "signed_by": "Ivan Ortega (owner), 2026-10-06"
   }
 }

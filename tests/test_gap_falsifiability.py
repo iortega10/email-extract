@@ -38,7 +38,7 @@ from emailextract.evals.labels import load_sidecars  # noqa: E402
 
 SIDECARS = load_sidecars()
 SIDECAR_PATHS = {stem: sidecar.path for stem, sidecar in SIDECARS.items()}
-INLINE_ONLY = {"body.headers_only", "body.no_boundary_found"}
+INLINE_ONLY = {"body.no_boundary_found"}
 
 
 def _outcome(report, fact_id: str):

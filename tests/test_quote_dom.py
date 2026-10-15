@@ -977,6 +977,8 @@ def test_the_dom_rows_are_identical_on_both_interpreters() -> None:
     """The whole corpus's quote output (both views) has one digest, so no rule moves."""
     rows: dict[str, list[object]] = {}
     for stem, sidecar in sorted(load_sidecars(DEFAULT_FIXTURES).items()):
+        if sidecar.artifact.suffix != ".eml":
+            continue  # the .msg sidecars (Turn 1b.10a) are not part of the .eml quote corpus
         raw = sidecar.artifact.read_bytes()
         result = walk(EmlContainer(raw))
         rows[stem] = [

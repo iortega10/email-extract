@@ -115,6 +115,11 @@ def test_the_registry_the_gap_ids_are_checked_against_is_not_empty() -> None:
 @pytest.mark.parametrize("stem", IDS)
 def test_every_span_is_non_negative_and_in_range(stem: str) -> None:
     facts = _facts(stem)
+    if not any(key in facts for key in ("part.regions", "part.tree", "headers.fields")):
+        # A Turn 1b.10a ``.msg`` sidecar carries only its ``msg.*`` facts (D5): it names no
+        # span fact, so there is no recorded address space to range-check against. The
+        # ``.eml`` corpus still pins every span against ``container.size_bytes``.
+        return
     size = facts["container.size_bytes"]
     for row in facts.get("part.regions", []):
         offset, length = _span(row[2])

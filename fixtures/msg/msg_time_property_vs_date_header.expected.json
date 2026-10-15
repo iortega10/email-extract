@@ -1,0 +1,88 @@
+{
+  "fixture": "msg_time_property_vs_date_header.msg",
+  "labels_provenance": "spec",
+  "facts": {
+    "part.gaps": {
+      "phase": 0,
+      "value": [
+        [
+          "1",
+          []
+        ]
+      ]
+    },
+    "msg.container_layout": {
+      "phase": 1,
+      "value": [
+        3,
+        512,
+        64,
+        4096,
+        6,
+        8
+      ]
+    },
+    "msg.sector_accounting": {
+      "phase": 1,
+      "value": [
+        [
+          "header",
+          512
+        ],
+        [
+          "difat",
+          0
+        ],
+        [
+          "fat",
+          512
+        ],
+        [
+          "minifat",
+          512
+        ],
+        [
+          "directory",
+          1024
+        ],
+        [
+          "stream",
+          512
+        ],
+        [
+          "free",
+          0
+        ],
+        [
+          "slack",
+          0
+        ]
+      ]
+    },
+    "msg.message_class": {
+      "phase": 1,
+      "value": "IPM.Note"
+    },
+    "msg.body_streams": {
+      "phase": 1,
+      "value": [
+        "html"
+      ]
+    },
+    "msg.time_facts": {
+      "phase": 1,
+      "value": [
+        [
+          "0039",
+          "01dd597cebed5800",
+          "2026-10-11T12:34:56Z"
+        ],
+        [
+          "0e06",
+          "01dd597cebed5800",
+          "2026-10-11T12:34:56Z"
+        ]
+      ]
+    }
+  }
+}

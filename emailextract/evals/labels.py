@@ -38,9 +38,9 @@ SIDECAR_SUFFIX = ".expected.json"
 #: sidecar in this repository claims ``human`` (tests/test_labels.py).
 PROVENANCES: tuple[str, ...] = ("human", "generator", "spec")
 
-#: A fixture the corpus knows about (Turn 0.3: ``.eml`` only; ``.msg`` arrives in
-#: Phase 1b).
-FIXTURE_SUFFIXES: tuple[str, ...] = (".eml",)
+#: A fixture the corpus knows about (Turn 0.3: ``.eml``; ``.msg`` added by Turn 1b.10a, D4 --
+#: the loader change is the suffix and nothing about fact ids).
+FIXTURE_SUFFIXES: tuple[str, ...] = (".eml", ".msg")
 
 REQUIRED_KEYS: tuple[str, ...] = ("fixture", "labels_provenance", "facts")
 OPTIONAL_KEYS: tuple[str, ...] = ("annotations", "benign")
