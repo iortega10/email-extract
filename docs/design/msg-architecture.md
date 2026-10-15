@@ -579,3 +579,30 @@ after the 1b.6 gaps: `msg.attachment_method_unsupported` (detail `<index>:<metho
 occurrence path, which is not known at the container layer; reported in the outcome note).
 `assemble.py` gains one `cfb_msg`-gated edit: it fills `AttachmentOccurrence.embedded` from the
 facts, joined through the span table; every `.eml` container keeps the current expression verbatim.
+
+## The RTF record (Turn 1b.8) and where 1b.10 projects it
+
+**The ``0x1009`` stream is decompressed, checked and recorded -- never a body view (owner decision
+O2).** ``emailextract/rtf.py`` takes the stream's bytes and returns a frozen ``RtfResult``: the
+``comptype`` (``"LZFu"``/``"MELA"``/hex), ``stream_length``, the three declared header words
+(``compsize``, ``rawsize``, ``crc``), whether the CRC matched, the decompressed length and its
+sha256 (``None`` when faulted) and a fault from a closed list. Nothing in it is the RTF text: the
+decoder keeps a 4096-byte dictionary, a bounded hash buffer and the running length, and never
+retains the output. The format is [MS-OXRTFCP] 2.1: a 16-byte header, an ``LZFu`` data stream of
+LSB-first control-byte flags with 12-bit-offset/4-bit-length references, and an end marker whose
+offset equals the current write position.
+
+**``MsgContainer.rtf_facts``.** A frozen ``RtfResult`` (or ``None`` with no ``0x1009`` stream),
+beside ``message_facts``/``attachment_facts``. It is not on ``EmailDocument``, not in
+``container_facts`` beyond the existing ``body_streams`` (which already lists ``rtf``), and not in
+``to_json``: nothing consumes it until **Turn 1b.10**, which projects it (a ``msg.rtf`` sidecar
+section and the two gaps below). A present ``0x1009`` stream adds **no** ``PartRecord``, no
+``BodyView``, no selection result and no virtual byte; ``msg_rtf_only`` projects exactly as a
+message with no body stream does in 1b.5.
+
+**The gaps.** Every present ``0x1009`` stream raises the registered ``msg.rtf_to_text_unsupported``
+(it says the body is not converted), faulted or not. A damaged stream -- a CFB chain fault or a
+decoder fault -- *also* raises the existing ``msg.stream_truncated`` with the detail
+``0x1009:<fault>`` (the form 1b.5's D0.1 fix gave body faults) and sets the document ``Status`` to
+``TRUNCATED`` with the contract-section-2 reason. No new gap id and no ``BodyView`` member is added;
+``msg.rtf_encapsulation_refused`` is **not** created (O2).

@@ -1555,6 +1555,58 @@ test: tests/test_msg_embedded.py::test_no_deeper_embedded_table_is_read
 stop: after attachments and the embedded summary
 ```
 
+```declaration turn=1b.8
+module: emailextract/rtf.py
+module: emailextract/msgcontainer.py
+module: tests/test_msg_rtf.py
+module: tests/support/rtf_compress.py
+module: tests/support/msg_construction.py
+module: tools/make_msg_fixtures.py
+test: tests/test_msg_rtf.py::test_lzfu_decompresses_and_checks_the_header_size_and_crc
+test: tests/test_msg_rtf.py::test_mela_uncompressed_is_accepted
+test: tests/test_msg_rtf.py::test_a_bad_crc_is_a_truncated_stream
+test: tests/test_msg_rtf.py::test_the_rtf_stream_is_recorded_with_no_body_view
+test: tests/test_msg_rtf.py::test_rtf_to_text_unsupported_is_emitted
+test: tests/test_msg_rtf.py::test_no_rtf_encapsulation_refused_id_exists
+test: tests/test_msg_rtf.py::test_the_decoder_and_compressor_agree_on_the_constants
+test: tests/test_msg_rtf.py::test_hand_typed_vectors_decode_byte_for_byte
+test: tests/test_msg_rtf.py::test_a_round_trip_through_both_encoders
+test: tests/test_msg_rtf.py::test_each_fault_is_named_with_its_reason_and_gap
+test: tests/test_msg_rtf.py::test_a_hostile_header_is_bounded_and_quick
+test: tests/test_msg_rtf.py::test_the_maximal_expansion_stays_within_the_work_bound
+test: tests/test_msg_rtf.py::test_zero_and_short_rtf_streams
+test: tests/test_msg_rtf.py::test_rtf_facts_is_plain_data_and_hash_seed_independent
+test: tests/test_msg_rtf.py::test_no_body_view_derives_from_rtf
+test: tests/test_msg_rtf.py::test_a_seeded_fuzz_of_the_rtf_stream_closes
+test: tests/test_msg_rtf.py::test_the_rtf_decode_memory_is_bounded
+test: tests/test_msg_rtf.py::test_the_existing_fixtures_projection_is_unchanged
+test: tests/test_msg_rtf.py::test_the_prebuf_is_the_207_byte_text_of_the_specification
+test: tests/test_msg_rtf.py::test_the_crc_is_the_raw_table_crc_not_zlib
+test: tests/test_msg_rtf.py::test_a_real_lzfu_vector_decodes_exactly
+test: tests/test_msg_rtf.py::test_a_real_mela_vector_is_accepted
+stop: after the RTF decompress-and-record minimum (RTF-to-text stays a gap)
+```
+
+Allow-list (`turn=1b.8`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `fixtures/msg/`,
+`tests/test_msg_rtf.py`, `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the
+brief's named additions, written here in the same turn: `emailextract/rtf.py` (new),
+`tests/support/rtf_compress.py` (new), `tests/support/msg_construction.py`, `tools/make_msg_fixtures.py`,
+`tests/test_phase1_scope.py` (`EXPECTED_LIBRARY`, `rtf.py`), `tests/test_msg_fixtures.py`,
+`tests/test_fixture_census.py`, `tests/test_turn_declarations.py`, `docs/design/phase1-turn-declarations.md`,
+`docs/design/phase1b-fixtures.md`, `docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md` (only if a
+registry sentence is wrong).
+
+Fix (`turn=1b.8`, `phase1b-turn-1b.8-fix-brief.md`, uncommitted tree): the 207-byte `PREBUF`, the
+raw-table CRC, the `crc_kind` field and the `MELA` CRC rule in `emailextract/rtf.py`; the single-source
+constants and two **real** vectors (`emailextract/rtf.py`, `tests/support/rtf_compress.py`,
+`tests/test_msg_rtf.py`); the rebuilt three RTF fixtures + `SHA256SUMS`; the
+`tests/ledger/label_ledger.json` re-record; the four new declared tests
+(`test_the_prebuf_is_the_207_byte_text_of_the_specification`,
+`test_the_crc_is_the_raw_table_crc_not_zlib`, `test_a_real_lzfu_vector_decodes_exactly`,
+`test_a_real_mela_vector_is_accepted`); and a short "fix" subsection in the 1b.8 outcome note
+(`docs/design/phase1b-ledgers.md`). `emailextract/msgcontainer.py` is untouched (the new field does not
+reach it).
+
 Allow-list (`turn=1b.7`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `emailextract/attach.py`,
 `fixtures/msg/`, `tests/test_msg_attachments.py`, `tests/test_msg_embedded.py`,
 `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the brief's named

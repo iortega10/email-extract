@@ -290,6 +290,9 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     family_g = _msg_family_g_rows(catalogue_text)
     built_in_1b7 = {name for name, turn in family_g.items() if "1b.7" in turn}
     assert len(built_in_1b7) == 10, sorted(built_in_1b7)
+    # Turn 1b.8 lands the three Family F RTF rows.
+    built_in_1b8 = {name for name, turn in family_f.items() if "1b.8" in turn}
+    assert len(built_in_1b8) == 3, sorted(built_in_1b8)
     committed_msg = {path.stem for path in MSG_FIXTURES.glob("*.msg")}
     catalogue_rows = set(msg_rows) | set(family_e) | set(family_f) | set(family_g)
     assert built_this_turn <= committed_msg, sorted(built_this_turn - committed_msg)
@@ -297,6 +300,7 @@ def test_every_catalogue_row_has_a_committed_fixture() -> None:
     assert built_in_1b5 <= committed_msg, sorted(built_in_1b5 - committed_msg)
     assert built_in_1b6 <= committed_msg, sorted(built_in_1b6 - committed_msg)
     assert built_in_1b7 <= committed_msg, sorted(built_in_1b7 - committed_msg)
+    assert built_in_1b8 <= committed_msg, sorted(built_in_1b8 - committed_msg)
     assert committed_msg <= catalogue_rows, sorted(committed_msg - catalogue_rows)
     # ... and the check has teeth: a Family D row built this turn with no `.msg` fails by name.
     missing = sorted(built_this_turn)[0]

@@ -56,7 +56,7 @@ import struct
 from dataclasses import replace
 from typing import Mapping, NamedTuple, Sequence
 
-from . import cfb, mapi
+from . import cfb, mapi, rtf
 from .container import CharsetOrigin, SpanRow
 from .ids import sha256_hex
 from .model import (
@@ -135,6 +135,8 @@ GAP_MAPI_HEADER_PROPERTY_DISAGREE = "headers.mapi_header_property_disagree"
 GAP_STREAM_TRUNCATED = "msg.stream_truncated"
 GAP_ATTACHMENT_METHOD_UNSUPPORTED = "msg.attachment_method_unsupported"
 GAP_EMBEDDED_DEPTH_CAP = "msg.embedded_depth_cap"
+#: Turn 1b.8: the registered gap a present ``0x1009`` stream raises (O2, no body view).
+GAP_RTF_TO_TEXT_UNSUPPORTED = "msg.rtf_to_text_unsupported"
 
 #: The attachment storage prefix and its embedded-message storage name (D2/D4).
 ATTACH_PREFIX = "__attach_version1.0_#"
@@ -158,6 +160,26 @@ _FAULT_REASONS: Mapping[str, str] = {
 
 def _fault_reason(fault: str) -> str:
     return _FAULT_REASONS.get(fault, "stream_ended_early")
+
+
+#: Turn 1b.8: each RTF decoder fault's mapped ``Status.TRUNCATED`` reason (D5, contract
+#: section 2). The size/comptype faults read as a declared-length mismatch; a bad CRC, a
+#: short input and a dictionary underrun ended the stream early. This mapping is the
+#: reviewer's choice, not a measured fact -- listed as an owner question in the note.
+_RTF_FAULT_REASONS: Mapping[str, str] = {
+    rtf.FAULT_HEADER_SHORT: "declared_length_mismatch",
+    rtf.FAULT_COMPTYPE_UNKNOWN: "declared_length_mismatch",
+    rtf.FAULT_COMPSIZE_MISMATCH: "declared_length_mismatch",
+    rtf.FAULT_RAWSIZE_MISMATCH: "declared_length_mismatch",
+    rtf.FAULT_CRC_MISMATCH: "stream_ended_early",
+    rtf.FAULT_DATA_SHORT: "stream_ended_early",
+    rtf.FAULT_DICTIONARY_UNDERRUN: "stream_ended_early",
+}
+
+
+def _rtf_reason(fault: str) -> str:
+    """The reason for an RTF fault, or a CFB stream fault mapped the D0.1 way."""
+    return _RTF_FAULT_REASONS.get(fault, _fault_reason(fault))
 
 
 _SUB = "__substg1.0_"
@@ -450,6 +472,9 @@ class MsgContainer:
         self.container_gaps: tuple[ContainerGap, ...] = ()
         self.message_facts: MessageFacts = MessageFacts(None, None, (), ())
         self.attachment_facts: tuple[AttachmentFact, ...] = ()
+        #: Turn 1b.8: the ``0x1009`` stream's reading, or ``None`` when there is no such
+        #: stream. Nothing consumes it until Turn 1b.10; it never becomes a body view (D7).
+        self.rtf_facts: "rtf.RtfResult | None" = None
         self._attachment_rows: tuple["mapi.AttachmentRow", ...] = ()
         self._depth_cap_gaps: tuple[ContainerGap, ...] = ()
         self.span_provenance: tuple[SpanRow, ...] = ()
@@ -545,7 +570,9 @@ class MsgContainer:
 
         plain = self._read_body(BODY_PLAIN)
         html, html_fault = self._binary_body(BODY_HTML)
-        rtf = self._has_stream(((BODY_RTF, mapi.PT_BINARY),))
+        rtf_present = self._has_stream(((BODY_RTF, mapi.PT_BINARY),))
+        rtf_facts, rtf_stream_fault = self._read_rtf() if rtf_present else (None, None)
+        self.rtf_facts = rtf_facts
         transport = self._read_transport()
         transport_text = transport.text if transport.present else None
         gaps: list[ContainerGap] = []
@@ -569,6 +596,25 @@ class MsgContainer:
                 self.status_outcome = StatusOutcome(
                     status=Status.TRUNCATED, reason=_fault_reason(fault)
                 )
+
+        if rtf_present:
+            # Turn 1b.8: a damaged `0x1009` stream -- a CFB chain fault or a decoder fault --
+            # is the same registered `msg.stream_truncated`, detail `0x1009:<fault>` (D5). The
+            # gap is the only signal, because no body view derives from RTF (O2).
+            rtf_fault = rtf_stream_fault or (rtf_facts.fault if rtf_facts is not None else None)
+            if rtf_fault is not None:
+                detail = f"{_stream_name(BODY_RTF, mapi.PT_BINARY)}:{rtf_fault}"
+                if not any(
+                    gap.gap_id == GAP_STREAM_TRUNCATED and gap.detail == detail for gap in gaps
+                ):
+                    gaps.append(ContainerGap(GAP_STREAM_TRUNCATED, detail))
+                if self.status_outcome is None:
+                    self.status_outcome = StatusOutcome(
+                        status=Status.TRUNCATED, reason=_rtf_reason(rtf_fault)
+                    )
+            # `msg.rtf_to_text_unsupported` is emitted whenever a `0x1009` stream is present,
+            # faulted or not: it says the body is not converted (D5).
+            gaps.append(ContainerGap(GAP_RTF_TO_TEXT_UNSUPPORTED))
 
         self.attachment_facts, attachment_payloads = self._build_attachment_facts()
         gaps.extend(self._attachment_gaps())
@@ -768,7 +814,7 @@ class MsgContainer:
             for name, present in (
                 ("plain", plain.present),
                 ("html", html is not None),
-                ("rtf", rtf),
+                ("rtf", rtf_present),
             )
             if present
         ) or "none"
@@ -859,6 +905,22 @@ class MsgContainer:
         if status != cfb.FAULT_OK:
             return None, mapi.STREAM_FAULTS.get(status)
         return payload, None
+
+    def _read_rtf(self) -> "tuple[rtf.RtfResult, str | None]":
+        """Turn 1b.8: read the ``0x1009`` stream and decode it (never raises).
+
+        Returns the decode result and, separately, the CFB *chain* fault of the stream when
+        there is one (the decode runs over whatever bytes the chain yielded). The container's
+        own work counter is charged per output byte (D4).
+        """
+        assert self._cfb is not None
+        name = _stream_name(BODY_RTF, mapi.PT_BINARY)
+        payload, status = cfb.read_stream(self._cfb, name)
+        result = rtf.decode(payload, work=self._cfb.work)
+        fault = None if status == cfb.FAULT_OK else mapi.STREAM_FAULTS.get(
+            status, mapi.FAULT_STREAM_OUT_OF_RANGE
+        )
+        return result, fault
 
     def _decode(self, payload: bytes, prop_type: int) -> "mapi.TextValue":
         assert self._message is not None

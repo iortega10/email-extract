@@ -598,6 +598,54 @@ MSG_HTML_META_CHARSET_CONTRADICTS: Mapping[str, Any] = _t15_table(
     file_length=3584,
 )
 
+#: ``msg_rtf_compressed_body`` (Turn 1b.8): ``0x1000`` plus the ``LZFu`` ``0x1009`` stream.
+MSG_RTF_COMPRESSED_BODY: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 768),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        ("__substg1.0_1000001F", STGTY_STREAM, 64),
+        ("__substg1.0_10090102", STGTY_STREAM, 226),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_1000001F": {"mini": True, "start": 7, "size": 64, "sectors": 1},
+        "__substg1.0_10090102": {"mini": True, "start": 8, "size": 226, "sectors": 4},
+        "<root>": {"mini": False, "start": 4, "size": 768, "sectors": 2},
+    },
+    dir_sectors=2,
+    stream_bytes=1024,
+    file_length=3584,
+)
+
+#: ``msg_rtf_only`` (Turn 1b.8): the ``0x1009`` stream alone, no plain and no HTML.
+MSG_RTF_ONLY: Mapping[str, Any] = _t15_table(
+    directory=[
+        ("Root Entry", STGTY_ROOT, 704),
+        _T15_PROPS,
+        _T15_CLASS,
+        _T15_TRANSPORT,
+        ("__substg1.0_10090102", STGTY_STREAM, 226),
+    ],
+    streams={
+        "__properties_version1.0": {"mini": True, "start": 0, "size": 80, "sectors": 2},
+        "__substg1.0_001A001F": {"mini": True, "start": 2, "size": 16, "sectors": 1},
+        "__substg1.0_007D001F": {"mini": True, "start": 3, "size": 218, "sectors": 4},
+        "__substg1.0_10090102": {"mini": True, "start": 7, "size": 226, "sectors": 4},
+        "<root>": {"mini": False, "start": 4, "size": 704, "sectors": 2},
+    },
+    dir_sectors=2,
+    stream_bytes=1024,
+    file_length=3584,
+)
+
+#: ``msg_rtf_bad_crc`` (Turn 1b.8): the same layout as ``msg_rtf_only`` -- only the stream's
+#: 16-byte CRC field differs, so the CFB layout is identical (a well-formed container).
+MSG_RTF_BAD_CRC: Mapping[str, Any] = MSG_RTF_ONLY
+
 #: ``msg_no_transport_headers``: no ``0x007D`` at all (a four-entry directory).
 MSG_NO_TRANSPORT_HEADERS: Mapping[str, Any] = _t15_table(
     directory=[
@@ -1674,6 +1722,9 @@ CONSTRUCTION: Mapping[str, Mapping[str, Any]] = {
     "msg_plain_and_html": MSG_PLAIN_AND_HTML,
     "msg_zero_length_body": MSG_ZERO_LENGTH_BODY,
     "msg_html_meta_charset_contradicts": MSG_HTML_META_CHARSET_CONTRADICTS,
+    "msg_rtf_compressed_body": MSG_RTF_COMPRESSED_BODY,
+    "msg_rtf_only": MSG_RTF_ONLY,
+    "msg_rtf_bad_crc": MSG_RTF_BAD_CRC,
     "msg_no_transport_headers": MSG_NO_TRANSPORT_HEADERS,
     "msg_transport_headers_utf8_bom": MSG_TRANSPORT_HEADERS_UTF8_BOM,
     "msg_transport_headers_lf_only": MSG_TRANSPORT_HEADERS_LF_ONLY,

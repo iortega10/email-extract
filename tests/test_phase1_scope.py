@@ -51,6 +51,7 @@ EXPECTED_LIBRARY = {
     "parse.py",
     "rfc2047.py",
     "rfc2231.py",
+    "rtf.py",
     "seam.py",
     "selection.py",
     "siblings.py",

@@ -59,6 +59,7 @@ __all__ = [
     "HOSTILE_FIXTURE_NAMES",
     "build_all",
     "build_fixture",
+    "rtf_message",
 ]
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
@@ -68,6 +69,7 @@ SUMS = MSG / "SHA256SUMS"
 sys.path.insert(0, str(REPO_ROOT / "tests"))
 
 from support import mapi_table  # noqa: E402  (property-table bytes, typed from [MS-OXMSG])
+from support import rtf_compress  # noqa: E402  (the independent LZFu compressor, Turn 1b.8)
 
 #: The transport-header stream's UTF-16LE byte length, typed here so the fixtures'
 #: construction tables can name it. It is a whole number of UTF-16 code units.
@@ -621,6 +623,31 @@ T15_PLAIN_TEXT = "\r\n"
 #: The disputed property subject: it does **not** equal the transport header's Subject.
 T15_CONFLICT_SUBJECT = "synthetic turn 1b.5 property subject"
 
+#: Turn 1b.8: the ``0x1009`` stream's decompressed text. It carries ``\\fromtext`` (the real
+#: shape [MS-OXRTFCP]/O2 keeps: decompress-and-record, never de-encapsulate) and is
+#: **synthetic**, typed here, then compressed with the *independent* test-side compressor.
+RTF_BODY_TEXT = (
+    "{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033{\\fonttbl{\\f0\\fnil\\fcharset0 Calibri;}}"
+    "{\\*\\generator Riched20 10.0.19041}\\viewkind4\\uc1\\pard\\f0\\fs22\\fromtext synthetic turn 1b.8 rtf body\\par}"
+)
+#: ``msg_rtf_compressed_body``'s plain body: real text, so the plain leaf is projected (D6).
+T18_PLAIN_TEXT = "synthetic turn 1b.8 plain body\r\n"
+
+
+def _rtf_stream(*, bad_crc: bool = False) -> bytes:
+    """A literal-only ``LZFu`` ``0x1009`` stream (its 16-byte header, data and end marker).
+
+    ``bad_crc`` flips every bit of the header's CRC field, and nothing else, so the
+    ``msg_rtf_bad_crc`` fixture is a well-formed CFB whose compressed stream a CRC check
+    rejects (both fixtures' streams are the same length, so the layout is shared).
+    """
+    stream = bytearray(rtf_compress.compress_literal(RTF_BODY_TEXT.encode("utf-8")))
+    if bad_crc:
+        declared = struct.unpack_from("<I", stream, 12)[0]
+        struct.pack_into("<I", stream, 12, declared ^ 0xFFFFFFFF)
+    return bytes(stream)
+
+
 
 def _t15_fixture(
     *,
@@ -629,6 +656,7 @@ def _t15_fixture(
     subject_stream: bytes | None = None,
     plain: bytes | None = None,
     html: bytes | None = None,
+    rtf: bytes | None = None,
     codepages: tuple[int, int] = (1252, 1252),
 ) -> bytes:
     """One Turn 1b.5 fixture: ``IPM.Note`` plus the named streams, in a fixed order."""
@@ -652,6 +680,8 @@ def _t15_fixture(
         children.append(stream("__substg1.0_1000001F", plain))
     if html is not None:
         children.append(stream("__substg1.0_10130102", html))
+    if rtf is not None:
+        children.append(stream("__substg1.0_10090102", rtf))
     return build_cfb(storage("Root Entry", *children))
 
 
@@ -686,6 +716,34 @@ def _fixture_zero_length_body() -> bytes:
         transport_name="__substg1.0_007D001F",
         transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
         plain=b"",
+    )
+
+
+def _fixture_rtf_compressed_body() -> bytes:
+    """``0x1000`` plus an ``LZFu`` ``0x1009`` (``\\fromtext``), no HTML (Turn 1b.8)."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        plain=T18_PLAIN_TEXT.encode("utf-16-le"),
+        rtf=_rtf_stream(),
+    )
+
+
+def _fixture_rtf_only() -> bytes:
+    """A ``0x1009`` stream and no plain, no HTML (Turn 1b.8): no body stream, no body view."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        rtf=_rtf_stream(),
+    )
+
+
+def _fixture_rtf_bad_crc() -> bytes:
+    """An ``LZFu`` ``0x1009`` whose header CRC is wrong (hostile; Turn 1b.8)."""
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        rtf=_rtf_stream(bad_crc=True),
     )
 
 
@@ -1201,6 +1259,9 @@ FIXTURES = {
     "msg_plain_and_html": _fixture_plain_and_html,
     "msg_zero_length_body": _fixture_zero_length_body,
     "msg_html_meta_charset_contradicts": _fixture_html_meta_charset_contradicts,
+    "msg_rtf_compressed_body": _fixture_rtf_compressed_body,
+    "msg_rtf_only": _fixture_rtf_only,
+    "msg_rtf_bad_crc": _fixture_rtf_bad_crc,
     "msg_no_transport_headers": _fixture_no_transport_headers,
     "msg_transport_headers_utf8_bom": _fixture_transport_headers_utf8_bom,
     "msg_transport_headers_lf_only": _fixture_transport_headers_lf_only,
@@ -1250,6 +1311,20 @@ def build_fixture(name: str) -> bytes:
 def build_all() -> dict[str, bytes]:
     """Every committed fixture's bytes, keyed by name."""
     return {name: build_fixture(name) for name in ALL_FIXTURE_NAMES}
+
+
+def rtf_message(rtf_bytes: bytes, *, plain: "bytes | None" = None) -> bytes:
+    """An ``IPM.Note`` carrying ``rtf_bytes`` as its ``0x1009`` stream (a test-side helper).
+
+    Turn 1b.8 commits only the three Family F RTF rows; the ``MELA`` form and the hostile
+    shapes are built here, in-memory, so no hostile RTF is committed.
+    """
+    return _t15_fixture(
+        transport_name="__substg1.0_007D001F",
+        transport_bytes=T15_TRANSPORT_TEXT.encode("utf-16-le"),
+        plain=plain,
+        rtf=rtf_bytes,
+    )
 
 
 def _sha256(name: str, data: bytes) -> str:

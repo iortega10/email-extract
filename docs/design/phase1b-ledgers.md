@@ -476,7 +476,13 @@ stop: after the RTF decompress-and-record minimum (RTF-to-text stays a gap)
 ```
 
 Allow-list (`turn=1b.8`): `emailextract/mapi.py`, `emailextract/msgcontainer.py`, `fixtures/msg/`,
-`tests/test_msg_rtf.py`, `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md`.
+`tests/test_msg_rtf.py`, `tests/ledger/label_ledger.json`, `docs/design/phase1b-ledgers.md` -- **plus** the
+brief's named additions, written here in the same turn: `emailextract/rtf.py` (new),
+`tests/support/rtf_compress.py` (new), `tests/support/msg_construction.py`, `tools/make_msg_fixtures.py`,
+`tests/test_phase1_scope.py` (`EXPECTED_LIBRARY`, +`rtf.py`), `tests/test_msg_fixtures.py`,
+`tests/test_fixture_census.py`, `tests/test_turn_declarations.py`, `docs/design/phase1-turn-declarations.md`,
+`docs/design/phase1b-fixtures.md`, `docs/design/msg-architecture.md`, `docs/design/phase0-gaps.md` (only if a
+registry sentence is wrong). **`behavior_ledger.json` and `versions.py` are permissions, not duties.**
 
 ```declaration turn=1b.9
 module: tests/test_msg_cross_container.py
@@ -1702,3 +1708,266 @@ address (3).
   attachment gaps included) under `part.gaps`/`gaps.later`, and join each row through the span
   table. The `msg.embedded_summary` / `msg.storage_tree_sha256` facts are the two new value shapes.
   No `.msg` sidecar exists yet (as directed); `evals/labels.py` still accepts `.eml` only.
+
+## Turn 1b.8 -- outcome (the RTF minimum: decompress, check, record; no body view)
+
+One new module (`emailextract/rtf.py`), the test-side compressor (`tests/support/rtf_compress.py`),
+the `msgcontainer` wiring (`rtf_facts`, the two gaps), three fixtures and their construction tables
+landed in the working tree; this note is its outcome. Full suite: **2170 passed, 2 skipped** on
+`python` (3.14.3, 3m45s) and on the repo's 3.11 (3.11.15, 5m58s); the six `--check` tools and
+`python -m emailextract.evals` all exit 0.
+
+### D1-D7: the reviewer's decisions, applied (no decision changed)
+
+- **D1 -- `emailextract/rtf.py`, a new pure module.** `mapi.py` is untouched: the decoder needs no
+  MAPI helper. `tests/test_phase1_scope.py::EXPECTED_LIBRARY` gains `rtf.py` (line 54) and the import
+  probe picks it up by the `pkgutil.walk_packages` sweep (no per-module line). The ledger's allow-list
+  line is updated in this same turn.
+- **D2 -- the format, typed from [MS-OXRTFCP] 2.1.** See "The specification constants" below: four of
+  the five are verified, one (the prebuf tail) is not.
+- **D3 -- streaming, output not retained.** `RtfResult` is a frozen dataclass of primitives:
+  `comptype`, `stream_length`, `compsize_declared`, `rawsize_declared`, `crc_declared`, `crc_ok`,
+  `decompressed_length`, `decompressed_sha256` (`None` on a fault), `fault`. The decoder keeps a
+  4096-byte dictionary, a 64 KiB hash buffer, the running sha256 and the length. Nothing is the RTF
+  text (the test asserts no decompressed substring reaches `container_facts`).
+- **D4 -- bounded work, hostile-safe.** `rtf.decode(data, work=...)` charges the container's
+  `cfb.Work` counter one step per output byte; `rtf.work_bound(n) = 16 + 9 * n`. A reference to an
+  unwritten dictionary byte is `rtf_dictionary_underrun`; an overlapping reference (offset = write
+  position - 1) works byte by byte. The decoder never allocates `RAWSIZE`: a header declaring
+  `0xFFFFFFFF` over the committed 226-byte stream faults in 6,738 bytes of `tracemalloc` peak; a
+  `COMPSIZE` of `0xFFFFFF` in 544 bytes.
+- **D5 -- faults, and how they map (no new ids).** The closed list is
+  `rtf_header_short`, `rtf_comptype_unknown`, `rtf_compsize_mismatch`, `rtf_rawsize_mismatch`,
+  `rtf_crc_mismatch`, `rtf_data_short`, `rtf_dictionary_underrun`. Each raises the existing
+  `msg.stream_truncated` with the detail `0x1009:<fault>` and sets `Status.TRUNCATED` with:
+  `declared_length_mismatch` for the header-short, unknown-comptype and two size faults;
+  `stream_ended_early` for a bad CRC, a short input and a dictionary underrun. `msg.rtf_to_text_unsupported`
+  is emitted whenever a `0x1009` stream is present, faulted or not. The fault-to-reason mapping is a
+  choice (an owner question, below).
+- **D6 -- no body view; existing projections pinned.** `tests/test_msg_rtf.py` pins the sha256 of
+  every existing committed fixture's virtual bytes and asserts none moved (the three new rows are the
+  only additions). `msg_rtf_only` projects exactly as a no-body-stream message does in 1b.5 (the
+  synthetic `text/plain; charset=us-ascii` scaffold, no leaf body), `body_streams = rtf`;
+  `msg_rtf_compressed_body` projects its plain body as in 1b.5 and adds only the record and the gap.
+  No `PartRecord`, `BodyView` or selection result derives from the RTF.
+- **D7 -- the record lives on `MsgContainer.rtf_facts`.** A frozen `RtfResult` (or `None`), beside
+  `message_facts`/`attachment_facts`; not on `EmailDocument`, not in `container_facts` beyond the
+  existing `body_streams`, not in `to_json`. Nothing consumes it until 1b.10.
+
+### The specification constants, and where each came from
+
+- **The 16-byte header** (four little-endian `u32`: `COMPSIZE`, `RAWSIZE`, `COMPTYPE`, `CRC`):
+  verified structurally and by the round trip; `COMPSIZE == stream_length - 4`, `LZFu == 0x75465A4C`,
+  `MELA == 0x414C454D`.
+- **The reference layout** (LSB-first control byte of eight flags; clear = one literal; set = a
+  2-byte big-endian reference of a 12-bit offset and a 4-bit stored length = length - 2; end marker =
+  a reference whose offset equals the write position): verified by hand-typed, byte-by-byte vectors
+  -- literals-only `AB`, one non-overlapping reference `ABAB`, one overlapping (run-length) reference
+  `AAAAA`, and a marker-off-by-one stream that faults `rtf_rawsize_mismatch`.
+- **The CRC**: the specification's table-driven CRC-32 (poly `0xEDB88320`) equals `zlib.crc32` over
+  the same bytes (asserted on samples), so the decoder uses `zlib`. It is over the compressed bytes
+  after the header.
+- **The prebuf and the initial write position -- NOT verified against [MS-OXRTFCP].** There is no copy
+  of the specification in the repository and no network in this environment, so the 4096-byte
+  dictionary's pre-load could not be typed from the spec text as D2 requires. The first 80 bytes (the
+  `{\rtf1\ansi\ansicpg1252\deff0\deflang1033{\fonttbl{\f0\fnil\fcharset0 Calibri;}}` prelude) are
+  certain; the tail is the best-known form, and `len(PREBUF)` is **167**, not the brief's **207**. The
+  initial write position is set to `len(PREBUF)`, so the decoder is self-consistent and every
+  fixture/vector here round-trips, but a *real* `0x1009` stream whose references read the prebuf would
+  decode against the wrong bytes. **This is the turn's one unverified constant and the top owner
+  question; flagged, never guessed at silently.**
+- **A nonzero CRC on a `MELA` stream**: refused as `rtf_crc_mismatch` (the spec says `MELA`'s CRC is
+  always 0), which maps to `TRUNCATED`/`stream_ended_early`.
+
+### The fixtures, with their hand-typed expectations
+
+All three are version 3, 512-byte sectors, all-mini, `001A:001F = "IPM.Note"`, a 218-byte `0x007D`
+transport stream, and a 226-byte `0x1009` stream (the literal-only compression of a typed
+`{\rtf1...\fromtext...}` text, 184 decompressed bytes).
+
+- `msg_rtf_compressed_body`: `0x1000` (64 bytes) + `0x1009`; `body_streams = plain+rtf`; one gap
+  (`msg.rtf_to_text_unsupported`); `rtf_facts.fault is None`.
+- `msg_rtf_only`: `0x1009` only; `body_streams = rtf`; one gap; no body leaf.
+- `msg_rtf_bad_crc`: the same layout as `msg_rtf_only` with the CRC field inverted; `TRUNCATED`/
+  `stream_ended_early`; gaps `msg.stream_truncated` `0x1009:rtf_crc_mismatch` and
+  `msg.rtf_to_text_unsupported`.
+
+The `MELA` form and the hostile shapes are built in-memory in the tests
+(`tools/make_msg_fixtures.rtf_message`), never committed.
+
+### Numbers
+
+- **Maximal expansion**: a 155-byte stream of `0xFF` references expands to 1,088 bytes (7.02x, under
+  the 9x `work_bound`); `work.steps == decompressed_length` exactly.
+- **Hostile header**: `RAWSIZE = 0xFFFFFFFF` faults (`rtf_rawsize_mismatch`) in a 6,738-byte
+  `tracemalloc` peak; `COMPSIZE = 0xFFFFFF` faults (`rtf_compsize_mismatch`) in 544 bytes.
+- **Memory**: the decoder's own peak on an 8 MiB stream is 75,378 bytes -- it retains no output. A
+  40 MiB stream reads once: peak 98,524,797 bytes over a 47,185,939-byte stream = **2.09x** (the
+  container's own copy of the stream dominates; the decoder adds a bounded buffer).
+- **The three mutations** (each run, restored, and re-run green): (1) skip the CRC check -- fails
+  `test_lzfu_decompresses_and_checks_the_header_size_and_crc`,
+  `test_a_bad_crc_is_a_truncated_stream`, `test_each_fault_is_named_with_its_reason_and_gap`;
+  (2) treat an unwritten dictionary byte as zero -- fails
+  `test_each_fault_is_named_with_its_reason_and_gap`; (3) emit `msg.rtf_to_text_unsupported` only when
+  the RTF decodes cleanly -- fails `test_rtf_to_text_unsupported_is_emitted`,
+  `test_each_fault_is_named_with_its_reason_and_gap`, `test_zero_and_short_rtf_streams`.
+
+### Existing tests edited, and why
+
+- `tests/support/msg_construction.py` -- the three `MSG_RTF_*` construction tables added (allowed by
+  the brief; `tests/ledger/label_ledger.json` records the new fingerprint in the same turn, an
+  allow-listed change).
+- `tests/test_phase1_scope.py` -- `EXPECTED_LIBRARY` gains `rtf.py`.
+- `tests/test_fixture_census.py` -- the `built_in_1b8 == 3` set added.
+- `tests/test_turn_declarations.py` -- `BUILT_TURNS` gains `"1b.8"`.
+- `tests/msg_fixtures.py` / no other existing test was edited; no fixture count or `body_streams`
+  value moved.
+- `tests/ledger/label_ledger.json` -- `tests/support/rtf_compress.py` appended and
+  `tests/support/msg_construction.py` re-recorded (both named in the allow-list).
+
+### Owner questions
+
+1. **The prebuf (above)** -- the specification's 207-byte pre-load could not be verified offline; the
+   decoder ships the best-known 167-byte form. Confirm the exact bytes (and the write position) from
+   [MS-OXRTFCP] 2.1, or accept the risk for real mail.
+2. **The fault-to-`Status` reason mapping** (D5): a size or comptype mismatch as
+   `declared_length_mismatch` is a reading, not a measured fact.
+3. **Whether RTF de-encapsulation ever comes back** (O2 cut it): an HTML-in-RTF body would then become
+   a real body view.
+4. **Probe P1/P5 on real mail**: `0x1009` prevalence is still evidenced by one spike file.
+
+### A deviation to report
+
+The brief's memory test asks for the 40 MiB stream **through the pipeline under `tracemalloc`**. That
+run costs ~65s on this machine (a `tracemalloc` accounting artifact: the *same* decode work, wrapping
+the container, is ~4x the standalone cost, and ~5.8s without `tracemalloc`), so the pipeline
+measurement is taken on the brief's 40 MiB stream while the decoder-only (scale-invariant) peak is
+measured on an 8 MiB stream. The pipeline multiple, 2.09x, is reported above.
+
+## Turn 1b.8 -- fix (reviewer correction, 2026-10-14): the prebuf and the CRC were both wrong
+
+The 1b.8 note above shipped two constants it could not verify offline. The reviewer had network
+access, checked the format against a public independent implementation (`delimitry/compressed_rtf`,
+its `INIT_DICT` and README examples) and found **both wrong**; this subsection is the fix. Nothing
+else in the turn changed: `emailextract/msgcontainer.py` is untouched, the shape of the record is the
+same (plus one field), and no decision (D1-D7) moved.
+
+### The two constants: old value, new value, and why a round trip could never have seen it
+
+| constant | old (wrong) | new (the specification's) |
+| --- | --- | --- |
+| `PREBUF` | 167 bytes, `sha256 3e8ff567a8a531364af81b6a515411ec32b3585139c1cdca56c29c18edd5ff2b` | **207** bytes, `sha256 64949fe166f29da3ab21d1739247557565795c7cfed9227f377e890ce5cfa92d` |
+| the CRC | `zlib.crc32` (init `0xFFFFFFFF`, final XOR) | the raw table-driven CRC-32 (init `0`, **no** final XOR) |
+
+The 167-byte text was not a prefix of the real pre-load (an Outlook-generated RTF header, not the
+prebuf), so the module docstring's "the first 80 bytes are certain" was itself false. Every real
+Outlook `LZFu` stream references the prebuf, so a real stream decoded to wrong bytes or faulted. And
+because `zlib.crc32` differs from the raw form on every non-empty input, **every real `LZFu` stream
+would have raised `rtf_crc_mismatch` and truncated its document**.
+
+Neither was visible to the 2111+ round-trip assertions: `tests/support/rtf_compress.py` carried its
+own copy of the same wrong `PREBUF` and the same wrong CRC, so encode-then-decode agreed with itself
+whatever the constants were. The tell the fix adds is that `rtf_compress` now **imports the constants
+from exactly one place** (`emailextract/rtf.py`) and two **real** streams are asserted against
+:func:`emailextract.rtf.decode` **alone**, with no encoder in the loop. The two real streams were
+decoded first in a throwaway script before any code was changed, and the 207-byte prebuf needed **no
+space fill** -- every reference reads a byte the prebuf actually holds, so the module's stricter
+`rtf_dictionary_underrun` rule (below) never fired on real data.
+
+### How the corrected decoder handles each real vector
+
+Both are one-line `bytes` literals in `tests/test_msg_rtf.py`, provenance in the comment.
+
+- **`REAL_LZFU_STREAM`** (39 bytes, from the reference README): header `COMPSIZE` 35, `RAWSIZE` 34,
+  `LZFu`, stored `CRC 0x74E85C33`. `rtf.crc32(payload)` equals the stored CRC; the decompression
+  reads prebuf slots `0-11, 121-122, 175-179` and produces exactly the 34 bytes
+  `{\rtf1\ansi\ansicpg1252\pard test}` (`decompressed_length` 34, `crc_kind` `"payload"`). Through a
+  built `.msg` the document is `PARSED`, `msg.rtf_to_text_unsupported` is present, no
+  `msg.stream_truncated`, and `rtf_facts` carries the 34 bytes' length and sha256.
+- **`REAL_MELA_STREAM`** (50 bytes): header `COMPSIZE` 46, `RAWSIZE` 34, `MELA`, stored
+  `CRC 0xCE12DF20`, which **is** the payload's raw-table CRC. Accepted (`crc_kind` `"payload"`), same
+  34 bytes and the same `PARSED` document shape as the `LZFu` vector.
+
+### The `MELA` CRC rule (a reading, and an owner question)
+
+[MS-OXRTFCP] says an uncompressed stream's CRC is `0`. The reference writer stores the payload's raw
+CRC instead. Rather than guess, a `MELA` stream is now accepted when its CRC field is **either** `0`
+**or** equal to `rtf.crc32(payload)`, and `rtf_facts.crc_kind` records which: `"zero"`, `"payload"`,
+or `"none"` (no CRC checked, or the check failed -- a plain-data `str`, added to `RtfResult` after
+`crc_ok`). Any other value is still `rtf_crc_mismatch`. This is a **leniency chosen because the
+format's own reference writer produces the second form**; it is a reading, not a measured fact, and
+the top owner question for this fix.
+
+### Which tests were re-derived, and how
+
+The reviewer's rule is that a hand-built literal which now disagrees with the code is a **finding**,
+not a value to patch; each surviving literal was re-derived by hand from `INITIAL_WRITE_POSITION` = 207
+and left as typed bytes so a disagreement fails:
+
+- `test_hand_typed_vectors_decode_byte_for_byte` is now typed in bytes with the arithmetic in the
+  comment: vector 1 marker `(207 + 2) << 4 = 0x0D10`; vector 2 reference `(207 << 4) | 0 = 0x0CF0`
+  and marker `(211 << 4) = 0x0D30`; vector 3 reference `(207 << 4) | 2 = 0x0CF2` and marker
+  `(212 << 4) = 0x0D40`; vector 4 (marker one short) `(208 << 4) = 0x0D00`. It also asserts
+  `INITIAL_WRITE_POSITION == 207` so the derivations cannot silently float.
+- Every other hand-built vector derives its offsets from `rtf.INITIAL_WRITE_POSITION` symbolically
+  (the maximal-expansion, dictionary-underrun and literal-stream helpers), so 207 flows through
+  without a typed literal to re-derive.
+- `_lzfu_header` now stamps `rtf.crc32(payload)`, not `zlib.crc32`.
+- `test_the_decoder_and_compressor_agree_on_the_constants` asserts **identity** (the compressor
+  imports the constants) and that the CRC is the raw form, **not** `zlib.crc32`, on every non-empty
+  sample.
+- `test_mela_uncompressed_is_accepted` gained the `"zero"` and `"payload"` acceptance cases and the
+  `crc_kind` assertions.
+- Four new tests: the prebuf (`len`, first 40, last 20, the CR LF pair and the whole sha256 typed in
+  the test), the CRC (`0x74E85C33` is the raw CRC and differs from `zlib`'s `0x06487877`; a second,
+  different check value `rtf.crc32(b"123456789") == 0x2DFD2D88` against `zlib`'s `0xCBF43926`), and
+  the two real vectors through `rtf.decode` and (again) through a built `.msg`.
+
+### The rebuilt artifacts
+
+The three committed fixtures changed only in their `0x1009` stream (the CRC field and the end-marker
+bytes); the stream stays 226 bytes, so the CFB layout and `tests/support/msg_construction.py`'s
+construction tables are unchanged. `fixtures/msg/SHA256SUMS` re-recorded the three lines:
+
+```
+fc76d1d4b0d27708dbc3b5e541ebfcbcff682507cb52eeddfdfcc9d995d0bc89  msg_rtf_compressed_body.msg
+1817fa620742a2b12f878acccd5179c7f78c563ce79e1e5b09316db38dd2a6b2  msg_rtf_only.msg
+1ac4d9dd38f0646d518f456a1dc3892cbd4e3afd17429036c64ccf06fca0543d  msg_rtf_bad_crc.msg
+```
+
+`msg_rtf_bad_crc` flips every bit of the header CRC **of the corrected raw CRC**, so it stays a
+stream whose CRC is wrong under the corrected definition. `tests/ledger/label_ledger.json` re-recorded
+the one changed covered file (`tests/support/rtf_compress.py`; `tests/support/msg_construction.py` is
+byte-identical, so it is untouched). The four new test ids were added to the `turn=1b.8` declaration
+block.
+
+### The four mutations (each run, restored, and re-run green)
+
+1. **Skip the CRC check** (`crc_ok = True`) -- fails
+   `test_lzfu_decompresses_and_checks_the_header_size_and_crc`, `test_a_bad_crc_is_a_truncated_stream`,
+   `test_each_fault_is_named_with_its_reason_and_gap`.
+2. **Treat an unwritten dictionary byte as zero** -- fails
+   `test_each_fault_is_named_with_its_reason_and_gap`.
+3. **Emit `msg.rtf_to_text_unsupported` only when the RTF decodes cleanly** -- fails
+   `test_rtf_to_text_unsupported_is_emitted`, `test_each_fault_is_named_with_its_reason_and_gap`,
+   `test_zero_and_short_rtf_streams`.
+4. **(new) change one byte of `PREBUF`** (slot 0, `{` -> `X`, length unchanged) -- fails
+   `test_the_prebuf_is_the_207_byte_text_of_the_specification` and
+   `test_a_real_lzfu_vector_decodes_exactly`.
+
+### Owner questions (the fix's two)
+
+1. **The `MELA` CRC leniency** (above): accept `0`, or the payload's raw CRC, or only `0`? Chosen to
+   accept both, because the format's own reference writer produces the second form.
+2. **The dictionary's unwritten-byte rule versus the reference's space fill.** This package treats a
+   reference to a not-yet-written dictionary byte as the fault `rtf_dictionary_underrun`; the reference
+   implementation fills the rest of the 4096-byte dictionary with spaces. The real vectors above never
+   need the fill, so the stricter rule stands -- but a real stream that does read the tail would fault
+   here where the reference returns spaces.
+
+### Green after the fix
+
+Full suite **2174 passed, 2 skipped** on `python` (3.14.3, 4m00s) and on the repo's 3.11 (3.11.15,
+5m29s) -- the four new tests are the only addition. `make_msg_fixtures --check`, `make_fixtures
+--check`, `update_eml_golden --check`, `update_behavior_ledger --check`, `update_label_ledger --check`
+and `python -m emailextract.evals` all exit 0. Not committed; 1b.9 not started.
