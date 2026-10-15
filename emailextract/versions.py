@@ -244,3 +244,39 @@ from every other version constant because the real matcher is a separate track
 that moves when the shared matcher moves. Every seam record is stamped with it,
 never with the output record's version.
 """
+
+CFB_VERSION: Final[str] = "1"
+"""Version of the CFB primitives (``emailextract/cfb.py``, Turn 1b.3).
+
+Moves when ``cfb.py``'s measured output changes for unchanged bytes: the parsed
+header, the DIFAT/FAT/miniFAT walks, the directory shape, each stream's chain and
+bytes, or the eight-class sector classification. It is a behavior-ledger component
+(Turn 1b.10b), keyed over the committed well-formed ``.msg`` corpus.
+
+It is **not** a projection stamp: it enters no ``RunRecord``, no
+``limits_fingerprint`` and no document key, so it cannot move an ``.eml`` artifact.
+"""
+
+MSG_READER_VERSION: Final[str] = "1"
+"""Version of the MAPI layer (``emailextract/mapi.py``, Turn 1b.4).
+
+Moves when the property-table decode, the ``001E``/``001F``/multi-valued values, the
+string ladder and its chosen code page and ``encoding_source``, the class gate, the
+recipient rows or the attachment rows change for unchanged bytes. It is a
+behavior-ledger component (Turn 1b.10b), keyed over the committed ``.msg`` corpus.
+
+Like the CFB primitives' own constant it is **not** a projection stamp: it enters no
+``RunRecord`` and no document key.
+"""
+
+MSG_PROJECTION_VERSION: Final[str] = "1"
+"""Version of the virtual framing (``emailextract/msgcontainer.py``, Turn 1b.5).
+
+Moves when the projected virtual RFC 822 bytes, the span table, the headers' UTF-8
+re-encoding or the ``part_id``s change. The persisted span row drops the virtual
+offsets and recomputes them from the CFB bytes and this constant (contract section 7,
+C2), which is why :class:`emailextract.container.PersistedSpanRow` names it. It is a
+behavior-ledger component (Turn 1b.10b), keyed over the committed ``.msg`` corpus.
+
+It is **not** a projection stamp either: it enters no ``RunRecord`` and no document key.
+"""

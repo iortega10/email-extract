@@ -1,5 +1,8 @@
 {
-  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); since the Turn 0.3 switch the corpus source is the committed fixtures (the .eml files under fixtures/, excluding local-only real/; --fixtures DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's message names. Adding a message or a fixture adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by this package's OUTPUT_SCHEMA_VERSION alone; before Turn 0.5 it was keyed by the core codec's SCHEMA_VERSION, so the '7' line under 'contracts' is LEGACY -- kept in place (append-only) and never compared again. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 fixtures in Turn 0.3); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
+  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); since the Turn 0.3 switch the corpus source is the committed fixtures (the .eml and .msg files under fixtures/, excluding local-only real/; --fixtures DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's message names. One corpus version may carry both kinds: the walker's two components fingerprint the .eml names and the three message components (cfb/msg_reader/msg_projection, Turn 1b.10b) the .msg names, so the two readers never fingerprint the same input. Adding a message or a fixture adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by this package's OUTPUT_SCHEMA_VERSION alone; before Turn 0.5 it was keyed by the core codec's SCHEMA_VERSION, so the '7' line under 'contracts' is LEGACY -- kept in place (append-only) and never compared again. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 fixtures in Turn 0.3; re-measured over the .msg corpus in Turn 1b.10b); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
+  "cfb": {
+    "1|corpus:1": "74482a9037e3ca99409e9a24e0b8dcf051aa9e9f65410ed21c707159b2a494f6"
+  },
   "contracts": {
     "2": "a334378bc2342e00726e97a4262fd3944c2ad3a218c8e107923104c50f93a350",
     "3": "7928314db18a5cdaa600af4428e6eaa94630587ef18132703a3ab08a38e1599b",
@@ -19,6 +22,12 @@
     "2|corpus:6": "7fe3a1086fe19b3fddda05a728cd02a72808eaff8a590cdb55b6ba61b07e868e",
     "2|corpus:7": "1f8d07aebfcce4a54388561cb913426a442398adc9144cee0f3a67d09c072f52",
     "2|corpus:8": "f04d2bd3fa9bc2c2db1116eb9bb179649b565655ad3eb0c86eba58aeccd3c007"
+  },
+  "msg_projection": {
+    "1|corpus:1": "3f5749a2b933d1651038217cf8d514a9f6c0c7fb6ac22f9e62f9c79919c1f67f"
+  },
+  "msg_reader": {
+    "1|corpus:1": "056843efc6cd527dc986811fecfe8770071e9294a25da1392f30586e290cda81"
   },
   "walk": {
     "1|1|corpus:1": "b18fd393fe2700e780afde9ef0b183b9ee8cbf6dc06074cf62b9f162cb37ba4b",

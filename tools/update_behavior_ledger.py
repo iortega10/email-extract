@@ -67,9 +67,10 @@ def main(argv: list[str] | None = None) -> int:
             print(problem, file=sys.stderr)
         return 1 if problems else 0
     corpora, corpus_grew = behavior_ledger.add_corpus_version(args.fixtures)
+    messages, messages_grew = behavior_ledger.add_message_corpus_version(args.fixtures)
     try:
         updated, lines = behavior_ledger.record(
-            ledger, fixtures_dir=args.fixtures, corpora=corpora
+            ledger, fixtures_dir=args.fixtures, corpora=corpora, messages=messages
         )
     except ValueError as refused:
         # Refused before anything is written: the new corpus is not recorded
@@ -78,12 +79,19 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     for line in lines:
         print(line)
-    if corpus_grew:
-        behavior_ledger.write_corpora(corpora)
-        print(
-            f"corpus: recorded version {behavior_ledger.latest_corpus(corpora)}",
-            file=sys.stderr,
-        )
+    if corpus_grew or messages_grew:
+        behavior_ledger.write_corpora(corpora, messages)
+        if corpus_grew:
+            print(
+                f"corpus: recorded version {behavior_ledger.latest_corpus(corpora)}",
+                file=sys.stderr,
+            )
+        if messages_grew:
+            print(
+                "corpus: recorded message version "
+                f"{behavior_ledger.latest_corpus(messages)}",
+                file=sys.stderr,
+            )
     # Byte comparison, not text: `read_text` translates newlines, so a CRLF checkout
     # (git `core.autocrlf=true`) would compare equal and never converge back to the LF
     # bytes `write_ledger` guarantees.

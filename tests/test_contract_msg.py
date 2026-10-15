@@ -231,10 +231,9 @@ def test_verbatim_reasons_gain_container_stream() -> None:
 def test_output_schema_version_is_six() -> None:
     """``OUTPUT_SCHEMA_VERSION`` moved 5 -> 6; the record defaults follow the constant."""
     assert versions.OUTPUT_SCHEMA_VERSION == "6"
-    # ``EMAIL_PARSER_VERSION`` does not move with it, and no CFB reader version is added here.
+    # ``EMAIL_PARSER_VERSION`` does not move with it, and this turn added no CFB reader version:
+    # ``CFB_VERSION``/``MSG_READER_VERSION``/``MSG_PROJECTION_VERSION`` arrive in Turn 1b.10b.
     assert versions.EMAIL_PARSER_VERSION == "2"
-    assert not hasattr(versions, "CFB_VERSION")
-    assert not hasattr(versions, "MSG_READER_VERSION")
     assert RunRecord(run_id="r").output_schema_version == "6"
     assert RunRecord(run_id="r").email_parser_version == "2"
     assert EmailDocument(

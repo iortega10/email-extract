@@ -21,11 +21,17 @@ from pathlib import Path
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tools"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "tests"))
 
 import behavior_ledger  # noqa: E402
+import make_msg_fixtures  # noqa: E402
 import update_behavior_ledger  # noqa: E402
+from emailextract import cfb as cfb_module, mapi as mapi_module  # noqa: E402
 from emailextract import model, store, versions, walk as walk_module  # noqa: E402
 from emailextract.container import EmlContainer, memory_bytes  # noqa: E402
+from emailextract.msgcontainer import MsgContainer  # noqa: E402
+
+ROOT = Path(__file__).resolve().parent.parent
 
 EXTRA_MESSAGE = (
     b"From: new@example.com\r\n"
@@ -125,6 +131,16 @@ def test_the_version_strings_point_at_the_names_to_bump() -> None:
     assert strings["contracts"] == versions.OUTPUT_SCHEMA_VERSION
     assert behavior_ledger.VERSION_CONSTANTS["walk"].startswith("EMAIL_PARSER_VERSION")
     assert behavior_ledger.VERSION_CONSTANTS["contracts"] == "OUTPUT_SCHEMA_VERSION"
+    # Turn 1b.10b: the three message components and their constants (extended here, named in the
+    # turn's declaration).
+    assert strings["cfb"] == versions.CFB_VERSION
+    assert strings["msg_reader"] == versions.MSG_READER_VERSION
+    assert strings["msg_projection"] == versions.MSG_PROJECTION_VERSION
+    assert behavior_ledger.VERSION_CONSTANTS["cfb"] == "CFB_VERSION"
+    assert behavior_ledger.VERSION_CONSTANTS["msg_reader"] == "MSG_READER_VERSION"
+    assert behavior_ledger.VERSION_CONSTANTS["msg_projection"] == "MSG_PROJECTION_VERSION"
+    assert set(behavior_ledger.COMPONENTS) == set(strings)
+    assert set(behavior_ledger.MSG_COMPONENTS) == {"cfb", "msg_reader", "msg_projection"}
     # The core codec's version is not this package's to bump: no component is keyed
     # by it any more (Turn 0.5's re-key).
     assert all("docextract_core" not in name for name in behavior_ledger.VERSION_CONSTANTS.values())
@@ -358,3 +374,120 @@ def test_the_interpreter_is_recorded_but_never_keyed(monkeypatch) -> None:
     )
     assert behavior_ledger.fingerprints() == baseline
     assert store.artifact_key(container) == key
+
+
+# -------------------------------------------- Turn 1b.10b: the three .msg components
+
+
+def _names_problem(problems: list[str], component: str, constant: str) -> bool:
+    """Whether one of ``problems`` is this component's, naming its constant."""
+    return any(p.startswith(f"{component}:") and constant in p for p in problems)
+
+
+def test_the_msg_components_are_keyed_by_their_own_constants() -> None:
+    """Each of the three is keyed ``"<version>|corpus:<N>"`` off the ``.msg`` corpus list."""
+    ledger = behavior_ledger.load_ledger()
+    strings = behavior_ledger.version_strings()
+    messages = behavior_ledger.load_message_corpora()
+    assert messages, "the message corpus list is missing"
+    latest = behavior_ledger.latest_corpus(messages)
+    for component, constant in (
+        ("cfb", "CFB_VERSION"),
+        ("msg_reader", "MSG_READER_VERSION"),
+        ("msg_projection", "MSG_PROJECTION_VERSION"),
+    ):
+        assert behavior_ledger.VERSION_CONSTANTS[component] == constant
+        key = behavior_ledger.entry_key(component, strings[component], latest)
+        assert key == f"{getattr(versions, constant)}|corpus:{latest}", key
+        assert key in ledger[component], (component, key)
+        # The .eml corpus versions carry no line for it: its space is the .msg list alone.
+        assert set(ledger[component]) == {key}, ledger[component]
+    assert behavior_ledger.check() == []
+
+
+def test_the_msg_corpus_is_a_second_list_and_moves_no_eml_line() -> None:
+    """``corpus()`` stays ``.eml``-only (the golden's enumeration); ``.msg`` is its own list."""
+    eml = behavior_ledger.discovered()
+    messages = behavior_ledger.discovered_messages()
+    assert eml and messages
+    assert all(name.endswith(".eml") for name in eml), eml
+    assert all(name.endswith(".msg") for name in messages), messages
+    assert not set(eml) & set(messages)
+    ledger = behavior_ledger.load_ledger()
+    walk_prefix = behavior_ledger.version_strings()["walk"] + "|"
+    assert len([key for key in ledger["walk"] if key.startswith(walk_prefix)]) == len(
+        behavior_ledger.load_corpora()
+    )
+    latest = behavior_ledger.latest_corpus(behavior_ledger.load_message_corpora())
+    assert all(
+        set(ledger[component]) == {f"1|corpus:{latest}"}
+        for component in behavior_ledger.MSG_COMPONENTS
+    )
+
+
+def test_the_hostile_msg_stems_match_the_fixture_builder() -> None:
+    """The ``cfb`` component's hostile exclusion is the fixture builder's own list, not a copy."""
+    assert set(behavior_ledger.MSG_HOSTILE_STEMS) == set(make_msg_fixtures.HOSTILE_FIXTURE_NAMES)
+    assert behavior_ledger.MSG_HOSTILE_STEMS <= {
+        Path(name).stem for name in behavior_ledger.discovered_messages()
+    }
+
+
+def test_a_cfb_classification_change_moves_the_cfb_fingerprint(monkeypatch) -> None:
+    """A planted change to the sector classification is named against ``CFB_VERSION``."""
+    original = cfb_module.classify_sectors
+
+    def all_free(opened):
+        accounting, unaccounted = original(opened)
+        zeroed = tuple((name, 0) for name in cfb_module.SECTOR_CLASSES)
+        return zeroed, sum(value for _, value in accounting) + unaccounted
+
+    monkeypatch.setattr(cfb_module, "classify_sectors", all_free)
+    problems = behavior_ledger.check()
+    assert _names_problem(problems, "cfb", "CFB_VERSION"), problems
+    assert not _names_problem(problems, "msg_reader", "MSG_READER_VERSION")
+    assert not _names_problem(problems, "msg_projection", "MSG_PROJECTION_VERSION")
+
+
+def test_a_msg_reader_value_change_moves_the_msg_reader_fingerprint(monkeypatch) -> None:
+    """A planted change to the string ladder is named against ``MSG_READER_VERSION``."""
+    original = mapi_module.decode_string8
+
+    def forced(raw, *, internet_codepage, message_codepage):
+        decoded = original(
+            raw, internet_codepage=internet_codepage, message_codepage=message_codepage
+        )
+        return decoded._replace(encoding_source="forced")
+
+    monkeypatch.setattr(mapi_module, "decode_string8", forced)
+    problems = behavior_ledger.check()
+    assert _names_problem(problems, "msg_reader", "MSG_READER_VERSION"), problems
+    assert not _names_problem(problems, "cfb", "CFB_VERSION")
+
+
+def test_a_projection_byte_change_moves_the_msg_projection_fingerprint(monkeypatch) -> None:
+    """A planted change to the projected bytes is named against ``MSG_PROJECTION_VERSION``."""
+    original = MsgContainer.raw_bytes
+
+    def extra(self):
+        return original(self) + b"x"
+
+    monkeypatch.setattr(MsgContainer, "raw_bytes", extra)
+    problems = behavior_ledger.check()
+    assert _names_problem(problems, "msg_projection", "MSG_PROJECTION_VERSION"), problems
+
+
+def test_the_msg_fingerprints_do_not_move_with_the_recorded_environment(monkeypatch) -> None:
+    """The three reproduce in-process from the corpus alone.
+
+    The cross-interpreter half of the requirement is not an in-process claim: it is the end-of-turn
+    ``tools/update_behavior_ledger.py --check`` run on **both** pinned interpreters and compared,
+    which is what the ledger header records.
+    """
+    baseline = behavior_ledger.fingerprints()
+    monkeypatch.setattr(
+        store,
+        "recorded_only_inputs",
+        lambda: {"python": "3.99.0", "implementation": "Other", "platform": "elsewhere"},
+    )
+    assert behavior_ledger.fingerprints() == baseline

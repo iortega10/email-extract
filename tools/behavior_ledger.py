@@ -69,24 +69,51 @@ for _path in (_ROOT,):
 
 from docextract_core import encode, sha256_json  # noqa: E402
 
+from emailextract import cfb as cfb_module  # noqa: E402
 from emailextract import ids as ids_module  # noqa: E402
+from emailextract import mapi as mapi_module  # noqa: E402
 from emailextract import model, seam, siblings, store, timeevent, versions  # noqa: E402
 from emailextract import walk as walk_module  # noqa: E402
 from emailextract.container import EmlContainer  # noqa: E402
+from emailextract.ids import sha256_hex  # noqa: E402
+from emailextract.msgcontainer import MsgContainer  # noqa: E402
 
-#: The component names, in the ledger's own order.
-COMPONENTS = ("walk", "decode_chain", "contracts")
+#: The component names, in the ledger's own order. The first three are Phase 1's; the
+#: last three are Phase 1b's (Turn 1b.10b) and fingerprint the committed ``.msg`` corpus.
+COMPONENTS = ("walk", "decode_chain", "contracts", "cfb", "msg_reader", "msg_projection")
 
 #: Which constant a component's version string is built from -- what to bump.
 VERSION_CONSTANTS = {
     "walk": "EMAIL_PARSER_VERSION (or DECODE_CHAIN_VERSION)",
     "decode_chain": "DECODE_CHAIN_VERSION",
     "contracts": "OUTPUT_SCHEMA_VERSION",
+    "cfb": "CFB_VERSION",
+    "msg_reader": "MSG_READER_VERSION",
+    "msg_projection": "MSG_PROJECTION_VERSION",
 }
 
 #: The components whose fingerprint is over the corpus. ``contracts`` is over the
 #: record definitions alone, so it is keyed by its version and nothing else.
-CORPUS_DEPENDENT = ("walk", "decode_chain")
+CORPUS_DEPENDENT = ("walk", "decode_chain", "cfb", "msg_reader", "msg_projection")
+
+#: The three Phase 1b components: each reads the committed ``.msg`` fixtures and never an
+#: ``.eml`` one, so a corpus version that carries both kinds gives each its own subset and
+#: the two readers never fingerprint the same input.
+MSG_COMPONENTS = ("cfb", "msg_reader", "msg_projection")
+
+#: The suffix that separates the two corpora inside one corpus version, and the suffixes
+#: the corpus source carries (``.eml`` for the walker's components, ``.msg`` for the three
+#: Phase 1b ones).
+_MESSAGE_SUFFIX = ".msg"
+
+#: The committed ``.msg`` fixtures that are **hostile mutants** rather than messages. The
+#: ``cfb`` component fingerprints the CFB primitives over the well-formed fixtures only
+#: (``docs/design/phase1b-ledgers.md`` section (c)); the hostile three are the seeded
+#: fuzz's and the fault classification's. Kept in step with ``tools/make_msg_fixtures``'s
+#: ``HOSTILE_FIXTURE_NAMES`` by ``tests/test_behavior_ledger.py``.
+MSG_HOSTILE_STEMS: frozenset[str] = frozenset(
+    {"msg_fat_cycle", "msg_directory_loop", "msg_truncated_stream"}
+)
 
 #: Keys a component recorded under a version this package no longer keys by: the
 #: re-key history, kept in the file (append-only) and **never compared again**.
@@ -185,9 +212,13 @@ _HEADER = (
     "corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE "
     "corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); "
     "since the Turn 0.3 switch the corpus source is the committed fixtures "
-    "(the .eml files under fixtures/, excluding local-only real/; --fixtures DIR "
-    "points elsewhere), and tests/ledger/corpus.json lists each corpus version's "
-    "message names. Adding a message or a fixture adds a corpus version and NEW "
+    "(the .eml and .msg files under fixtures/, excluding local-only real/; --fixtures "
+    "DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's "
+    "message names. One corpus version may carry both kinds: the walker's two "
+    "components fingerprint the .eml names and the three message components "
+    "(cfb/msg_reader/msg_projection, Turn 1b.10b) the .msg names, so the two readers "
+    "never fingerprint the same input. Adding a message or a fixture adds a corpus "
+    "version and NEW "
     "LINES under the SAME component versions "
     "-- it is not a behavior change and bumps nothing; the tool refuses to record a "
     "new corpus if any older corpus's fingerprint moved (that is a behavior change "
@@ -197,7 +228,8 @@ _HEADER = (
     "in place (append-only) and never compared again. Fingerprints are identical on "
     "CPython 3.14.3 and "
     "3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 "
-    "fixtures in Turn 0.3); a cross-interpreter difference is recorded "
+    "fixtures in Turn 0.3; re-measured over the .msg corpus in Turn 1b.10b); a "
+    "cross-interpreter difference is recorded "
     "here, never hidden. The history before this file is not reconstructed. Record "
     "lines with tools/update_behavior_ledger.py in the same commit as the change "
     "that caused them."
@@ -207,7 +239,8 @@ _CORPUS_HEADER = (
     "The ledger's corpora, oldest first: each version lists the message names its "
     "fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names for "
     "corpus version 1; relative paths under the fixtures corpus source since the "
-    "Turn 0.3 switch, --fixtures DIR for another source). Growing the corpus adds "
+    "Turn 0.3 switch -- .eml and, since Turn 1b.10b, .msg -- and --fixtures DIR for "
+    "another source). Growing the corpus adds "
     "a version here -- the tool detects a changed file list and appends it "
     "automatically; it never bumps a component version."
 )
@@ -216,24 +249,65 @@ _CORPUS_HEADER = (
 # ------------------------------------------------------------------ the corpus
 
 
-def corpus(fixtures_dir: str | Path | None = None) -> dict[str, bytes]:
-    """Every corpus message, by name: the ``.eml`` files under the corpus source.
-
-    The source is the committed fixtures since the Turn 0.3 switch (``--fixtures``
-    points elsewhere); ``INLINE_CORPUS`` is history and is reachable through
-    :func:`_resolve`, never listed here.
-    """
-    root = Path(fixtures_dir) if fixtures_dir is not None else FIXTURES
+def _files_under(root: Path, suffixes: tuple[str, ...]) -> dict[str, bytes]:
+    """Every file under ``root`` with one of ``suffixes``, local-only ``real/`` skipped."""
     return {
         path.relative_to(root).as_posix(): path.read_bytes()
-        for path in sorted(root.rglob("*.eml"))
-        if _LOCAL_ONLY not in path.relative_to(root).parts
+        for path in sorted(root.rglob("*"))
+        if path.is_file()
+        and path.suffix.lower() in suffixes
+        and _LOCAL_ONLY not in path.relative_to(root).parts
     }
 
 
+def corpus(fixtures_dir: str | Path | None = None) -> dict[str, bytes]:
+    """Every ``.eml`` corpus message, by name -- the walker's corpus.
+
+    The source is the committed fixtures since the Turn 0.3 switch (``--fixtures`` points
+    elsewhere); ``INLINE_CORPUS`` is history and is reachable through :func:`_resolve`,
+    never listed here. Deliberately ``.eml``-only: ``tools/update_eml_golden.py``
+    enumerates the ``.eml`` golden through this function, so the ``.msg`` corpus lives in
+    its own list (:func:`message_corpus`) and neither enumeration moves the other.
+    """
+    root = Path(fixtures_dir) if fixtures_dir is not None else FIXTURES
+    return _files_under(root, (".eml",))
+
+
 def discovered(fixtures_dir: str | Path | None = None) -> list[str]:
-    """The corpus message names, in a machine-independent order."""
+    """The ``.eml`` corpus message names, in a machine-independent order."""
     return sorted(corpus(fixtures_dir))
+
+
+def message_corpus(fixtures_dir: str | Path | None = None) -> dict[str, bytes]:
+    """Every ``.msg`` corpus message, by name -- the three Phase 1b components' corpus."""
+    root = Path(fixtures_dir) if fixtures_dir is not None else FIXTURES
+    return _files_under(root, (_MESSAGE_SUFFIX,))
+
+
+def discovered_messages(fixtures_dir: str | Path | None = None) -> list[str]:
+    """The ``.msg`` corpus message names, in a machine-independent order."""
+    return sorted(message_corpus(fixtures_dir))
+
+
+def _is_message(name: str) -> bool:
+    """Whether a corpus name is a ``.msg`` (the three Phase 1b components' half)."""
+    return name.lower().endswith(_MESSAGE_SUFFIX)
+
+
+def _component_names(component: str, names: Iterable[str]) -> list[str]:
+    """The names one component fingerprints out of a corpus list.
+
+    Each of the two corpora is already one kind, so this filter can never change which
+    inputs a component reads: the ``.msg`` corpus feeds the three Phase 1b components and
+    never the walker's, and ``cfb`` additionally drops the hostile ``.msg`` mutants
+    (:data:`MSG_HOSTILE_STEMS`); ``contracts`` hashes no corpus at all.
+    """
+    if component in MSG_COMPONENTS:
+        selected = [name for name in names if _is_message(name)]
+        if component == "cfb":
+            selected = [name for name in selected if Path(name).stem not in MSG_HOSTILE_STEMS]
+        return selected
+    return [name for name in names if not _is_message(name)]
 
 
 def _resolve(name: str, fixtures_dir: str | Path | None) -> bytes:
@@ -259,22 +333,47 @@ def _resolve(name: str, fixtures_dir: str | Path | None) -> bytes:
     )
 
 
-def load_corpora(path: str | Path | None = None) -> list[dict]:
-    """The corpus versions on disk, oldest first; ``[]`` when there is none yet."""
-    manifest = Path(path) if path is not None else CORPUS_PATH
+def _load_versions(manifest: Path, key: str) -> list[dict]:
+    """One version list out of the corpus manifest, oldest first; ``[]`` when absent."""
     if not manifest.is_file():
         return []
     loaded = json.loads(manifest.read_text(encoding="utf-8"))
     return [
         {"version": int(entry["version"]), "files": list(entry["files"])}
-        for entry in loaded.get("corpora", [])
+        for entry in loaded.get(key, [])
     ]
 
 
-def write_corpora(corpora: list[dict], path: str | Path | None = None) -> Path:
+def load_corpora(path: str | Path | None = None) -> list[dict]:
+    """The ``.eml`` corpus versions on disk, oldest first; ``[]`` when there is none yet."""
+    return _load_versions(Path(path) if path is not None else CORPUS_PATH, "corpora")
+
+
+def load_message_corpora(path: str | Path | None = None) -> list[dict]:
+    """The ``.msg`` corpus versions on disk, oldest first; ``[]`` when there is none yet.
+
+    A **second list** in the same manifest, kept apart from ``corpora`` on purpose: the
+    ``.eml`` corpus version is what ``tools/update_eml_golden.py`` pins in the golden
+    header (and what every existing ledger key counts), so a ``.msg`` fixture is recorded
+    here and can never move the golden. Message corpus versions count from 1 in their own
+    space; the key's ``corpus:<N>`` half is read against this list for the three Phase 1b
+    components and against ``corpora`` for the walker's.
+    """
+    return _load_versions(Path(path) if path is not None else CORPUS_PATH, "messages")
+
+
+def write_corpora(
+    corpora: list[dict],
+    messages: list[dict] | None = None,
+    path: str | Path | None = None,
+) -> Path:
     manifest = Path(path) if path is not None else CORPUS_PATH
     manifest.parent.mkdir(parents=True, exist_ok=True)
-    body = {"_comment": _CORPUS_HEADER, "corpora": corpora}
+    body = {
+        "_comment": _CORPUS_HEADER,
+        "corpora": corpora,
+        "messages": [] if messages is None else messages,
+    }
     with manifest.open("w", encoding="utf-8", newline="\n") as handle:
         handle.write(json.dumps(body, indent=2, sort_keys=True) + "\n")
     return manifest
@@ -284,15 +383,27 @@ def latest_corpus(corpora: list[dict]) -> int:
     return max((entry["version"] for entry in corpora), default=0)
 
 
+def _append_version(versions: list[dict], names: list[str]) -> tuple[list[dict], bool]:
+    """Append a corpus version for ``names``; ``False`` when the newest already lists them."""
+    if versions and sorted(versions[-1]["files"]) == names:
+        return versions, False
+    return [*versions, {"version": latest_corpus(versions) + 1, "files": names}], True
+
+
 def add_corpus_version(
     fixtures_dir: str | Path | None = None, corpora: list[dict] | None = None
 ) -> tuple[list[dict], bool]:
-    """Append a corpus version for today's message list; ``False`` when unchanged."""
+    """Append an ``.eml`` corpus version for today's message list; ``False`` when unchanged."""
     corpora = load_corpora() if corpora is None else corpora
-    files = discovered(fixtures_dir)
-    if corpora and sorted(corpora[-1]["files"]) == files:
-        return corpora, False
-    return [*corpora, {"version": latest_corpus(corpora) + 1, "files": files}], True
+    return _append_version(corpora, discovered(fixtures_dir))
+
+
+def add_message_corpus_version(
+    fixtures_dir: str | Path | None = None, messages: list[dict] | None = None
+) -> tuple[list[dict], bool]:
+    """Append a ``.msg`` corpus version for today's message list; ``False`` when unchanged."""
+    messages = load_message_corpora() if messages is None else messages
+    return _append_version(messages, discovered_messages(fixtures_dir))
 
 
 def entry_key(component: str, version: str, corpus_version: int) -> str:
@@ -312,6 +423,9 @@ def version_strings() -> dict[str, str]:
         "walk": f"{versions.EMAIL_PARSER_VERSION}|{versions.DECODE_CHAIN_VERSION}",
         "decode_chain": versions.DECODE_CHAIN_VERSION,
         "contracts": versions.OUTPUT_SCHEMA_VERSION,
+        "cfb": versions.CFB_VERSION,
+        "msg_reader": versions.MSG_READER_VERSION,
+        "msg_projection": versions.MSG_PROJECTION_VERSION,
     }
 
 
@@ -383,7 +497,7 @@ def contracts_fingerprint(records: Iterable[type] | None = None) -> str:
 
 
 def _walk_pieces(name: str, payload: bytes) -> dict[str, Any]:
-    """One message's measured output, as plain JSON-ready data."""
+    """One ``.eml`` message's measured output, as plain JSON-ready data."""
     result = walk_module.walk(EmlContainer(payload))
     return {
         "name": name,
@@ -392,39 +506,210 @@ def _walk_pieces(name: str, payload: bytes) -> dict[str, Any]:
     }
 
 
+# -------------------------------------------- Turn 1b.10b: the three .msg components
+
+
+def _stream_digest(opened: "cfb_module.CfbFile", path: str) -> list[Any]:
+    """One stream's bytes as ``[length, fault, sha256]`` -- read, never fabricated."""
+    data, fault = cfb_module.read_stream(opened, path)
+    return [len(data), fault, sha256_hex(data)]
+
+
+def _cfb_shape(payload: bytes) -> Any:
+    """The CFB primitives' output for one file (the ``cfb`` component).
+
+    The header (version, sector and mini-sector shift, mini cutoff, the DIFAT/FAT/
+    directory counts, the 109 inline DIFAT entries), the DIFAT/FAT walks, the directory
+    shape (each entry's index, name, type, size, path and faults), every stream's size,
+    bytes digest and chain fault, and the eight-class sector classification. Opened with
+    ``require_properties=False``: this is the **primitives'** fingerprint, not the message
+    check, so a well-formed CFB that carries no ``__properties_version1.0``
+    (``msg_mini_cutoff_boundary``) is fingerprinted rather than refused.
+    """
+    opened = cfb_module.open_cfb(payload, require_properties=False)
+    if not isinstance(opened, cfb_module.CfbFile):
+        return {"refused": opened.reason}
+    header = opened.header
+    return {
+        "header": [
+            header.version,
+            header.byte_order,
+            header.sector_shift,
+            header.mini_sector_shift,
+            header.mini_cutoff,
+            header.num_dir_sectors,
+            header.num_fat_sectors,
+            header.first_dir_sector,
+            header.first_mini_fat_sector,
+            header.num_mini_fat_sectors,
+            header.first_difat_sector,
+            header.num_difat_sectors,
+            list(header.difat),
+        ],
+        "fat_sectors": list(opened.fat_sector_ids),
+        "difat_sectors": list(opened.difat_sectors),
+        "extended_difat": opened.extended_difat,
+        "difat_fault": opened.difat_fault,
+        "sector_count": opened.sector_count,
+        "directory_entries": opened.directory_entries,
+        "directory": [
+            [entry.index, entry.name, entry.entry_type, entry.size, entry.path, list(entry.faults)]
+            for entry in opened.entries
+        ],
+        "streams": [
+            [
+                stream.path,
+                stream.mini,
+                stream.size,
+                stream.available,
+                stream.fault,
+                _stream_digest(opened, stream.path),
+            ]
+            for stream in opened.streams
+        ],
+        "accounting": [[name, value] for name, value in opened.accounting],
+        "unaccounted": opened.unaccounted,
+    }
+
+
+def _msg_reader_shape(payload: bytes) -> Any:
+    """The MAPI layer's output for one file (the ``msg_reader`` component).
+
+    ``mapi``'s whole record: the class gate's verdict and the verbatim class, the two
+    code pages, the decoded property table (``001E``/``001F``/multi-valued values, each
+    value's ladder rung and ``encoding_source``), the recipient rows, the named/unknown
+    tag sets, the declared counts and the attachment rows -- read straight from the
+    reader, never projected to a sidecar column.
+    """
+    opened = cfb_module.open_cfb(payload)
+    if not isinstance(opened, cfb_module.CfbFile):
+        return {"refused": opened.reason}
+    message = mapi_module.read_message(opened)
+    attachments = mapi_module.read_attachments(
+        opened, internet_codepage=message.internet_cp, message_codepage=message.message_cp
+    )
+    return {"message": encode(message), "attachments": encode(attachments)}
+
+
+def _msg_projection_shape(payload: bytes) -> Any:
+    """The virtual framing's output for one file (the ``msg_projection`` component).
+
+    The projected virtual RFC 822 bytes' digest and length, the span table rows (source
+    stream, byte offsets, digests, axes; the virtual offsets the persisted row drops, C2),
+    the headers' UTF-8 re-encoding and the ``part_id``s the one walker measured over the
+    projection. A container that refused projects empty bytes, and that is recorded as it
+    is -- this component fingerprints every committed ``.msg``.
+    """
+    container = MsgContainer(payload)
+    raw = container.raw_bytes()
+    walked = walk_module.walk(container)
+    parts = walked.parts
+    fields = parts[0].header_fields if parts else []
+    return {
+        "virtual_sha256": sha256_hex(raw),
+        "virtual_bytes": len(raw),
+        "spans": encode(container.span_provenance),
+        "headers": [
+            [field.ordinal, field.name, field.raw_value.encode("utf-8").hex(), field.parse_status]
+            for field in fields
+        ],
+        "part_ids": [part.part_id for part in parts],
+    }
+
+
+def _msg_pieces(payload: bytes) -> dict[str, Any]:
+    """One ``.msg`` file's three measured outputs, as plain JSON-ready data."""
+    return {
+        "cfb": _cfb_shape(payload),
+        "msg_reader": _msg_reader_shape(payload),
+        "msg_projection": _msg_projection_shape(payload),
+    }
+
+
+def _pieces(name: str, payload: bytes) -> dict[str, Any]:
+    """One message's measured outputs, for whichever components read its kind."""
+    if _is_message(name):
+        return _msg_pieces(payload)
+    return _walk_pieces(name, payload)
+
+
+def _fingerprint(component: str, names: Iterable[str], pieces: Mapping[str, Any]) -> str:
+    """One component's fingerprint over its subset of a corpus version."""
+    if component == "contracts":
+        return contracts_fingerprint()
+    names = list(names)
+    if component == "decode_chain":
+        return sha256_json({name: pieces[name]["decode_chain"] for name in names})
+    return sha256_json({name: pieces[name][component] for name in names})
+
+
+def _corpus_lists(
+    fixtures_dir: str | Path | None,
+    corpora: list[dict] | None,
+    messages: list[dict] | None,
+) -> tuple[list[dict], list[dict]]:
+    """The two version lists, read from the manifest when the caller passes none."""
+    if corpora is None:
+        corpora = load_corpora() or [{"version": 1, "files": discovered(fixtures_dir)}]
+    if messages is None:
+        messages = load_message_corpora()
+    return corpora, messages
+
+
+def _version_space(component: str, corpora: list[dict], messages: list[dict]) -> list[dict]:
+    """The version list a component's ``corpus:<N>`` half counts in."""
+    return messages if component in MSG_COMPONENTS else corpora
+
+
 def fingerprints(
     fixtures_dir: str | Path | None = None, corpus_version: int | None = None
 ) -> dict[str, str]:
-    """Every component's fingerprint over one corpus (the latest by default)."""
-    corpora = load_corpora()
-    if not corpora:
-        corpora = [{"version": 1, "files": discovered(fixtures_dir)}]
-    version = latest_corpus(corpora) if corpus_version is None else corpus_version
-    return all_fingerprints(fixtures_dir, [version], corpora)[version]
+    """Every component's fingerprint over the newest version of **its own** corpus.
+
+    ``corpus_version``, when given and present in a component's space, picks that version
+    instead.
+    """
+    by_component = all_fingerprints(fixtures_dir)
+    out: dict[str, str] = {}
+    for component in COMPONENTS:
+        versions = sorted(by_component[component])
+        if not versions:
+            raise ValueError(f"{component}: its corpus has no version to fingerprint")
+        chosen = corpus_version if corpus_version in versions else versions[-1]
+        out[component] = by_component[component][chosen]
+    return out
 
 
 def all_fingerprints(
     fixtures_dir: str | Path | None = None,
-    corpus_versions: list[int] | None = None,
     corpora: list[dict] | None = None,
-) -> dict[int, dict[str, str]]:
-    """Fingerprints per corpus version, walking each message exactly once."""
-    corpora = load_corpora() if corpora is None else corpora
-    if not corpora:
-        corpora = [{"version": 1, "files": discovered(fixtures_dir)}]
-    wanted = corpus_versions if corpus_versions is not None else [latest_corpus(corpora)]
-    by_version = {entry["version"]: entry["files"] for entry in corpora}
-    needed = sorted({name for version in wanted for name in by_version[version]})
-    pieces = {name: _walk_pieces(name, _resolve(name, fixtures_dir)) for name in needed}
-    out: dict[int, dict[str, str]] = {}
-    for version in wanted:
-        names = by_version[version]
-        out[version] = {
-            "walk": sha256_json({name: pieces[name]["walk"] for name in names}),
-            "decode_chain": sha256_json({name: pieces[name]["decode_chain"] for name in names}),
-            "contracts": contracts_fingerprint(),
+    messages: list[dict] | None = None,
+) -> dict[str, dict[int, str]]:
+    """Every component's fingerprint per version of its own corpus, measuring once.
+
+    The walker's components fingerprint the ``.eml`` corpus versions and the three Phase 1b
+    components the ``.msg`` corpus versions (:func:`load_message_corpora`), each message
+    measured at most once (the pieces are shared). So a ``.msg`` fixture entering its
+    corpus adds lines for the three alone and moves no walker fingerprint, and an ``.eml``
+    one the reverse -- which is what an unchanged ``--check`` over the committed corpora
+    proves.
+    """
+    corpora, messages = _corpus_lists(fixtures_dir, corpora, messages)
+    spaces: dict[str, dict[int, list[str]]] = {
+        "eml": {entry["version"]: entry["files"] for entry in corpora},
+        "msg": {entry["version"]: entry["files"] for entry in messages},
+    }
+    needed = sorted(
+        {name for files in spaces.values() for names in files.values() for name in names}
+    )
+    pieces = {name: _pieces(name, _resolve(name, fixtures_dir)) for name in needed}
+    return {
+        component: {
+            version: _fingerprint(component, _component_names(component, names), pieces)
+            for version, names in spaces["msg" if component in MSG_COMPONENTS else "eml"].items()
         }
-    return out
+        for component in COMPONENTS
+    }
 
 
 # ------------------------------------------------------------- ledger file I/O
@@ -470,6 +755,7 @@ def check(
     computed: Mapping[str, str] | None = None,
     fixtures_dir: str | Path | None = None,
     corpora: list[dict] | None = None,
+    messages: list[dict] | None = None,
 ) -> list[str]:
     """Every way the ledger disagrees with the code; ``[]`` means the guard holds.
 
@@ -479,43 +765,36 @@ def check(
     nobody bumped for. Every problem names the constant to bump. A payload loaded
     straight from the file is accepted, ``_comment`` and all -- names starting
     with ``_`` are skipped, never interpreted as components.
+
+    Each component is compared in **its own** corpus space: the walker's against the
+    ``.eml`` corpus versions and the three Phase 1b components against the ``.msg`` ones
+    (:func:`_version_space`).
     """
     ledger = load_ledger() if ledger is None else {k: v for k, v in ledger.items() if not k.startswith("_")}
-    if corpora is None:
-        corpora = load_corpora() or [{"version": 1, "files": discovered(fixtures_dir)}]
-    latest = latest_corpus(corpora)
+    corpora, messages = _corpus_lists(fixtures_dir, corpora, messages)
     problems: list[str] = []
     if not load_corpora():
         problems.append(
             "corpus: tests/ledger/corpus.json is missing -- run "
             "tools/update_behavior_ledger.py to write corpus version 1"
         )
-    elif sorted(discovered(fixtures_dir)) != sorted(
-        next(entry["files"] for entry in corpora if entry["version"] == latest)
-    ):
-        problems.append(
-            "corpus: today's messages differ from corpus "
-            f"{latest} in tests/ledger/corpus.json -- growing the corpus adds a corpus "
-            "version (tools/update_behavior_ledger.py records it; it bumps no component "
-            "version)"
+    else:
+        problems.extend(_corpus_drift("corpus", discovered(fixtures_dir), corpora))
+    if messages:
+        problems.extend(
+            _corpus_drift("message corpus", discovered_messages(fixtures_dir), messages)
         )
     if computed is None:
-        current_versions = version_strings()
-        wanted = sorted(
-            {
-                entry["version"]
-                for entry in corpora
-                for component, version in current_versions.items()
-                if entry_key(component, version, entry["version"]) in (ledger.get(component) or {})
-            }
-            | {latest}
-        )
-        by_corpus = all_fingerprints(fixtures_dir, wanted, corpora)
+        by_component = all_fingerprints(fixtures_dir, corpora, messages)
     else:
-        by_corpus = {latest: dict(computed)}
+        by_component = {
+            component: {latest_corpus(_version_space(component, corpora, messages)): value}
+            for component, value in computed.items()
+        }
     for component, version in version_strings().items():
         entry = ledger.get(component)
         entry = entry if isinstance(entry, Mapping) else {}
+        latest = latest_corpus(_version_space(component, corpora, messages))
         key = entry_key(component, version, latest)
         if key not in entry:
             problems.append(
@@ -523,16 +802,30 @@ def check(
                 f"(tools/update_behavior_ledger.py) in the same commit as the change; "
                 f"if the behavior changed, bump {VERSION_CONSTANTS[component]} first"
             )
-        for corpus_version, current in sorted(by_corpus.items()):
+        for corpus_version, current in sorted(by_component[component].items()):
             recorded_key = entry_key(component, version, corpus_version)
-            if recorded_key in entry and entry[recorded_key] != current[component]:
+            if recorded_key in entry and entry[recorded_key] != current:
                 problems.append(
                     f"{component}: {recorded_key!r} was recorded with fingerprint "
-                    f"{entry[recorded_key]} but the code now computes {current[component]} "
+                    f"{entry[recorded_key]} but the code now computes {current} "
                     f"-- the behavior changed without a bump: bump "
                     f"{VERSION_CONSTANTS[component]} and record the new version"
                 )
     return problems
+
+
+def _corpus_drift(what: str, found: list[str], versions: list[dict]) -> list[str]:
+    """The "today's files differ from the newest version" problem for one corpus, or ``[]``."""
+    latest = latest_corpus(versions)
+    named = next(entry["files"] for entry in versions if entry["version"] == latest)
+    if sorted(found) == sorted(named):
+        return []
+    noun = "today's .msg messages" if what == "message corpus" else "today's messages"
+    return [
+        f"corpus: {noun} differ from {what} {latest} in tests/ledger/corpus.json -- "
+        "growing the corpus adds a corpus version (tools/update_behavior_ledger.py "
+        "records it; it bumps no component version)"
+    ]
 
 
 def record(
@@ -541,8 +834,9 @@ def record(
     computed: Mapping[str, str] | None = None,
     fixtures_dir: str | Path | None = None,
     corpora: list[dict] | None = None,
+    messages: list[dict] | None = None,
 ) -> tuple[dict[str, dict[str, str]], list[str]]:
-    """Append each component's current version and fingerprint for every corpus.
+    """Append each component's current version and fingerprint for every corpus of its kind.
 
     Appends only: a key already recorded with the fingerprint the code still
     computes is left alone, and one recorded with a *different* fingerprint is a
@@ -551,36 +845,35 @@ def record(
     with ``_`` in the payload are skipped, so a ledger loaded straight from the
     file (``_comment`` included) can be passed in as-is.
     """
-    if corpora is None:
-        corpora = load_corpora() or [{"version": 1, "files": discovered(fixtures_dir)}]
-    latest = latest_corpus(corpora)
+    corpora, messages = _corpus_lists(fixtures_dir, corpora, messages)
     if computed is None:
-        by_corpus = all_fingerprints(
-            fixtures_dir, [entry["version"] for entry in corpora], corpora
-        )
+        by_component = all_fingerprints(fixtures_dir, corpora, messages)
     else:
-        by_corpus = {latest: dict(computed)}
+        by_component = {
+            component: {latest_corpus(_version_space(component, corpora, messages)): value}
+            for component, value in computed.items()
+        }
     updated = {
         name: dict(entry) for name, entry in ledger.items() if not name.startswith("_")
     }
     lines: list[str] = []
     for component, version in version_strings().items():
         entry = updated.setdefault(component, {})
-        for corpus_version, current in sorted(by_corpus.items()):
+        for corpus_version, current in sorted(by_component[component].items()):
             key = entry_key(component, version, corpus_version)
             recorded = entry.get(key)
-            if recorded == current[component]:
+            if recorded == current:
                 lines.append(f"{component} {key}: unchanged ({recorded})")
             elif recorded is not None:
                 raise ValueError(
                     f"{component}: {key!r} is already recorded with fingerprint "
-                    f"{recorded}, but the code now computes {current[component]}. Bump "
+                    f"{recorded}, but the code now computes {current}. Bump "
                     f"{VERSION_CONSTANTS[component]} and record the new version -- an "
                     f"existing key is never overwritten."
                 )
             else:
-                entry[key] = current[component]
-                lines.append(f"{component} {key}: appended {current[component]}")
+                entry[key] = current
+                lines.append(f"{component} {key}: appended {current}")
             if component not in CORPUS_DEPENDENT:
                 break  # corpus-independent: one line is the whole fact
     return updated, lines
@@ -594,19 +887,25 @@ __all__ = [
     "INLINE_CORPUS",
     "LEDGER_PATH",
     "LEGACY_KEYS",
+    "MSG_COMPONENTS",
+    "MSG_HOSTILE_STEMS",
     "VERSION_CONSTANTS",
     "add_corpus_version",
+    "add_message_corpus_version",
     "all_fingerprints",
     "check",
     "contract_records",
     "contracts_fingerprint",
     "corpus",
     "discovered",
+    "discovered_messages",
     "entry_key",
     "fingerprints",
     "latest_corpus",
     "load_corpora",
     "load_ledger",
+    "load_message_corpora",
+    "message_corpus",
     "record",
     "render",
     "version_strings",

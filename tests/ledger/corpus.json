@@ -1,5 +1,5 @@
 {
-  "_comment": "The ledger's corpora, oldest first: each version lists the message names its fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names for corpus version 1; relative paths under the fixtures corpus source since the Turn 0.3 switch, --fixtures DIR for another source). Growing the corpus adds a version here -- the tool detects a changed file list and appends it automatically; it never bumps a component version.",
+  "_comment": "The ledger's corpora, oldest first: each version lists the message names its fingerprints were taken over (tools/behavior_ledger.INLINE_CORPUS names for corpus version 1; relative paths under the fixtures corpus source since the Turn 0.3 switch -- .eml and, since Turn 1b.10b, .msg -- and --fixtures DIR for another source). Growing the corpus adds a version here -- the tool detects a changed file list and appends it automatically; it never bumps a component version.",
   "corpora": [
     {
       "files": [
@@ -629,6 +629,65 @@
         "time/received_clock_skew.eml"
       ],
       "version": 8
+    }
+  ],
+  "messages": [
+    {
+      "files": [
+        "msg/msg_attachment_by_reference.msg",
+        "msg/msg_attachment_hidden.msg",
+        "msg/msg_attachment_hostile_name.msg",
+        "msg/msg_attachment_ole.msg",
+        "msg/msg_attachment_with_cid.msg",
+        "msg/msg_attachment_zero_size.msg",
+        "msg/msg_attachments_4095_4096_4097.msg",
+        "msg/msg_codepage_disagree.msg",
+        "msg/msg_difat_extended.msg",
+        "msg/msg_directory_loop.msg",
+        "msg/msg_duplicate_filenames.msg",
+        "msg/msg_embedded_depth_two.msg",
+        "msg/msg_embedded_message.msg",
+        "msg/msg_fat_cycle.msg",
+        "msg/msg_headers_html.msg",
+        "msg/msg_headers_only.msg",
+        "msg/msg_html_meta_charset_contradicts.msg",
+        "msg/msg_html_only_no_plain.msg",
+        "msg/msg_mini_cutoff_boundary.msg",
+        "msg/msg_multivalued_strings.msg",
+        "msg/msg_named_properties.msg",
+        "msg/msg_no_transport_headers.msg",
+        "msg/msg_non_bmp_text.msg",
+        "msg/msg_non_ipm_note.msg",
+        "msg/msg_outlook_layout_handbuilt.msg",
+        "msg/msg_plain_and_html.msg",
+        "msg/msg_plain_only.msg",
+        "msg/msg_property_vs_header_conflict.msg",
+        "msg/msg_recipients_bcc_duplicates.msg",
+        "msg/msg_recipients_display_only.msg",
+        "msg/msg_recipients_ex_no_smtp.msg",
+        "msg/msg_rtf_bad_crc.msg",
+        "msg/msg_rtf_compressed_body.msg",
+        "msg/msg_rtf_only.msg",
+        "msg/msg_signed_class.msg",
+        "msg/msg_string8_1252.msg",
+        "msg/msg_string8_ascii20127.msg",
+        "msg/msg_string8_ascii_no_cp.msg",
+        "msg/msg_string8_body.msg",
+        "msg/msg_string8_message_cpid.msg",
+        "msg/msg_string8_utf8_65001.msg",
+        "msg/msg_string8_utf8_no_cp.msg",
+        "msg/msg_string8_windows_1252_no_cp.msg",
+        "msg/msg_time_property_vs_date_header.msg",
+        "msg/msg_transport_headers_lf_only.msg",
+        "msg/msg_transport_headers_utf8_bom.msg",
+        "msg/msg_truncated_stream.msg",
+        "msg/msg_unicode_subject.msg",
+        "msg/msg_unknown_tags.msg",
+        "msg/msg_v4_sectors.msg",
+        "msg/msg_zero_length_body.msg",
+        "msg/pair_gmail_reply.msg"
+      ],
+      "version": 1
     }
   ]
 }

@@ -25,6 +25,10 @@ EXPECTED_FROZEN = {
     "FLAG_SCHEMA_VERSION",
     "MATCHER_VERSION",
     "QUOTE_RULES_VERSION",
+    # Turn 1b.10b: the three Phase 1b reader constants (behavior-ledger keys, not stamps).
+    "CFB_VERSION",
+    "MSG_READER_VERSION",
+    "MSG_PROJECTION_VERSION",
 }
 
 CONSTANT_NAME = re.compile(r"\b[A-Z][A-Z0-9]*_VERSION\b")

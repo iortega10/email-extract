@@ -339,16 +339,20 @@ _CITATION = re.compile(r"(tests/[A-Za-z0-9_/.]+\.py)::([A-Za-z0-9_]+)")
 _REPORT_HEADING = re.compile(r"^(## .+)$", re.MULTILINE)
 
 
-def _report_problems(text: str) -> list[str]:
+def _report_problems(text: str, sections: tuple[str, ...] = REQUIRED_REPORT_SECTIONS) -> list[str]:
     """Every way ``text`` is not a report: a missing or repeated heading, or an empty body.
 
     A section's body is everything between its heading line and the next level-2 heading (or the
     end of the file), so a heading with nothing under it -- a stub -- is caught, and the problem
     names the section. The content is not judged: that is the owner's review.
+
+    ``sections`` is a parameter so Phase 1b's report test can reuse this helper with its own
+    section list (Turn 1b.10b added ``## The max_input_bytes asymmetry``); the default is this
+    file's own :data:`REQUIRED_REPORT_SECTIONS`.
     """
     headings = [match.group(1).strip() for match in _REPORT_HEADING.finditer(text)]
     problems: list[str] = []
-    for section in REQUIRED_REPORT_SECTIONS:
+    for section in sections:
         seen = headings.count(section)
         if seen == 0:
             problems.append(f"the required section {section!r} is missing")
@@ -359,7 +363,7 @@ def _report_problems(text: str) -> list[str]:
     matches = list(_REPORT_HEADING.finditer(text))
     for index, match in enumerate(matches):
         section = match.group(1).strip()
-        if section not in REQUIRED_REPORT_SECTIONS:
+        if section not in sections:
             continue
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         if not text[match.end():end].strip():

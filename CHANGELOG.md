@@ -4,6 +4,51 @@ All notable changes to `email-extract`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
+## 0.2.0 (unreleased)
+
+The **Phase 1b `.msg` reader**: an Outlook/OLE-CFB message is read into the same `EmailDocument`
+the `.eml` path produces. Everything stays deterministic -- no LLM, no clock, no network, no
+third-party runtime dependency beyond `docextract-core`.
+
+### What it delivers
+
+* **The `.msg` reader** (`emailextract/cfb.py`, `emailextract/mapi.py`, `emailextract/msgcontainer.py`):
+  the package's own [MS-CFB] primitives (header, DIFAT/FAT, directory, per-stream chains, the
+  eight-class sector accounting), the MAPI property tables (`001E`/`001F`/multi-valued), the string
+  ladder with both code pages, the class gate, the recipient and attachment rows, and a projection
+  of the message into **one virtual RFC 822 container** with a span table back to the CFB streams --
+  read by the same walker as `.eml`, not a second one.
+* **The message-level facts** (`emailextract/evals/l1.py`): subject, sender, recipients (from the
+  directory, never a declared count), the time properties, the layout facts and the
+  attachment/embedded-message facts, each measured and pinned by a hand-typed sidecar.
+* **The RTF minimum** (`emailextract/rtf.py`): `0x1009` is decompressed (LZFu and uncompressed
+  `MELA`, header and CRC checked) and recorded; no RTF body view is produced.
+* **The Phase 1b evidence**: the Phase 1b gap gate, the hostile-`.msg` run inventory, the scope
+  guard (no `olefile` import, no real message anywhere) and the three behavior-ledger components
+  `cfb`, `msg_reader` and `msg_projection`, each keyed over the committed `.msg` corpus.
+
+### Versions
+
+| constant | value | note |
+|---|---|---|
+| `OUTPUT_SCHEMA_VERSION` | `6` | moved from `5` in Turn 1b.1 (`stream_ref`/`embedded` null keys) |
+| `CFB_VERSION` | `1` | new: the CFB primitives |
+| `MSG_READER_VERSION` | `1` | new: the MAPI layer |
+| `MSG_PROJECTION_VERSION` | `1` | new: the virtual framing |
+| `EMAIL_PARSER_VERSION` | `2` | **unmoved**: Phase 1b changes no `.eml` behaviour |
+
+The three new constants are behavior-ledger keys, not projection stamps: they enter no
+`RunRecord`, no `limits_fingerprint` and no document key, so no `.eml` artifact moves.
+
+### What it is not
+
+Not threading and not time reconciliation (`TimeEvent` is Phase 3); not embedded-message recursion
+(`children_axis` is Phase 2); not RTF-to-text; not a `.msg` writer; not `.pst`/`.ost`/`.oft`/TNEF;
+not a verifier of signed or encrypted mail (the class is recorded, the body is not opened). The
+`.msg` evidence is a **synthetic** corpus: no real message has been read, and every tag outside the
+first eleven spike files is public-spec only until the probes P1-P6 are run. One defect is carried
+into this release: `ingest_path` cannot ingest a `.msg` (recorded in `docs/phase1b-report.md`).
+
 ## 0.1.0 (2026-10-07)
 
 The first public release: the **Phase 1 `.eml` parser** and the oracle that measures it. Everything

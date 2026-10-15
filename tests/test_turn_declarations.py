@@ -31,6 +31,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DECLARATIONS = ROOT / "docs" / "design" / "phase1-turn-declarations.md"
+#: The Phase 1b declaration document (``phase1b-ledgers.md`` section (f)). Each 1b turn's block is
+#: **mirrored** into :data:`DECLARATIONS`, because this file's Phase 1 tests read that document
+#: alone; the two Phase 1b tests below read **both**, so a 1b turn declared in the ledgers document
+#: must also be collected, and the mirror may not drop a declaration the ledgers document carries.
+PHASE1B = ROOT / "docs" / "design" / "phase1b-ledgers.md"
 
 #: The turns whose declaration must be fully collected. A later turn appends its own
 #: turn name here, in the same commit as its tests (this file is in every Phase 1
@@ -599,3 +604,78 @@ def test_every_undeclared_test_fails_the_declaration() -> None:
     # ... and a declared id is accounted for by its declaration alone.
     declared = blocks[BUILT_TURNS[0]]["tests"][0]
     assert _undeclared([declared], blocks, ()) == []
+
+
+# ------------------------------------------------- Turn 1b.10b: the Phase 1b declarations
+
+
+def _read_phase1b_blocks() -> dict[str, dict[str, list[str]]]:
+    """The declaration blocks in ``phase1b-ledgers.md`` (section (f))."""
+    return _parse_declarations(PHASE1B.read_text(encoding="utf-8"))
+
+
+def _phase1b_turns() -> tuple[str, ...]:
+    return tuple(turn for turn in BUILT_TURNS if turn.startswith("1b."))
+
+
+def _merged_blocks() -> dict[str, dict[str, list[str]]]:
+    """Every turn's declaration across **both** documents: the union of its ``test:`` lines.
+
+    A turn is declared once in the ledgers document and mirrored (a superset for two turns) in
+    ``phase1-turn-declarations.md``; the union is the turn's declaration, so neither document can
+    drop a test the other carries.
+    """
+    merged: dict[str, dict[str, list[str]]] = {}
+    for turn, block in {**_read_blocks(), **_read_phase1b_blocks()}.items():
+        merged[turn] = block
+    for turn, block in _read_blocks().items():
+        entry = merged.setdefault(turn, {"tests": [], "modules": [], "pending": None})
+        entry["tests"] = list(dict.fromkeys([*entry["tests"], *block["tests"]]))
+        entry["modules"] = list(dict.fromkeys([*entry["modules"], *block["modules"]]))
+        entry["pending"] = entry["pending"] or block["pending"]
+    return merged
+
+
+def test_every_phase1b_declared_test_is_collected() -> None:
+    """Direction 1: every declared 1b test exists, and the mirror carries the source's tests.
+
+    The mirror in ``phase1-turn-declarations.md`` must carry at least the ledgers document's
+    declared tests for every **built** 1b turn, so it cannot drop a declaration the source makes
+    (``1b.0b`` is a spike with no declaration row of its own; it is not a built turn).
+    """
+    mirror = _read_blocks()
+    ledgers = _read_phase1b_blocks()
+    assert ledgers, "no 1b declaration block in phase1b-ledgers.md"
+    for turn in _phase1b_turns():
+        assert turn in ledgers, f"built turn {turn!r} has no block in phase1b-ledgers.md"
+        assert turn in mirror, f"turn {turn!r} is declared in the ledgers document but not mirrored"
+        assert set(ledgers[turn]["tests"]) <= set(mirror[turn]["tests"]), (
+            f"turn {turn!r}: the mirror drops a declaration the ledgers document carries: "
+            f"{sorted(set(ledgers[turn]['tests']) - set(mirror[turn]['tests']))}"
+        )
+    collected = _collected()
+    problems = _missing_declared(_merged_blocks(), collected, _phase1b_turns())
+    assert not problems, problems
+    # Direction 1 can fail: a declared test nothing collects.
+    fake = {
+        "1b.10b": {
+            "tests": ["tests/test_phase1b_gap_gate.py::test_absent"],
+            "modules": [],
+            "pending": None,
+        }
+    }
+    assert _missing_declared(fake, collected, ("1b.10b",)) == [
+        "tests/test_phase1b_gap_gate.py::test_absent is declared by turn '1b.10b' but not collected"
+    ]
+
+
+def test_every_undeclared_phase1b_test_fails_the_declaration() -> None:
+    """Direction 2 over **both** documents: every collected 1b test is declared in one of them."""
+    merged = _merged_blocks()
+    collected = _collected()
+    problems = _undeclared(collected, merged, PHASE0_BASELINE)
+    assert not problems, f"collected tests nobody declared: {problems}"
+    planted = "tests/test_phase1b_gap_gate.py::test_undeclared"
+    assert _undeclared([*collected, planted], merged, PHASE0_BASELINE) == [planted]
+    declared = _merged_blocks()["1b.10b"]["tests"][0]
+    assert _undeclared([declared], merged, ()) == []

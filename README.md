@@ -20,8 +20,13 @@ id wherever it is `unknown`. It is importable with **no sibling repository** ins
 
 * **not an LLM and not a service** -- no model, no network call, nothing fetched. A remote reference
   (`<img src="https://...">`) is recorded, never dereferenced;
-* **not a `.msg`/CFB reader.** A CFB (`D0CF11E0...`) input is refused by name: `parse` returns the
-  named error `cfb_msg_unsupported`. The `.msg` reader is Phase 1b;
+* **a `.msg` (Outlook/OLE-CFB) reader, reading only.** A CFB (`D0CF11E0...`) message is read into
+  the same `EmailDocument`: the package's own CFB primitives, the MAPI property tables, the class
+  gate and the `0x007D` transport headers, with the message projected into one virtual RFC 822
+  container that the same walker reads. What it does **not** do: no RTF-to-text (an RTF body is
+  recorded, not rendered), no embedded-message recursion, no threading or time reconciliation, and
+  no writing or modifying a `.msg`. The evidence is a **synthetic** corpus only -- no real `.msg`
+  has been read;
 * **not a threading or time-reconciliation engine.** No thread is built and no `TimeEvent` is
   emitted yet; the `children`, `thread_edges`, `times` and `same_message_candidates` axes ship
   present-but-empty, each marked `unknown(not_built_in_phase1)` -- a built observation, never a
@@ -61,8 +66,10 @@ pip install "email-extract[form]"   # route a child .pdf/.xlsx to form-extract
 ```
 
 The `form` extra requests `form-extract` **plain** on purpose: its own `[pdf]` extra pulls PyMuPDF
-(AGPL-3.0), which this package must never request. `olefile` (BSD) is *not* a dependency of 0.1 --
-it arrives with the `.msg` reader.
+(AGPL-3.0), which this package must never request. Since 0.2, `olefile` (BSD-3-Clause) is a
+**development-only** extra (`email-extract[dev]`): it is the tests-and-tools comparator for the
+committed `.msg` fixtures. The package's own `.msg` reader is `emailextract/cfb.py`, the package
+never imports `olefile`, and no GPL-family dependency is declared anywhere.
 
 ## Quick start
 

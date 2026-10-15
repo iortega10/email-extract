@@ -1694,16 +1694,44 @@ stop: after the eleven msg.* measurers, the .msg sidecars and the coverage floor
 ```
 
 ```declaration turn=1b.10b
-module: emailextract/evals/gates.py
-module: emailextract/evals/falsify.py
+module: emailextract/versions.py
+module: emailextract/__init__.py
+module: tools/behavior_ledger.py
+module: tools/update_behavior_ledger.py
+module: tests/ledger/behavior_ledger.json
+module: tests/ledger/corpus.json
+module: tests/test_behavior_ledger.py
+module: tests/test_phase1_scope.py
+module: tests/test_turn_declarations.py
 module: tests/test_phase1b_gap_gate.py
+module: tests/test_phase1b_hostile_run.py
 module: tests/test_phase1b_scope.py
 module: tests/test_phase1b_report.py
-module: tests/ledger/behavior_ledger.json
 module: docs/phase1b-report.md
+module: docs/design/phase1b-ledgers.md
+module: docs/design/phase1-turn-declarations.md
 module: CHANGELOG.md
 module: README.md
 module: pyproject.toml
-module: emailextract/versions.py
-pending: 1b.10b (the phase1b gap gate, the hostile run, the scope test, the three ledger components, the report and the 0.2.0 release) is not built yet
+test: tests/test_behavior_ledger.py::test_the_msg_components_are_keyed_by_their_own_constants
+test: tests/test_behavior_ledger.py::test_the_msg_corpus_is_a_second_list_and_moves_no_eml_line
+test: tests/test_behavior_ledger.py::test_the_hostile_msg_stems_match_the_fixture_builder
+test: tests/test_behavior_ledger.py::test_a_cfb_classification_change_moves_the_cfb_fingerprint
+test: tests/test_behavior_ledger.py::test_a_msg_reader_value_change_moves_the_msg_reader_fingerprint
+test: tests/test_behavior_ledger.py::test_a_projection_byte_change_moves_the_msg_projection_fingerprint
+test: tests/test_behavior_ledger.py::test_the_msg_fingerprints_do_not_move_with_the_recorded_environment
+test: tests/test_turn_declarations.py::test_every_phase1b_declared_test_is_collected
+test: tests/test_turn_declarations.py::test_every_undeclared_phase1b_test_fails_the_declaration
+test: tests/test_phase1b_gap_gate.py::test_every_msg_gap_id_has_a_mutation_case
+test: tests/test_phase1b_gap_gate.py::test_the_msg_ids_are_read_off_live_gap_ids
+test: tests/test_phase1b_gap_gate.py::test_the_phase1b_gap_gate_fails_when_a_gap_is_dropped
+test: tests/test_phase1b_hostile_run.py::test_every_hostile_msg_input_yields_a_document_or_a_named_refusal
+test: tests/test_phase1b_hostile_run.py::test_the_hostile_inventory_is_stable_across_hash_seeds
+test: tests/test_phase1b_scope.py::test_the_library_imports_with_no_olefile_and_no_gpl
+test: tests/test_phase1b_scope.py::test_no_real_msg_is_in_the_repository
+test: tests/test_phase1b_scope.py::test_fixtures_real_is_empty
+test: tests/test_phase1b_report.py::test_the_phase1b_report_sections_are_present_and_non_empty
+test: tests/test_phase1b_report.py::test_the_phase1b_report_names_the_version_bumps_and_the_licences
+test: tests/test_phase1b_report.py::test_the_phase1b_report_records_the_max_input_bytes_asymmetry
+stop: after the phase1b gap gate, the hostile run, the scope test, the three ledger components, the report and the 0.2.0 edits; the owner commits and tags v0.2.0
 ```
