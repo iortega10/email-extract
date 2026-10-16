@@ -16,6 +16,7 @@ The content itself is the owner's review.
 
 from __future__ import annotations
 
+import re
 import sys
 import tomllib
 from pathlib import Path
@@ -99,7 +100,8 @@ def test_the_phase1b_report_names_the_version_bumps_and_the_licences() -> None:
     assert versions.MSG_READER_VERSION == "1"
     assert versions.MSG_PROJECTION_VERSION == "1"
     assert versions.EMAIL_PARSER_VERSION == "2", "Phase 1b moves no .eml behaviour"
-    assert emailextract.__version__ == "0.2.0"
+    # The release is 0.2.0; its TestPyPI dry run (docs/releasing.md) is 0.2.0rcN of the same release.
+    assert re.fullmatch(r"0\.2\.0(rc\d+)?", emailextract.__version__), emailextract.__version__
     # The licence rows.
     assert "olefile" in text and "BSD-3-Clause" in text
     assert "Apache-2.0" in text
