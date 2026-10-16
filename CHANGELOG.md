@@ -4,7 +4,7 @@ All notable changes to `email-extract`. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project uses
 [semantic versioning](https://semver.org/spec/v2.0.0.html).
 
-## 0.2.0 (unreleased)
+## 0.2.0 (2026-10-16)
 
 The **Phase 1b `.msg` reader**: an Outlook/OLE-CFB message is read into the same `EmailDocument`
 the `.eml` path produces. Everything stays deterministic -- no LLM, no clock, no network, no
