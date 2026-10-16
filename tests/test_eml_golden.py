@@ -216,11 +216,16 @@ def test_the_golden_checks_both_interpreters_with_a_recorded_waiver(fresh: dict)
         assert path[-1] in WAIVABLE_LEAVES, path
 
     observed = compare(committed, fresh, ())
-    recording_here = header["recorded_on"] == fresh["header"]["recorded_on"]
+    # The recorded-only projection stamp (``HTMLTEXT_VERSION``) names the CPython *minor*, so "the
+    # recording interpreter" is the same implementation and the same major.minor: another patch
+    # release (``recorded_on`` is the full version, e.g. ``CPython 3.14.3``) must reproduce the
+    # file exactly, with only the patch-level ``recorded_on`` metadata allowed to differ.
+    recording_here = _minor_of(header["recorded_on"]) == _minor_of(fresh["header"]["recorded_on"])
     if recording_here:
-        # On the recording interpreter nothing is waived: the committed file is
-        # reproduced byte for byte, so no pinned value can hide behind a waiver.
-        assert observed == [], _describe(observed)
+        # On the recording minor nothing but the ``recorded_on`` patch stamp may differ: the
+        # committed file is reproduced byte for byte, so no pinned value can hide behind a waiver.
+        unexpected = [entry for entry in observed if entry[0] != ("header", "recorded_on")]
+        assert unexpected == [], _describe(unexpected)
     else:
         # On the other interpreter every difference is a declared waiver path, and
         # every declared pattern really fires (a stale pattern is a defect).
@@ -241,6 +246,12 @@ def test_the_golden_checks_both_interpreters_with_a_recorded_waiver(fresh: dict)
             bytes.fromhex(payload["store"]["document"]["bytes_hex"]),
             bytes.fromhex(fresh["fixtures"][name]["store"]["document"]["bytes_hex"]),
         )
+
+
+def _minor_of(recorded_on: str) -> tuple[str, str]:
+    """``"CPython 3.14.3"`` -> ``("CPython", "3.14")``: the implementation and the CPython minor."""
+    implementation, _, version = str(recorded_on).partition(" ")
+    return implementation, ".".join(version.split(".")[:2])
 
 
 def _matches(path: tuple[str, ...], pattern: tuple[str, ...]) -> bool:
