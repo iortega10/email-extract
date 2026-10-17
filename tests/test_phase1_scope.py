@@ -36,6 +36,7 @@ EXPECTED_LIBRARY = {
     "addresses.py",
     "assemble.py",
     "attach.py",
+    "bodytext.py",
     "cfb.py",
     "container.py",
     "dates.py",

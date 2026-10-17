@@ -186,6 +186,7 @@
     "fixtures/time/future_date_in_text.expected.json": "7711bf2eb783e16a066244a4d797767abada5d90ff714b97c120b0fa665ebf35",
     "fixtures/time/received_clock_skew.expected.json": "3d970061e8f6424f03faf9471915a14d21d516b18fe5a887fa7e0d8cc07e1864",
     "tests/golden/eml_golden.json": "0d0dca4d2fda2b28715d7c37b95e02928fdbca9258b22271f11282bf5dcb0ac2",
+    "tests/support/body_text_labels.py": "cac9154873c7973ad92aa38f3544fcac6ae66206f148bda5719ff2a0a7fc7864",
     "tests/support/boundary_splitter.py": "f5d3cbe7700129179b552b57418747687f978cb20c674c258b8c17eb57072358",
     "tests/support/cfb_raw.py": "60eb8d07917488d901a5cba0b5eaca737be3a116ba67a968a69ffa75402c568c",
     "tests/support/fake_msg_container.py": "434d9ae3c36c7f31bc6bccd845e5f9e0b61c2728d83f01eb01578244a4b7a497",

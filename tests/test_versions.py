@@ -29,6 +29,9 @@ EXPECTED_FROZEN = {
     "CFB_VERSION",
     "MSG_READER_VERSION",
     "MSG_PROJECTION_VERSION",
+    # Turn BODY1: the two on-demand accessor constants (behavior-ledger keys, not stamps).
+    "BODY_TEXT_VERSION",
+    "ATTACHMENT_ACCESSOR_VERSION",
 }
 
 CONSTANT_NAME = re.compile(r"\b[A-Z][A-Z0-9]*_VERSION\b")

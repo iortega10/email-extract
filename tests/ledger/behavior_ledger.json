@@ -1,5 +1,25 @@
 {
-  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); since the Turn 0.3 switch the corpus source is the committed fixtures (the .eml and .msg files under fixtures/, excluding local-only real/; --fixtures DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's message names. One corpus version may carry both kinds: the walker's two components fingerprint the .eml names and the three message components (cfb/msg_reader/msg_projection, Turn 1b.10b) the .msg names, so the two readers never fingerprint the same input. Adding a message or a fixture adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by this package's OUTPUT_SCHEMA_VERSION alone; before Turn 0.5 it was keyed by the core codec's SCHEMA_VERSION, so the '7' line under 'contracts' is LEGACY -- kept in place (append-only) and never compared again. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 fixtures in Turn 0.3; re-measured over the .msg corpus in Turn 1b.10b); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
+  "_comment": "Append-only behavior fingerprints (build spec, Turn 0.2): {component: {key: sha256}}. A key is '<version string>|corpus:<N>': the code version and the corpus version it was fingerprinted on. Corpus version 1 is the TINY INLINE corpus (INLINE_CORPUS in tools/behavior_ledger.py; hand-written byte strings); since the Turn 0.3 switch the corpus source is the committed fixtures (the .eml and .msg files under fixtures/, excluding local-only real/; --fixtures DIR points elsewhere), and tests/ledger/corpus.json lists each corpus version's message names. One corpus version may carry both kinds: the walker's two components fingerprint the .eml names and the three message components (cfb/msg_reader/msg_projection, Turn 1b.10b) the .msg names, so the two readers never fingerprint the same input. Turn BODY1's two accessor components (body_text, attachment_payloads) fingerprint the .eml names as well: the decode chain and the transfer-encoding decoders they read are shared with the .msg path, which the msg_projection/msg_reader lines already pin. Adding a message or a fixture adds a corpus version and NEW LINES under the SAME component versions -- it is not a behavior change and bumps nothing; the tool refuses to record a new corpus if any older corpus's fingerprint moved (that is a behavior change that needs a bump). 'contracts' does not depend on the corpus and is keyed by this package's OUTPUT_SCHEMA_VERSION alone; before Turn 0.5 it was keyed by the core codec's SCHEMA_VERSION, so the '7' line under 'contracts' is LEGACY -- kept in place (append-only) and never compared again. Fingerprints are identical on CPython 3.14.3 and 3.11.15 (measured in Turn 0.2; re-measured unchanged over the Turn 0.3 fixtures in Turn 0.3; re-measured over the .msg corpus in Turn 1b.10b); a cross-interpreter difference is recorded here, never hidden. The history before this file is not reconstructed. Record lines with tools/update_behavior_ledger.py in the same commit as the change that caused them.",
+  "attachment_payloads": {
+    "1|corpus:1": "f56a6bff01d3b2a3d5716267367f522f033e415676b16ec68e7fbbc4286f45b1",
+    "1|corpus:2": "f4ae71ee5fde2cc8b418ef75f88586671fcad023d30fc7b815e496ffc9042ea5",
+    "1|corpus:3": "2b1a2ee4e6abffe7f4dfbf7c82684614b5b7ac7dd0ecbd0f717cc7644eabc856",
+    "1|corpus:4": "e5e2f508f43b196f3a0881fb3269003ec4cf53cbe9f2b882df9301cfe8350fa5",
+    "1|corpus:5": "dd4d001e6b3c11887a8e71c50e6537f1570554252b807e89aa192b949f4007c0",
+    "1|corpus:6": "a61f3e88e4aa97ed176ef8dbfddd7782f162d3df33fa5f3ee1737ed91fa9d722",
+    "1|corpus:7": "a9a53f04ddbe35b1d629b2ce291f8db21f92cc4b4333ca2832e7f9b7e4351ffe",
+    "1|corpus:8": "ba5cc218526f9035751b3d903909bebc4faf3a74b25ce8cbaa9ad2946f221784"
+  },
+  "body_text": {
+    "1|corpus:1": "af3cd4df79cea00a0e9ca65c6eb0946647d3804b9d429cc3e8b0422a48a8e5ae",
+    "1|corpus:2": "d49c045b468f9e4fe1674ca897a2c7ef31eccee7449904acd32cb4ed27de2891",
+    "1|corpus:3": "9d19a32f261e4afad74415f691991d44fcff11dcae109086314c0521e08acd21",
+    "1|corpus:4": "8092c99bed29d62392b5406a0c64a325c0ebc61ab388b394d762386d478b34ec",
+    "1|corpus:5": "bd6662e84ffb115803eea51e72a815cbd45f208129492f1439c4fafdb8aecd59",
+    "1|corpus:6": "d9897879f7de13be001bf4d1f7e5aa520566dbc3271c63a8533ed9a3116dc4f5",
+    "1|corpus:7": "fa03fd24c0c1b85804e8c7af62abd1ffa2b92fe11358101463a92fb798fb3b4c",
+    "1|corpus:8": "7b064ab9fba1e6fca70ba1e2aee60846fa2dace7c69d05aa248d51804e858706"
+  },
   "cfb": {
     "1|corpus:1": "74482a9037e3ca99409e9a24e0b8dcf051aa9e9f65410ed21c707159b2a494f6"
   },

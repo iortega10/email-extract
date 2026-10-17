@@ -85,6 +85,7 @@ __all__ = [
     "projection_versions",
     "resolve_span",
     "run_id",
+    "selected_body_text",
 ]
 
 #: The version constants whose values the record stamps on ``RunRecord``: the
@@ -322,21 +323,18 @@ def _document_status(result: WalkResult) -> StatusOutcome:
     return StatusOutcome(status=Status.PARSED)
 
 
-def _content_fingerprint(
-    raw: bytes,
-    result: WalkResult,
-    *,
-    limits: Limits,
-) -> ContentFingerprint:
-    """D14's labeled fingerprint: the selected body view's text, ``HTML`` if present.
+def selected_body_text(
+    raw: bytes, result: WalkResult, *, limits: Limits
+) -> tuple[BodyView, str | None, str]:
+    """D14's body view, the part it chose and that part's decoded text.
 
-    The digest is over the view's **code points** encoded UTF-8 -- the
-    transport-encoding-independent body content -- never over the transfer bytes,
-    which differ between the same message stored as ``.eml`` and as ``.msg``. The
-    view is ``html`` when the message has a displayable ``text/html`` body view
-    (the design's "HTML if present, else plain"); the digested part is the one the
-    selection stage selected within that view, else the first such view in part
-    order. A message with no text body view digests the empty string.
+    Turn BODY1 extracted this rule from :func:`_content_fingerprint` so the digest and the
+    on-demand accessor (:func:`emailextract.bodytext.body_text`) **cannot choose different
+    views**: one rule, one implementation. The view is ``HTML`` when the message has a
+    displayable ``text/html`` body view, else ``PLAIN``; within that view the part the
+    selection stage selected wins, else the first in part order. ``locator`` is that
+    part's path (``None`` when the message has no text body view at all, which is also
+    the only case where ``text`` is ``""`` because nothing was chosen).
     """
     by_path = {part.path: part for part in result.parts}
     views = [
@@ -367,13 +365,31 @@ def _content_fingerprint(
     if html_views:
         chosen = choose(html_views)
         assert chosen is not None
-        text = html_text.get(chosen.path, "")
-        view = BodyView.HTML
-    else:
-        plain_views = [part for part in views if _media(part, by_path) == "text/plain"]
-        chosen = choose(plain_views)
-        text = plain_text.get(chosen.path, "") if chosen is not None else ""
-        view = BodyView.PLAIN
+        return BodyView.HTML, chosen.path, html_text.get(chosen.path, "")
+    plain_views = [part for part in views if _media(part, by_path) == "text/plain"]
+    chosen = choose(plain_views)
+    if chosen is None:
+        return BodyView.PLAIN, None, ""
+    return BodyView.PLAIN, chosen.path, plain_text.get(chosen.path, "")
+
+
+def _content_fingerprint(
+    raw: bytes,
+    result: WalkResult,
+    *,
+    limits: Limits,
+) -> ContentFingerprint:
+    """D14's labeled fingerprint: the selected body view's text, ``HTML`` if present.
+
+    The digest is over the view's **code points** encoded UTF-8 -- the
+    transport-encoding-independent body content -- never over the transfer bytes,
+    which differ between the same message stored as ``.eml`` and as ``.msg``. The
+    view is ``html`` when the message has a displayable ``text/html`` body view
+    (the design's "HTML if present, else plain"); the digested part is the one the
+    selection stage selected within that view, else the first such view in part
+    order. A message with no text body view digests the empty string.
+    """
+    view, _locator, text = selected_body_text(raw, result, limits=limits)
     return ContentFingerprint(
         body_digest=sha256_hex(text.encode("utf-8")), body_digest_view=view
     )

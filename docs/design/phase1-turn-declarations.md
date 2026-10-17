@@ -1753,3 +1753,56 @@ test: tests/test_ingest_msg.py::test_the_msg_manifest_is_byte_identical_across_s
 test: tests/test_ingest_msg.py::test_a_hostile_msg_directory_yields_documents_or_named_skips
 stop: `ingest_path` ingests every committed `.msg`, the hostile run goes through the entry point, the report and CHANGELOG say the finding was fixed, and nothing is committed or tagged
 ```
+
+```declaration turn=BODY1
+module: emailextract/bodytext.py
+module: emailextract/assemble.py
+module: emailextract/versions.py
+module: emailextract/__init__.py
+module: tools/behavior_ledger.py
+module: tests/ledger/behavior_ledger.json
+module: tests/support/body_text_labels.py
+module: tests/test_body_text.py
+module: tests/test_attach_payloads.py
+module: tests/test_phase1_scope.py
+module: tests/test_phase0_gaps.py
+module: tests/test_versions.py
+module: tests/test_turn_declarations.py
+module: docs/design/phase1-turn-declarations.md
+module: docs/design/turn-BODY1-note.md
+test: tests/test_body_text.py::test_each_labelled_fixture_returns_its_typed_text
+test: tests/test_body_text.py::test_every_labelled_fixture_takes_the_view_d14_digests
+test: tests/test_body_text.py::test_the_segments_partition_the_text_and_every_locator_resolves
+test: tests/test_body_text.py::test_a_message_with_no_text_body_has_a_reason_not_an_exception
+test: tests/test_body_text.py::test_a_source_that_is_not_a_message_is_a_typed_refusal
+test: tests/test_body_text.py::test_a_body_that_cannot_be_decoded_is_a_typed_refusal
+test: tests/test_body_text.py::test_max_chars_boundaries_truncate_and_flag
+test: tests/test_body_text.py::test_max_chars_outside_its_bounds_is_a_caller_error
+test: tests/test_body_text.py::test_the_msg_and_eml_of_one_message_agree_on_text
+test: tests/test_body_text.py::test_a_zero_width_space_survives_and_a_tracking_pixel_adds_no_text
+test: tests/test_body_text.py::test_the_record_stamps_every_version
+test: tests/test_body_text.py::test_the_body_accessor_is_exported_from_the_package
+test: tests/test_body_text.py::test_no_manifest_byte_changes
+test: tests/test_body_text.py::test_the_accessor_stores_nothing_and_a_second_call_re_reads
+test: tests/test_body_text.py::test_a_decode_change_moves_the_body_text_fingerprint
+test: tests/test_body_text.py::test_the_two_accessor_components_are_keyed_by_their_own_constants
+test: tests/test_body_text.py::test_the_accessor_imports_no_network_and_no_new_dependency
+test: tests/test_body_text.py::test_an_unknown_source_kind_is_refused_by_type
+test: tests/test_attach_payloads.py::test_each_labelled_fixture_returns_its_typed_payloads
+test: tests/test_attach_payloads.py::test_the_payload_matches_the_occurrence_the_manifest_carries
+test: tests/test_attach_payloads.py::test_every_occurrence_of_every_committed_message_yields_one_result
+test: tests/test_attach_payloads.py::test_the_count_ceiling_refuses_the_rest_and_names_the_reason
+test: tests/test_attach_payloads.py::test_an_attachment_larger_than_the_ceiling_is_refused_not_returned
+test: tests/test_attach_payloads.py::test_the_total_ceiling_stops_the_iteration_within_the_budget
+test: tests/test_attach_payloads.py::test_a_fifty_attachment_message_stays_within_the_ceiling
+test: tests/test_attach_payloads.py::test_a_large_base64_blob_is_refused_without_returning_its_bytes
+test: tests/test_attach_payloads.py::test_an_oversized_message_is_refused_by_the_entry_point_before_any_decode
+test: tests/test_attach_payloads.py::test_a_nested_message_is_returned_unrecursed
+test: tests/test_attach_payloads.py::test_a_decorative_occurrence_is_skipped_and_reported
+test: tests/test_attach_payloads.py::test_a_source_that_is_not_a_message_yields_one_refusal
+test: tests/test_attach_payloads.py::test_a_message_with_no_attachment_yields_nothing
+test: tests/test_attach_payloads.py::test_the_bounds_are_validated
+test: tests/test_attach_payloads.py::test_the_defaults_are_documented_numbers
+test: tests/test_attach_payloads.py::test_no_attachment_byte_reaches_a_record
+stop: after the two accessors, the typed labels, the two ledger components, the mutation table and the note; nothing is committed and nothing is released
+```

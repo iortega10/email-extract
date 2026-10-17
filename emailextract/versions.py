@@ -280,3 +280,39 @@ behavior-ledger component (Turn 1b.10b), keyed over the committed ``.msg`` corpu
 
 It is **not** a projection stamp either: it enters no ``RunRecord`` and no document key.
 """
+
+BODY_TEXT_VERSION: Final[str] = "1"
+"""Version of the on-demand body text (``emailextract/bodytext.py``, Turn BODY1).
+
+Moves when ``body_text``'s answer changes for unchanged message bytes: which view D14
+chooses, the decoded text of that view (the charset ladder, the transfer-encoding decode,
+the RFC 3676 space-unstuffing, the HTML projection's rules or the interpreter/parser inputs
+that key it), the segment partition of the text, the locator each segment carries, or the
+truncation rule and its bounds. A pure refactor that changes none of those does not move it
+-- but a change **anywhere in the decode chain** that reaches this accessor's output is a
+change to this accessor's behaviour, so the ledger's ``body_text`` component is the one that
+says so.
+
+It is a behavior-ledger component over the committed ``.eml`` corpus, and it stamps
+nothing: ``body_text`` returns the record and stores it nowhere, so this constant enters
+no manifest, no ``RunRecord`` and no document key.
+"""
+
+ATTACHMENT_ACCESSOR_VERSION: Final[str] = "1"
+"""Version of the attachment-payload accessor (``emailextract/bodytext.py``, Turn BODY1).
+
+A **separate** constant from the body-text one because the two are separate contracts: one
+returns a body view's text, the other an attachment's bytes. A change to the body view's
+rules cannot move the payloads, and a change to the payload ceilings, the occurrence order,
+the decorative skip or the transfer-encoding decode cannot move the body text. Two
+independent records need two independent stamps, or every bump would claim a change to
+behaviour that did not move.
+
+Moves when the accessor's answer changes for unchanged message bytes: the transfer-encoding
+decode as it reaches an attachment's payload, which occurrences are skipped as decorative,
+the order the payloads come in, the identity an ``occurrence_ref`` carries, the byte/count
+ceilings and the reason each refusal records.
+
+Like the body-text constant it stamps nothing that is stored: no attachment byte and no
+digest of one is written to any record by this accessor.
+"""

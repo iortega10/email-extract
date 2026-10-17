@@ -69,6 +69,7 @@ for _path in (_ROOT,):
 
 from docextract_core import encode, sha256_json  # noqa: E402
 
+from emailextract import bodytext  # noqa: E402
 from emailextract import cfb as cfb_module  # noqa: E402
 from emailextract import ids as ids_module  # noqa: E402
 from emailextract import mapi as mapi_module  # noqa: E402
@@ -78,9 +79,19 @@ from emailextract.container import EmlContainer  # noqa: E402
 from emailextract.ids import sha256_hex  # noqa: E402
 from emailextract.msgcontainer import MsgContainer  # noqa: E402
 
-#: The component names, in the ledger's own order. The first three are Phase 1's; the
-#: last three are Phase 1b's (Turn 1b.10b) and fingerprint the committed ``.msg`` corpus.
-COMPONENTS = ("walk", "decode_chain", "contracts", "cfb", "msg_reader", "msg_projection")
+#: The component names, in the ledger's own order. The first three are Phase 1's; the next
+#: three are Phase 1b's (Turn 1b.10b) and fingerprint the committed ``.msg`` corpus; the last
+#: two are Turn BODY1's on-demand accessors, over the ``.eml`` corpus.
+COMPONENTS = (
+    "walk",
+    "decode_chain",
+    "contracts",
+    "cfb",
+    "msg_reader",
+    "msg_projection",
+    "body_text",
+    "attachment_payloads",
+)
 
 #: Which constant a component's version string is built from -- what to bump.
 VERSION_CONSTANTS = {
@@ -90,11 +101,21 @@ VERSION_CONSTANTS = {
     "cfb": "CFB_VERSION",
     "msg_reader": "MSG_READER_VERSION",
     "msg_projection": "MSG_PROJECTION_VERSION",
+    "body_text": "BODY_TEXT_VERSION",
+    "attachment_payloads": "ATTACHMENT_ACCESSOR_VERSION",
 }
 
 #: The components whose fingerprint is over the corpus. ``contracts`` is over the
 #: record definitions alone, so it is keyed by its version and nothing else.
-CORPUS_DEPENDENT = ("walk", "decode_chain", "cfb", "msg_reader", "msg_projection")
+CORPUS_DEPENDENT = (
+    "walk",
+    "decode_chain",
+    "cfb",
+    "msg_reader",
+    "msg_projection",
+    "body_text",
+    "attachment_payloads",
+)
 
 #: The three Phase 1b components: each reads the committed ``.msg`` fixtures and never an
 #: ``.eml`` one, so a corpus version that carries both kinds gives each its own subset and
@@ -217,7 +238,10 @@ _HEADER = (
     "message names. One corpus version may carry both kinds: the walker's two "
     "components fingerprint the .eml names and the three message components "
     "(cfb/msg_reader/msg_projection, Turn 1b.10b) the .msg names, so the two readers "
-    "never fingerprint the same input. Adding a message or a fixture adds a corpus "
+    "never fingerprint the same input. Turn BODY1's two accessor components (body_text, "
+    "attachment_payloads) fingerprint the .eml names as well: the decode chain and the "
+    "transfer-encoding decoders they read are shared with the .msg path, which the "
+    "msg_projection/msg_reader lines already pin. Adding a message or a fixture adds a corpus "
     "version and NEW "
     "LINES under the SAME component versions "
     "-- it is not a behavior change and bumps nothing; the tool refuses to record a "
@@ -426,6 +450,8 @@ def version_strings() -> dict[str, str]:
         "cfb": versions.CFB_VERSION,
         "msg_reader": versions.MSG_READER_VERSION,
         "msg_projection": versions.MSG_PROJECTION_VERSION,
+        "body_text": versions.BODY_TEXT_VERSION,
+        "attachment_payloads": versions.ATTACHMENT_ACCESSOR_VERSION,
     }
 
 
@@ -503,7 +529,60 @@ def _walk_pieces(name: str, payload: bytes) -> dict[str, Any]:
         "name": name,
         "walk": encode(result),
         "decode_chain": [encode(part.decode_chain) for part in result.parts],
+        "body_text": _body_text_shape(payload),
+        "attachment_payloads": _attachment_payloads_shape(payload),
     }
+
+
+# ------------------------------------- Turn BODY1: the two accessor components
+
+
+def _body_text_shape(payload: bytes) -> Any:
+    """``body_text``'s answer for one message: the view, the text, the line table, the reason.
+
+    The **version stamps are not in the fingerprint** -- the ledger key already carries the
+    version, so a bump records a new line rather than moving an old one -- and neither is the
+    ``BodyRefusal``'s prose ``detail`` (the reason id is the contract).
+    """
+    record = bodytext.body_text(payload)
+    if isinstance(record, bodytext.BodyRefusal):
+        return {"refused": record.reason_id}
+    return {
+        "view": record.view,
+        "text": record.text,
+        "truncated": record.truncated,
+        "char_count": record.char_count,
+        "reason_id": record.reason_id,
+        "segments": [
+            [start, end, locator.part, locator.view, locator.span.start, locator.span.end, locator.unit]
+            for start, end, locator in record.segments
+        ],
+    }
+
+
+def _attachment_payloads_shape(payload: bytes) -> Any:
+    """``iter_attachment_payloads``'s answer: one row per occurrence, payload or refusal.
+
+    A payload is fingered by the **digest** of its bytes (never the bytes, and never a hash of
+    the whole list's bytes), a refusal by its occurrence reference and its closed reason id --
+    not by its prose ``detail``, which is for a human.
+    """
+    rows: list[list[Any]] = []
+    for item in bodytext.iter_attachment_payloads(payload):
+        if isinstance(item, bodytext.AttachmentPayload):
+            rows.append(
+                [
+                    "payload",
+                    item.occurrence_ref,
+                    item.filename,
+                    item.media_type,
+                    item.size,
+                    sha256_hex(item.data),
+                ]
+            )
+        else:
+            rows.append(["refused", item.occurrence_ref, item.reason_id])
+    return rows
 
 
 # -------------------------------------------- Turn 1b.10b: the three .msg components

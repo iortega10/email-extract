@@ -33,7 +33,7 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-from emailextract import container, ids, model, siblings, store, timeevent, walk as walk_module
+from emailextract import bodytext, container, ids, model, siblings, store, timeevent, walk as walk_module
 from emailextract.evals.falsify import CASES, WALKER_GAPS
 from emailextract.evals.l1 import FACTS
 from emailextract.evals.labels import load_sidecars
@@ -57,7 +57,7 @@ _BACKTICKED = re.compile(r"`([^`]+)`")
 _ENTRY = re.compile(r"^### `([^`]+)`$", re.MULTILINE)
 
 #: The library modules whose module-level constants could name a reason or a gap id.
-_LIBRARY = (container, ids, model, seam, siblings, store, timeevent, walk_module)
+_LIBRARY = (bodytext, container, ids, model, seam, siblings, store, timeevent, walk_module)
 
 
 def _registry_section() -> str:
